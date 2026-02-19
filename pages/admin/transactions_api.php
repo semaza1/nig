@@ -48,6 +48,8 @@ register_shutdown_function(function(){
 $mysqli = require __DIR__ . '/../../config/db.php';
 if (!$mysqli) { http_response_code(500); send_json(['success'=>false,'message'=>'Database connection failed']); }
 
+require_once __DIR__ . '/notifications_helper.php';
+
 if (empty($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
     http_response_code(403);
     send_json(['success'=>false,'message'=>'Access denied']);
@@ -166,6 +168,14 @@ if ($action === 'create') {
         $mysqli->commit();
         $res = $mysqli->query("SELECT t.trans_id, t.tx_date, t.type, t.amount, u.names as user_name, c.name as account_name FROM transactions t LEFT JOIN users u ON t.user_id = u.id LEFT JOIN accounts c ON t.account_id = c.account_id WHERE t.trans_id = " . (int)$id);
         $row = $res->fetch_assoc();
+        // Notifications
+        $msg = "Transaction yanditswe (#TX-$id): $type - " . number_format((float)$amount) . " Frw";
+        nig_create_notification($mysqli, (int)$user_id, 'transaction_recorded', $msg);
+        // If loan payment, also mark as payment_received
+        if ($type === 'loan_payment') {
+            nig_create_notification($mysqli, (int)$user_id, 'payment_received', $msg);
+        }
+        nig_notify_admins($mysqli, 'transaction_recorded', $msg);
         send_json(['success'=>true,'data'=>$row]);
     } else {
         $created_by = $_SESSION['id'] ?? 1;
@@ -176,6 +186,13 @@ if ($action === 'create') {
             $id = $stmtS->insert_id;
             $res = $mysqli->query("SELECT t.trans_id, t.tx_date, t.type, t.amount, u.names as user_name, c.name as account_name FROM transactions t LEFT JOIN users u ON t.user_id = u.id LEFT JOIN accounts c ON t.account_id = c.account_id WHERE t.trans_id = " . (int)$id);
             $row = $res->fetch_assoc();
+            // Notifications
+            $msg = "Transaction yanditswe (#TX-$id): $type - " . number_format((float)$amount) . " Frw";
+            nig_create_notification($mysqli, (int)$user_id, 'transaction_recorded', $msg);
+            if ($type === 'loan_payment') {
+                nig_create_notification($mysqli, (int)$user_id, 'payment_received', $msg);
+            }
+            nig_notify_admins($mysqli, 'transaction_recorded', $msg);
             send_json(['success'=>true,'data'=>$row]);
         } else {
             send_json(['success'=>false,'message'=>$mysqli->error]);

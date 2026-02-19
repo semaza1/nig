@@ -3,6 +3,7 @@ header('Content-Type: application/json; charset=utf-8');
 session_start();
 
 $mysqli = require __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/notifications_helper.php';
 
 if (empty($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
     http_response_code(403);
@@ -89,6 +90,8 @@ if ($action === 'create') {
         $id = $stmt->insert_id;
         $res = $mysqli->query("SELECT asset_id, name, purchase_date, purchase_value, location, notes, created_by, created_at, certificate_name, certificate_mime, HEX(certificate_file) as certificate_file, sold_value, sold_date FROM assets WHERE asset_id = " . (int)$id);
         $row = $res->fetch_assoc();
+        $msg = "Asset yanditswe (#AS-$id): $name - " . number_format((float)$purchase_value) . " Frw";
+        nig_notify_admins($mysqli, 'asset_recorded', $msg);
         echo json_encode(['success' => true, 'data' => $row]);
         exit;
     } else {
@@ -137,6 +140,8 @@ if ($action === 'update') {
     if ($stmt->execute()) {
         $res = $mysqli->query("SELECT asset_id, name, purchase_date, purchase_value, location, notes, created_by, created_at, certificate_name, certificate_mime, HEX(certificate_file) as certificate_file, sold_value, sold_date FROM assets WHERE asset_id = " . (int)$id);
         $row = $res->fetch_assoc();
+        $msg = "Asset yahinduwe (#AS-$id): $name";
+        nig_notify_admins($mysqli, 'asset_recorded', $msg);
         echo json_encode(['success' => true, 'data' => $row]);
         exit;
     } else {
@@ -154,6 +159,7 @@ if ($action === 'delete') {
     $stmt = $mysqli->prepare("DELETE FROM assets WHERE asset_id = ?");
     $stmt->bind_param('i', $id);
     if ($stmt->execute()) {
+        nig_notify_admins($mysqli, 'asset_recorded', "Asset yasibwe (#AS-$id)");
         echo json_encode(['success' => true]);
         exit;
     } else {

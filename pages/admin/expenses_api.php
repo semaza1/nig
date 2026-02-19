@@ -57,6 +57,7 @@ register_shutdown_function(function() {
 });
 
 $mysqli = require __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/notifications_helper.php';
 
 // Check for database connection errors
 if (!$mysqli) {
@@ -169,6 +170,8 @@ if ($action === 'create') {
             exit;
         }
         $row = $res->fetch_assoc();
+        $msg = "Expense yanditswe (#EX-$id): $category - " . number_format((float)$amount) . " Frw";
+        nig_notify_admins($mysqli, 'expense_recorded', $msg);
         send_json(['success' => true, 'data' => $row]);
         exit;
     } else {
@@ -208,6 +211,8 @@ if ($action === 'update') {
             exit;
         }
         $row = $res->fetch_assoc();
+        $msg = "Expense yahinduwe (#EX-$id): $category - " . number_format((float)$amount) . " Frw";
+        nig_notify_admins($mysqli, 'expense_recorded', $msg);
         send_json(['success' => true, 'data' => $row]);
         exit;
     } else {
@@ -225,6 +230,7 @@ if ($action === 'delete') {
     $stmt = $mysqli->prepare("DELETE FROM expenses WHERE expense_id = ?");
     $stmt->bind_param('i', $id);
     if ($stmt->execute()) {
+        nig_notify_admins($mysqli, 'expense_recorded', "Expense yasibwe (#EX-$id)");
         send_json(['success' => true]);
         exit;
     } else {

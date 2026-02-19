@@ -4,6 +4,7 @@ header('Content-Type: application/json; charset=utf-8');
 session_start();
 
 $mysqli = require __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/notifications_helper.php';
 
 // simple admin check - requires login via pages/login.php which sets is_admin
 if (empty($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
@@ -85,6 +86,8 @@ if ($action === 'create') {
     if ($stmt->execute()) {
         $id = $stmt->insert_id;
         $stmt->close();
+        // Notify admins that a user was created
+        nig_notify_admins($mysqli, 'user_event', "User mushya yanditswe (#U-$id): $names");
         $res = $mysqli->query("SELECT id, names, nid_passport, email, password, phone1, phone2, guarantee_name, guarantee_nid_passport, guarantee_email, guarantee_phone1, guarantee_phone2, is_member, is_admin FROM users WHERE id = " . (int)$id);
         $row = $res->fetch_assoc();
         echo json_encode(['success' => true, 'data' => $row]);
@@ -125,6 +128,7 @@ if ($action === 'update') {
     }
     if ($stmt->execute()) {
         $stmt->close();
+        nig_notify_admins($mysqli, 'user_event', "User yahinduwe (#U-$id): $names");
         $res = $mysqli->query("SELECT id, names, nid_passport, email, password, phone1, phone2, guarantee_name, guarantee_nid_passport, guarantee_email, guarantee_phone1, guarantee_phone2, is_member, is_admin FROM users WHERE id = " . (int)$id);
         $row = $res->fetch_assoc();
         echo json_encode(['success' => true, 'data' => $row]);
@@ -144,6 +148,7 @@ if ($action === 'delete') {
     $stmt = $mysqli->prepare("DELETE FROM users WHERE id = ?");
     $stmt->bind_param('i', $id);
     if ($stmt->execute()) {
+        nig_notify_admins($mysqli, 'user_event', "User yasibwe (#U-$id)");
         echo json_encode(['success' => true]);
         exit;
     } else {

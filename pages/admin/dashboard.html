@@ -94,6 +94,9 @@
           <button data-section="assets" class="sidebar-link w-full text-left">
             Assets
           </button>
+          <button data-section="notifications" class="sidebar-link w-full text-left">
+            Notifications
+          </button>
           <button data-section="reports" class="sidebar-link w-full text-left">
             Raporo
           </button>
@@ -1119,6 +1122,148 @@
             </div>
           </div>
 
+          <!-- NOTIFICATIONS (admin CRUD) -->
+          <div id="section-notifications" class="hidden space-y-4">
+            <p class="text-sm font-semibold text-primary-dark">Notifications</p>
+            <div class="card">
+              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <p class="text-xs text-slate-600">Ubutumwa bwo kumenyesha abakoresha ibiri kubera muri sisitemu (inguzanyo, transactions, expenses, assets...).</p>
+                <div class="flex gap-2">
+                  <button id="btn-new-notification" class="btn-secondary text-xs">Notification nshya</button>
+                  <button id="btn-refresh-notifications" class="btn-primary text-xs">Sobanura</button>
+                </div>
+              </div>
+
+              <div class="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div class="flex items-center gap-2">
+                  <input id="notifications-search" type="search" placeholder="Shakisha (message / type / user)" class="rounded-lg border px-3 py-2 text-sm" />
+                  <button id="notifications-search-btn" class="btn-secondary text-xs">Shakisha</button>
+                </div>
+                <div class="flex items-center gap-2">
+                  <select id="notifications-filter-type" class="rounded-lg border px-3 py-2 text-sm">
+                    <option value="">Type zose</option>
+                    <option value="loan_due_reminder">loan_due_reminder</option>
+                    <option value="loan_requested">loan_requested</option>
+                    <option value="loan_status_changed">loan_status_changed</option>
+                    <option value="payment_received">payment_received</option>
+                    <option value="interest_received">interest_received</option>
+                    <option value="transaction_recorded">transaction_recorded</option>
+                    <option value="expense_recorded">expense_recorded</option>
+                    <option value="asset_recorded">asset_recorded</option>
+                    <option value="user_event">user_event</option>
+                  </select>
+                  <select id="notifications-filter-channel" class="rounded-lg border px-3 py-2 text-sm">
+                    <option value="">Channel zose</option>
+                    <option value="in_app">in_app</option>
+                    <option value="sms">sms</option>
+                    <option value="email">email</option>
+                  </select>
+                  <select id="notifications-filter-status" class="rounded-lg border px-3 py-2 text-sm">
+                    <option value="">Status zose</option>
+                    <option value="queued">queued</option>
+                    <option value="sent">sent</option>
+                    <option value="failed">failed</option>
+                    <option value="read">read</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="mt-4 table-wrapper">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>User</th>
+                      <th>Type</th>
+                      <th>Channel</th>
+                      <th>Status</th>
+                      <th>Scheduled</th>
+                      <th>Sent</th>
+                      <th>Message</th>
+                      <th>Ibikorwa</th>
+                    </tr>
+                  </thead>
+                  <tbody id="notifications-tbody"></tbody>
+                </table>
+              </div>
+
+              <div class="mt-4 flex items-center justify-between">
+                <button id="notifications-prev" class="btn-ghost">← Prev</button>
+                <p id="notifications-pageinfo" class="text-xs text-slate-600">Page 1</p>
+                <button id="notifications-next" class="btn-ghost">Next →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notification Modal -->
+          <div id="notification-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4">
+            <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
+              <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+                <h2 id="notification-modal-title" class="text-lg font-semibold text-primary-dark">Ongeza Notification</h2>
+                <button id="notification-modal-close" class="text-gray-500 hover:text-gray-700">✕</button>
+              </div>
+              <div class="px-6 py-4">
+                <form id="notification-form" class="space-y-4">
+                  <input type="hidden" id="notification-id" name="id" />
+                  <div>
+                    <label class="block text-xs font-medium text-slate-700">User *</label>
+                    <select id="notification-user" name="user_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
+                      <option value="">-- Hitamo --</option>
+                    </select>
+                  </div>
+                  <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div>
+                      <label class="block text-xs font-medium text-slate-700">Type *</label>
+                      <select id="notification-type" name="type" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
+                        <option value="">-- Hitamo --</option>
+                        <option value="loan_due_reminder">loan_due_reminder</option>
+                        <option value="loan_requested">loan_requested</option>
+                        <option value="loan_status_changed">loan_status_changed</option>
+                        <option value="payment_received">payment_received</option>
+                        <option value="interest_received">interest_received</option>
+                        <option value="transaction_recorded">transaction_recorded</option>
+                        <option value="expense_recorded">expense_recorded</option>
+                        <option value="asset_recorded">asset_recorded</option>
+                        <option value="user_event">user_event</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-slate-700">Channel *</label>
+                      <select id="notification-channel" name="channel" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
+                        <option value="in_app">in_app</option>
+                        <option value="sms">sms</option>
+                        <option value="email">email</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div>
+                      <label class="block text-xs font-medium text-slate-700">Status *</label>
+                      <select id="notification-status" name="status" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
+                        <option value="queued">queued</option>
+                        <option value="sent">sent</option>
+                        <option value="failed">failed</option>
+                        <option value="read">read</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-slate-700">Scheduled for</label>
+                      <input id="notification-scheduled" name="scheduled_for" type="datetime-local" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-slate-700">Message *</label>
+                    <textarea id="notification-message" name="message" rows="3" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required></textarea>
+                  </div>
+                </form>
+              </div>
+              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
+                <button id="notification-cancel" class="btn-ghost">Siba</button>
+                <button id="notification-save" class="btn-primary">Bika</button>
+              </div>
+            </div>
+          </div>
+
           <!-- REPORTS -->
           <div id="section-reports" class="hidden space-y-4">
             <p class="text-sm font-semibold text-primary-dark">Raporo</p>
@@ -1428,6 +1573,7 @@
         "expenses",
         "transactions",
         "assets",
+        "notifications",
         "reports",
         "settings",
       ];
@@ -1442,6 +1588,7 @@
         expenses: "Expenses z'Ikimina",
         transactions: "Transactions - Izafari z'amafaranga",
         assets: "Imutungo (Assets) y'Ikimina",
+        notifications: "Notifications (Ubutumwa bwo kumenyesha)",
         reports: "Raporo z'ingenzi z'Ikimina",
         settings: "Igenamiterere (Settings) z'Ikimina",
       };
@@ -1961,6 +2108,208 @@
 
         // initial load
         fetchAssets();
+      })();
+
+      // Notifications management JS
+      (function(){
+        const api = 'notifications_api.php';
+        const tbody = document.getElementById('notifications-tbody');
+        const btnNew = document.getElementById('btn-new-notification');
+        const btnRefresh = document.getElementById('btn-refresh-notifications');
+        const searchInput = document.getElementById('notifications-search');
+        const searchBtn = document.getElementById('notifications-search-btn');
+        const filterType = document.getElementById('notifications-filter-type');
+        const filterChannel = document.getElementById('notifications-filter-channel');
+        const filterStatus = document.getElementById('notifications-filter-status');
+        const prevBtn = document.getElementById('notifications-prev');
+        const nextBtn = document.getElementById('notifications-next');
+        const pageInfo = document.getElementById('notifications-pageinfo');
+
+        const modal = document.getElementById('notification-modal');
+        const modalTitle = document.getElementById('notification-modal-title');
+        const modalClose = document.getElementById('notification-modal-close');
+        const cancelBtn = document.getElementById('notification-cancel');
+        const saveBtn = document.getElementById('notification-save');
+        const form = document.getElementById('notification-form');
+
+        const userSelect = document.getElementById('notification-user');
+
+        if(!tbody) return;
+
+        let currentPage = 1;
+        let perPage = 10;
+        let currentQuery = '';
+        let lastTotal = 0;
+        let searchTimer = null;
+
+        function openModal(){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
+        function closeModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
+
+        function statusBadge(s){
+          if(s === 'sent' || s === 'read') return '<span class="badge badge-success">'+globalEscapeHtml(s)+'</span>';
+          if(s === 'failed') return '<span class="badge badge-danger">failed</span>';
+          return '<span class="badge badge-warning">queued</span>';
+        }
+
+        async function loadUsers(){
+          try{
+            const res = await fetch(api + '?action=users');
+            const json = await res.json();
+            if(json.success){
+              userSelect.innerHTML = '<option value="">-- Hitamo --</option>';
+              (json.data || []).forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.id;
+                opt.textContent = u.names;
+                userSelect.appendChild(opt);
+              });
+            }
+          }catch(err){ console.error('loadUsers', err); }
+        }
+
+        async function fetchNotifications(page = currentPage){
+          const q = currentQuery.trim();
+          const status = (filterStatus?.value || '').trim();
+          const channel = (filterChannel?.value || '').trim();
+          const type = (filterType?.value || '').trim();
+
+          const url = new URL(api, window.location.href);
+          url.searchParams.set('page', page);
+          url.searchParams.set('per_page', perPage);
+          if(q) url.searchParams.set('q', q);
+          if(status) url.searchParams.set('status', status);
+          if(channel) url.searchParams.set('channel', channel);
+          if(type) url.searchParams.set('type', type);
+
+          try{
+            const res = await fetch(url.toString());
+            const json = await res.json();
+            if(json.success){
+              render(json.data || []);
+              lastTotal = json.total || 0;
+              currentPage = json.page || page;
+              const totalPages = Math.max(1, Math.ceil(lastTotal / perPage));
+              if(pageInfo) pageInfo.textContent = `Page ${currentPage} / ${totalPages} (${lastTotal})`;
+            } else {
+              alert(json.message || 'Failed to load notifications');
+            }
+          }catch(err){ console.error(err); alert('Network error'); }
+        }
+
+        function render(rows){
+          tbody.innerHTML = '';
+          rows.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>#NT-${r.notification_id}</td>
+              <td>${globalEscapeHtml(r.user_name || '')}</td>
+              <td>${globalEscapeHtml(r.type || '')}</td>
+              <td>${globalEscapeHtml(r.channel || '')}</td>
+              <td>${statusBadge(r.status || '')}</td>
+              <td>${globalEscapeHtml(r.scheduled_for || '')}</td>
+              <td>${globalEscapeHtml(r.sent_at || '')}</td>
+              <td class="max-w-[320px] truncate" title="${globalEscapeHtml(r.message||'')}">${globalEscapeHtml(r.message||'')}</td>
+              <td>
+                <button class="btn-ghost btn-edit-notification" data-id="${r.notification_id}">Hindura</button>
+                <button class="btn-ghost-danger btn-delete-notification" data-id="${r.notification_id}">Siba</button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+
+        tbody.addEventListener('click', async (e)=>{
+          const editBtn = e.target.closest('.btn-edit-notification');
+          const delBtn = e.target.closest('.btn-delete-notification');
+          if(editBtn){
+            const id = editBtn.getAttribute('data-id');
+            try{
+              const res = await fetch(`${api}?id=${encodeURIComponent(id)}`);
+              const json = await res.json();
+              if(json.success && json.data){
+                const d = json.data;
+                document.getElementById('notification-id').value = d.notification_id;
+                document.getElementById('notification-user').value = d.user_id;
+                document.getElementById('notification-type').value = d.type;
+                document.getElementById('notification-channel').value = d.channel || 'in_app';
+                document.getElementById('notification-status').value = d.status || 'queued';
+                document.getElementById('notification-message').value = d.message || '';
+                const sched = d.scheduled_for ? String(d.scheduled_for).replace(' ', 'T').slice(0,16) : '';
+                document.getElementById('notification-scheduled').value = sched;
+                if(modalTitle) modalTitle.textContent = 'Hindura Notification';
+                openModal();
+              } else alert(json.message || 'Not found');
+            }catch(err){ console.error(err); }
+          }
+          if(delBtn){
+            const id = delBtn.getAttribute('data-id');
+            if(!confirm('Urashaka gusiba iyi notification?')) return;
+            const fd = new FormData();
+            fd.append('action','delete');
+            fd.append('id', id);
+            try{
+              const res = await fetch(api, {method:'POST', body: fd});
+              const json = await res.json();
+              if(json.success) fetchNotifications(currentPage);
+              else alert(json.message || 'Delete failed');
+            }catch(err){ console.error(err); }
+          }
+        });
+
+        if(btnNew) btnNew.addEventListener('click', async ()=>{
+          form.reset();
+          document.getElementById('notification-id').value = '';
+          if(modalTitle) modalTitle.textContent = 'Ongeza Notification';
+          await loadUsers();
+          openModal();
+          userSelect.focus();
+        });
+        if(btnRefresh) btnRefresh.addEventListener('click', ()=>fetchNotifications(1));
+        if(modalClose) modalClose.addEventListener('click', closeModal);
+        if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
+        if(modal) modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+
+        if(saveBtn) saveBtn.addEventListener('click', async ()=>{
+          const id = document.getElementById('notification-id').value;
+          const fd = new FormData(form);
+          fd.append('action', id ? 'update' : 'create');
+          if(id) fd.append('id', id);
+          try{
+            const res = await fetch(api, {method:'POST', body: fd});
+            const json = await res.json();
+            if(json.success){ closeModal(); fetchNotifications(id ? currentPage : 1); }
+            else alert(json.message || 'Error saving');
+          }catch(err){ console.error(err); alert('Network error'); }
+        });
+
+        if(searchInput){
+          searchInput.addEventListener('input', (e)=>{
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(()=>{
+              currentQuery = (e.target.value || '').trim();
+              fetchNotifications(1);
+            }, 250);
+          });
+        }
+        if(searchBtn){
+          searchBtn.addEventListener('click', ()=>{
+            currentQuery = (searchInput?.value || '').trim();
+            fetchNotifications(1);
+          });
+        }
+
+        filterType?.addEventListener('change', ()=>fetchNotifications(1));
+        filterChannel?.addEventListener('change', ()=>fetchNotifications(1));
+        filterStatus?.addEventListener('change', ()=>fetchNotifications(1));
+
+        prevBtn?.addEventListener('click', ()=>{ if(currentPage > 1) fetchNotifications(currentPage-1); });
+        nextBtn?.addEventListener('click', ()=>{
+          const totalPages = Math.max(1, Math.ceil(lastTotal / perPage));
+          if(currentPage < totalPages) fetchNotifications(currentPage+1);
+        });
+
+        // initial
+        fetchNotifications(1);
       })();
 
       // Expenses management JS

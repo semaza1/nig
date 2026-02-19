@@ -137,7 +137,7 @@ CREATE TABLE `loan_guarantors` (
 CREATE TABLE `notifications` (
   `notification_id` bigint(20) UNSIGNED NOT NULL,
   `user_id` int(10) UNSIGNED NOT NULL,
-  `type` enum('loan_due_reminder','payment_received','interest_received') NOT NULL,
+  `type` enum('loan_due_reminder','payment_received','interest_received','loan_requested','loan_status_changed','transaction_recorded','expense_recorded','asset_recorded','user_event') NOT NULL,
   `message` text NOT NULL,
   `channel` enum('sms','email','in_app') NOT NULL DEFAULT 'in_app',
   `status` enum('queued','sent','failed','read') NOT NULL DEFAULT 'queued',

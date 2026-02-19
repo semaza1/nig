@@ -48,6 +48,8 @@ register_shutdown_function(function(){
 $mysqli = require __DIR__ . '/../../config/db.php';
 if (!$mysqli) { http_response_code(500); send_json(['success'=>false,'message'=>'Database connection failed']); }
 
+require_once __DIR__ . '/notifications_helper.php';
+
 // Debug: Log session info
 error_log('Session data: ' . json_encode($_SESSION));
 
@@ -252,6 +254,10 @@ if ($action === 'create') {
         $mysqli->commit();
         $res = $mysqli->query("SELECT l.loan_id, l.principal_amount, l.term_months, l.monthly_rate, l.start_date, l.status, a.name as account_name, u.names as borrower_name FROM loans l LEFT JOIN accounts a ON l.account_id = a.account_id LEFT JOIN users u ON l.borrower_user_id = u.id WHERE l.loan_id = " . (int)$id);
         $row = $res->fetch_assoc();
+        // Notifications
+        $msg = "Inguzanyo nshya yanditswe (#LN-$id): " . number_format((float)$principal) . " Frw";
+        nig_notify_admins($mysqli, 'loan_requested', $msg);
+        nig_create_notification($mysqli, (int)$borrower, 'loan_requested', $msg);
         send_json(['success'=>true,'data'=>$row]);
     } else {
         $stmtS = $mysqli->prepare("INSERT INTO loans (account_id, borrower_user_id, principal_amount, monthly_rate, term_months, start_date, status, approved_by, disbursed_by, notes, reference_name, reference_mime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -268,6 +274,10 @@ if ($action === 'create') {
             
             $res = $mysqli->query("SELECT l.loan_id, l.principal_amount, l.term_months, l.monthly_rate, l.start_date, l.status, a.name as account_name, u.names as borrower_name FROM loans l LEFT JOIN accounts a ON l.account_id = a.account_id LEFT JOIN users u ON l.borrower_user_id = u.id WHERE l.loan_id = " . (int)$id);
             $row = $res->fetch_assoc();
+            // Notifications
+            $msg = "Inguzanyo nshya yanditswe (#LN-$id): " . number_format((float)$principal) . " Frw";
+            nig_notify_admins($mysqli, 'loan_requested', $msg);
+            nig_create_notification($mysqli, (int)$borrower, 'loan_requested', $msg);
             send_json(['success'=>true,'data'=>$row]);
         } else {
             send_json(['success'=>false,'message'=>$mysqli->error]);
@@ -278,6 +288,16 @@ if ($action === 'create') {
 if ($action === 'update') {
     $id = (int)($_POST['id'] ?? 0);
     if ($id <= 0) send_json(['success'=>false,'message'=>'Invalid id']);
+
+    // Detect status changes
+    $oldStatus = null;
+    $oldBorrower = null;
+    $oldRes = $mysqli->query("SELECT status, borrower_user_id FROM loans WHERE loan_id = " . (int)$id . " LIMIT 1");
+    if ($oldRes) {
+        $oldRow = $oldRes->fetch_assoc();
+        $oldStatus = $oldRow['status'] ?? null;
+        $oldBorrower = isset($oldRow['borrower_user_id']) ? (int)$oldRow['borrower_user_id'] : null;
+    }
     $account_id = intval($_POST['account_id'] ?? 0);
     $borrower = intval($_POST['borrower_user_id'] ?? 0);
     $principal = floatval($_POST['principal_amount'] ?? 0);
@@ -305,6 +325,14 @@ if ($action === 'update') {
         
         $res = $mysqli->query("SELECT l.loan_id, l.principal_amount, l.term_months, l.monthly_rate, l.start_date, l.status, a.name as account_name, u.names as borrower_name FROM loans l LEFT JOIN accounts a ON l.account_id = a.account_id LEFT JOIN users u ON l.borrower_user_id = u.id WHERE l.loan_id = " . (int)$id);
         $row = $res->fetch_assoc();
+
+        if ($oldStatus !== null && $oldStatus !== $status) {
+            $bId = $borrower > 0 ? (int)$borrower : (int)($oldBorrower ?? 0);
+            $msg = "Status y'inguzanyo (#LN-$id) yahindutse: $oldStatus → $status";
+            if ($bId > 0) nig_create_notification($mysqli, $bId, 'loan_status_changed', $msg);
+            nig_notify_admins($mysqli, 'loan_status_changed', $msg);
+        }
+
         send_json(['success'=>true,'data'=>$row]);
     } else {
         send_json(['success'=>false,'message'=>$mysqli->error]);
@@ -316,7 +344,10 @@ if ($action === 'delete') {
     if ($id <= 0) send_json(['success'=>false,'message'=>'Invalid id']);
     $stmt = $mysqli->prepare("DELETE FROM loans WHERE loan_id = ?");
     $stmt->bind_param('i',$id);
-    if ($stmt->execute()) send_json(['success'=>true]);
+    if ($stmt->execute()) {
+        nig_notify_admins($mysqli, 'loan_status_changed', "Inguzanyo yasibwe (#LN-$id)");
+        send_json(['success'=>true]);
+    }
     else send_json(['success'=>false,'message'=>$mysqli->error]);
 }
 
