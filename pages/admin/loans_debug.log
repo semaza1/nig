@@ -1,0 +1,108 @@
+2026-02-17T12:16:33+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":1,"page":1,"per_page":200}
+
+2026-02-17T12:17:46+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":{"loan_id":"3","principal_amount":"1000.00","term_months":"30","monthly_rate":"12.0000","start_date":"2026-02-17","status":"approved","account_name":"Bank of Kigali","borrower_name":"Semaza Emmy"}}
+
+2026-02-17T12:17:46+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"3","reference_name":"card back.jpeg","principal_amount":"1000.00","monthly_rate":"12.0000","term_months":"30","start_date":"2026-02-17","status":"approved","account_name":"Bank of Kigali","borrower_name":"Semaza Emmy","approved_by_name":"Ngendahimana Joseph","disbursed_by_name":"Mukiza Seraphin"},{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T12:33:32+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"3","reference_name":"card back.jpeg","principal_amount":"1000.00","monthly_rate":"12.0000","term_months":"30","start_date":"2026-02-17","status":"approved","account_name":"Bank of Kigali","borrower_name":"Semaza Emmy","approved_by_name":"Ngendahimana Joseph","disbursed_by_name":"Mukiza Seraphin"},{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T12:50:51+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"3","reference_name":"card back.jpeg","principal_amount":"1000.00","monthly_rate":"12.0000","term_months":"30","start_date":"2026-02-17","status":"approved","account_name":"Bank of Kigali","borrower_name":"Semaza Emmy","approved_by_name":"Ngendahimana Joseph","disbursed_by_name":"Mukiza Seraphin"},{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T12:51:00+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"3","reference_name":"card back.jpeg","principal_amount":"1000.00","monthly_rate":"12.0000","term_months":"30","start_date":"2026-02-17","status":"approved","account_name":"Bank of Kigali","borrower_name":"Semaza Emmy","approved_by_name":"Ngendahimana Joseph","disbursed_by_name":"Mukiza Seraphin"},{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T12:51:01+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"3","reference_name":"card back.jpeg","principal_amount":"1000.00","monthly_rate":"12.0000","term_months":"30","start_date":"2026-02-17","status":"approved","account_name":"Bank of Kigali","borrower_name":"Semaza Emmy","approved_by_name":"Ngendahimana Joseph","disbursed_by_name":"Mukiza Seraphin"},{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T12:52:21+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"3","reference_name":"card back.jpeg","principal_amount":"1000.00","monthly_rate":"12.0000","term_months":"30","start_date":"2026-02-17","status":"approved","account_name":"Bank of Kigali","borrower_name":"Semaza Emmy","approved_by_name":"Ngendahimana Joseph","disbursed_by_name":"Mukiza Seraphin"},{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T13:13:42+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"3","reference_name":"card back.jpeg","principal_amount":"1000.00","monthly_rate":"12.0000","term_months":"30","start_date":"2026-02-17","status":"approved","account_name":"Bank of Kigali","borrower_name":"Semaza Emmy","approved_by_name":"Ngendahimana Joseph","disbursed_by_name":"Mukiza Seraphin"},{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T13:38:05+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"3","reference_name":"card back.jpeg","principal_amount":"1000.00","monthly_rate":"12.0000","term_months":"30","start_date":"2026-02-17","status":"approved","account_name":"Bank of Kigali","borrower_name":"Semaza Emmy","approved_by_name":"Ngendahimana Joseph","disbursed_by_name":"Mukiza Seraphin"},{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T13:42:16+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"3","reference_name":"card back.jpeg","principal_amount":"1000.00","monthly_rate":"12.0000","term_months":"30","start_date":"2026-02-17","status":"approved","account_name":"Bank of Kigali","borrower_name":"Semaza Emmy","approved_by_name":"Ngendahimana Joseph","disbursed_by_name":"Mukiza Seraphin"},{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T13:42:16+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"3","reference_name":"card back.jpeg","principal_amount":"1000.00","monthly_rate":"12.0000","term_months":"30","start_date":"2026-02-17","status":"approved","account_name":"Bank of Kigali","borrower_name":"Semaza Emmy","approved_by_name":"Ngendahimana Joseph","disbursed_by_name":"Mukiza Seraphin"},{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T13:44:26+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"3","reference_name":"card back.jpeg","principal_amount":"1000.00","monthly_rate":"12.0000","term_months":"30","start_date":"2026-02-17","status":"approved","account_name":"Bank of Kigali","borrower_name":"Semaza Emmy","approved_by_name":"Ngendahimana Joseph","disbursed_by_name":"Mukiza Seraphin"},{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T13:45:15+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"id":"5","names":"Irebe Gashumba alain","total_contrib":"8009973832.00","total_deductions":"0.00","total_loan_principal":"0.00","available_guarantee":"8009853832.00"},{"id":"1","names":"Ngendahimana Joseph","total_contrib":"999999999999.99","total_deductions":"0.00","total_loan_principal":"10000000.00","available_guarantee":"999989879999.99"}]}
+
+2026-02-17T13:45:36+01:00 - NON-JSON OUTPUT:
+{"success":true}
+
+2026-02-17T13:45:36+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":1,"page":1,"per_page":200}
+
+2026-02-17T13:45:38+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"id":"5","names":"Irebe Gashumba alain","total_contrib":"8009973832.00","total_deductions":"0.00","total_loan_principal":"0.00","available_guarantee":"8009853832.00"},{"id":"1","names":"Ngendahimana Joseph","total_contrib":"999999999999.99","total_deductions":"0.00","total_loan_principal":"10000000.00","available_guarantee":"999989879999.99"}]}
+
+2026-02-17T13:46:44+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"id":"5","names":"Irebe Gashumba alain","total_contrib":"8009973832.00","total_deductions":"0.00","total_loan_principal":"0.00","available_guarantee":"8009853832.00"},{"id":"1","names":"Ngendahimana Joseph","total_contrib":"999999999999.99","total_deductions":"0.00","total_loan_principal":"10000000.00","available_guarantee":"999989879999.99"}]}
+
+2026-02-17T13:56:18+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":1,"page":1,"per_page":200}
+
+2026-02-17T13:56:23+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"id":"5","names":"Irebe Gashumba alain","total_contrib":"8009973832.00","total_deductions":"0.00","total_loan_principal":"0.00","available_guarantee":"8009853832.00"},{"id":"1","names":"Ngendahimana Joseph","total_contrib":"999999999999.99","total_deductions":"0.00","total_loan_principal":"10000000.00","available_guarantee":"999989879999.99"}]}
+
+2026-02-17T13:59:14+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":1,"page":1,"per_page":200}
+
+2026-02-17T13:59:22+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"id":"5","names":"Irebe Gashumba alain","total_contrib":"8009973832.00","total_deductions":"0.00","total_loan_principal":"0.00","available_guarantee":"8009853832.00"},{"id":"1","names":"Ngendahimana Joseph","total_contrib":"999999999999.99","total_deductions":"0.00","total_loan_principal":"10000000.00","available_guarantee":"999989879999.99"}]}
+
+2026-02-17T14:06:51+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"id":"5","names":"Irebe Gashumba alain","total_contrib":"8009973832.00","total_deductions":"0.00","total_loan_principal":"0.00","available_guarantee":"8009853832.00"},{"id":"1","names":"Ngendahimana Joseph","total_contrib":"999999999999.99","total_deductions":"0.00","total_loan_principal":"10000000.00","available_guarantee":"999989879999.99"}]}
+
+2026-02-17T14:19:42+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":1,"page":1,"per_page":200}
+
+2026-02-17T14:19:48+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"id":"5","names":"Irebe Gashumba alain","total_contrib":"8009973832.00","total_deductions":"0.00","total_loan_principal":"0.00","available_guarantee":"8009853832.00"}]}
+
+2026-02-17T14:31:40+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"id":"5","names":"Irebe Gashumba alain","total_contrib":"8009973832.00","total_deductions":"0.00","total_loan_principal":"0.00","available_guarantee":"8009853832.00"}]}
+
+2026-02-17T14:38:36+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"id":"5","names":"Irebe Gashumba alain","total_contrib":"8009973832.00","total_deductions":"0.00","total_loan_principal":"0.00","available_guarantee":"8009853832.00"}]}
+
+2026-02-17T14:38:42+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"id":"5","names":"Irebe Gashumba alain","total_contrib":"8009973832.00","total_deductions":"0.00","total_loan_principal":"0.00","available_guarantee":"8009853832.00"}]}
+
+2026-02-17T14:40:52+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":{"loan_id":"4","principal_amount":"120000.00","term_months":"30","monthly_rate":"5.0000","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Semaza Emmy"}}
+
+2026-02-17T14:40:52+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"4","reference_name":"card back.jpeg","principal_amount":"120000.00","monthly_rate":"5.0000","term_months":"30","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Semaza Emmy","approved_by_name":"Ngendahimana Joseph","disbursed_by_name":null},{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T15:05:10+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[]}
+
+2026-02-17T15:06:51+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"4","reference_name":"card back.jpeg","principal_amount":"120000.00","monthly_rate":"5.0000","term_months":"30","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Semaza Emmy","approved_by_name":"Ngendahimana Joseph","disbursed_by_name":null},{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T16:29:45+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"4","reference_name":"card back.jpeg","principal_amount":"120000.00","monthly_rate":"5.0000","term_months":"30","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Semaza Emmy","approved_by_name":"Ngendahimana Joseph","disbursed_by_name":null},{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T16:29:58+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[]}
+
+2026-02-18T10:21:13+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"loan_id":"4","reference_name":"card back.jpeg","principal_amount":"120000.00","monthly_rate":"5.0000","term_months":"30","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Semaza Emmy","approved_by_name":"Ngendahimana Joseph","disbursed_by_name":null},{"loan_id":"2","reference_name":"card back.jpeg","principal_amount":"10000000.00","monthly_rate":"0.1800","term_months":"12","start_date":"2026-02-17","status":"requested","account_name":"Mobile Money","borrower_name":"Ngendahimana Joseph","approved_by_name":"Semaza Emmy","disbursed_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-18T10:21:27+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[]}
+

@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="rw">
+  <head>
+    <meta charset="utf-8" />
+    <title>NIG - Ikimina Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#2F6B4F",
+              "primary-dark": "#1F4D3A",
+              accent: "#E89C2C",
+              brown: "#6B4A2D",
+              "bg-soft": "#F8FAF9",
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="./css/styles.css" />
+  </head>
+  <body class="min-h-screen bg-white text-slate-900">
+    <!-- Navbar -->
+    <header class="border-b border-gray-200 bg-white">
+      <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+        <div class="flex items-center gap-2">
+          <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white font-bold">
+            N
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-primary-dark">NIG Ikimina</p>
+            <p class="text-xs text-slate-500">Ikoranabuhanga ryo gucunga Ikimina</p>
+          </div>
+        </div>
+        <nav class="hidden items-center gap-6 text-sm font-medium text-slate-700 md:flex">
+          <a href="#about" class="hover:text-primary">Ibyerekeye Sisitemu</a>
+          <a href="#users" class="hover:text-primary">Abayikoresha</a>
+          <a href="#features" class="hover:text-primary">Ibikora</a>
+        </nav>
+        <div class="flex items-center gap-2">
+          <a href="pages/login.php" class="btn-primary text-sm">Injira</a>
+          <a href="pages/signup.html" class="btn-secondary text-sm hidden sm:inline-flex">Iyandikishe</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="container">
+        <h1>NIG Management System</h1>
+        <p>Ikoranabuhanga rigezweho ryo gucunga Ikimina (NIG), rigena imigabane, inguzanyo n'inyungu mu buryo bwizewe.</p>
+        <div class="flex flex-wrap gap-3 justify-center">
+          <a href="pages/signup.html" class="btn-secondary">Fungura Konti</a>
+          <a href="pages/login.php" class="btn-primary">Injira</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- About -->
+    <section id="about" class="section bg-gray-50">
+      <div class="container">
+        <h2 class="text-2xl font-bold text-center mb-8">Ibyerekeye Sisitemu</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Intangiriro</h3>
+            <p class="text-gray-600">NIG Management System ni software igenewe gucunga imirimo y'ikimina/ikoperative irimo imigabane, inguzanyo, inyungu, expenses, assets n'amakuru y'abanyamuryango.</p>
+          </div>
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Uburyo bwo Kubara Inyungu</h3>
+            <p class="text-gray-600">Iyi system ikoresha uburyo bwa Reducing Balance mu kubara inyungu z'inguzanyo. Inyungu ibarwa buri kwezi hashingiwe ku mwenda usigaye.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Users -->
+    <section id="users" class="section">
+      <div class="container">
+        <h2 class="text-2xl font-bold text-center mb-8">Ibyiciro by'Abakoresha</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div class="card">
+            <h3 class="text-xl font-semibold mb-4 text-primary">Utari Umunyamuryango</h3>
+            <ul class="space-y-2 text-sm text-gray-600">
+              <li>• Ashobora gusaba inguzanyo</li>
+              <li>• Agomba kugira abamwishingira 2</li>
+              <li>• Ashobora kureba inguzanyo ye</li>
+              <li>• Yishyura inyungu mbere y'umwenda</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3 class="text-xl font-semibold mb-4 text-primary">Umunyamuryango</h3>
+            <ul class="space-y-2 text-sm text-gray-600">
+              <li>• Atanga umusanzu wa buri kwezi</li>
+              <li>• Ashobora kureba imigabane ye</li>
+              <li>• Ashobora kugurizwa amafaranga</li>
+              <li>• Yishyura inyungu mbere y'umwenda</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3 class="text-xl font-semibold mb-4 text-primary">Umuyobozi (Admin)</h3>
+            <ul class="space-y-2 text-sm text-gray-600">
+              <li>• Yandika abanyamuryango</li>
+              <li>• Yinjiza imigabane n'inguzanyo</li>
+              <li>• Ashyira inyungu zemewe</li>
+              <li>• Areba raporo z'abantu</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="section bg-gray-50">
+      <div class="container">
+        <h2 class="text-2xl font-bold text-center mb-8">Ibikora</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div class="card">
+            <h3 class="text-lg font-semibold mb-2">Gukuramo Amafaranga</h3>
+            <p class="text-sm text-gray-600">Iyo umunyamuryango ashaka kuvana amafaranga, system ireba inguzanyo, igabanya % yo gukata.</p>
+          </div>
+          <div class="card">
+            <h3 class="text-lg font-semibold mb-2">Raporo</h3>
+            <p class="text-sm text-gray-600">Raporo ya buri muntu n'iz rusange, z'ukwezi, igice cy'umwaka n'umwaka.</p>
+          </div>
+          <div class="card">
+            <h3 class="text-lg font-semibold mb-2">Umutekano</h3>
+            <p class="text-sm text-gray-600">Login system n'roles, audit trail, backup na restore.</p>
+          </div>
+          <div class="card">
+            <h3 class="text-lg font-semibold mb-2">Abishingira</h3>
+            <p class="text-sm text-gray-600">System igenzura imigabane yabo n'inguzanyo zishingira.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-8">
+      <div class="container text-center">
+        <p>&copy; 2024 NIG Management System. All rights reserved.</p>
+      </div>
+    </footer>
+  </body>
+</html>
+
+

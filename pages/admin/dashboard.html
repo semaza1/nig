@@ -1,0 +1,2605 @@
+<!doctype html>
+<html lang="rw">
+  <head>
+    <meta charset="utf-8" />
+    <title>Admin Dashboard | NIG Ikimina</title>
+    <script>
+      // Protect admin dashboard from unauthenticated access
+      (async () => {
+        try {
+          const res = await fetch('../get_session.php', {cache: 'no-store'});
+          const json = await res.json();
+          if (!json.success || !json.data || !json.data.is_admin) {
+            window.location.href = '../login.php';
+          }
+        } catch (e) {
+          window.location.href = '../login.php';
+        }
+      })();
+      // Fallback global handler to open the loan modal if other handlers fail
+      document.addEventListener('click', function(e){
+        try{
+          const btn = e.target.closest && e.target.closest('#btn-new-loan');
+          if (!btn) return;
+          const form = document.getElementById('loan-form');
+          if (form) form.reset();
+          const idel = document.getElementById('loan-id'); if (idel) idel.value = '';
+          const modal = document.getElementById('loan-modal');
+          if (modal){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
+          const borrower = document.getElementById('loan-borrower'); if (borrower) borrower.focus();
+        }catch(_){ }
+      });
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#2F6B4F",
+              "primary-dark": "#1F4D3A",
+              accent: "#E89C2C",
+              brown: "#6B4A2D",
+              "bg-soft": "#F8FAF9",
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="../../css/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body class="min-h-screen bg-[color:var(--color-bg)]">
+    <div class="flex min-h-screen">
+      <!-- Sidebar -->
+      <aside class="hidden w-64 flex-col bg-primary-dark px-4 py-6 text-white md:flex">
+        <div class="flex items-center gap-2 px-2">
+          <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-lg font-bold">
+            N
+          </div>
+          <div>
+            <p class="text-sm font-semibold">NIG Ikimina</p>
+            <p class="text-xs text-emerald-100/80">Admin</p>
+          </div>
+        </div>
+        <nav class="mt-8 space-y-1 text-sm" id="admin-menu">
+          <button data-section="overview" class="sidebar-link sidebar-link-active w-full text-left">
+            Dashboard
+          </button>
+          <button data-section="members" class="sidebar-link w-full text-left">
+            Abanyamuryango
+          </button>
+          <button data-section="users" class="sidebar-link w-full text-left">
+            Abakoresha (Users)
+          </button>
+          <button data-section="loans" class="sidebar-link w-full text-left">
+            Inguzanyo
+          </button>
+          <button data-section="accounts" class="sidebar-link w-full text-left">
+            Amafaranga (Accounts)
+          </button>
+          <button data-section="shares" class="sidebar-link w-full text-left">
+            Imigabane
+          </button>
+          <button data-section="payments" class="sidebar-link w-full text-left">
+            Kwishyura
+          </button>
+          <button data-section="expenses" class="sidebar-link w-full text-left">
+            Expenses
+          </button>
+          <button data-section="transactions" class="sidebar-link w-full text-left">
+            Transactions
+          </button>
+          <button data-section="assets" class="sidebar-link w-full text-left">
+            Assets
+          </button>
+          <button data-section="reports" class="sidebar-link w-full text-left">
+            Raporo
+          </button>
+          <button data-section="settings" class="sidebar-link w-full text-left">
+            Settings
+          </button>
+          <a href="../logout.php" class="sidebar-link mt-4 flex w-full items-center text-red-100 hover:bg-red-500/20 hover:text-white">
+            Gusohoka
+          </a>
+        </nav>
+        <p class="mt-auto px-2 pt-6 text-[11px] text-emerald-100/70">
+          Ubuyobozi bw'Ikimina bukurikirana amafaranga yinjira n'asohoka, abanyamuryango n'inguzanyo zose.
+        </p>
+      </aside>
+
+      <!-- Main content -->
+      <main class="flex-1">
+        <!-- Top bar -->
+        <header class="flex items-center justify-between border-b border-[color:var(--color-border)] bg-white/80 px-4 py-3">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Admin Dashboard
+            </p>
+            <p class="text-sm text-slate-700" id="section-title">
+              Isuzuma rusange ry'Ikimina
+            </p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="text-right">
+              <p class="text-xs font-medium text-slate-700" id="admin-name">Admin Name</p>
+              <p class="text-[11px] text-slate-500">Admin</p>
+            </div>
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+              A
+            </div>
+          </div>
+        </header>
+
+        <section class="mx-auto max-w-7xl px-4 py-6 space-y-8">
+          <!-- OVERVIEW -->
+          <div id="section-overview" class="space-y-6">
+            <div class="grid gap-4 lg:grid-cols-4">
+              <div class="card">
+                <p class="text-xs font-medium text-slate-500">Abanyamuryango bose</p>
+                <p class="mt-2 text-2xl font-semibold text-primary-dark">124</p>
+                <p class="mt-1 text-[11px] text-slate-500">Abanyamuryango bakora neza muri iki gihe.</p>
+              </div>
+              <div class="card">
+                <p class="text-xs font-medium text-slate-500">Inguzanyo zose</p>
+                <p class="mt-2 text-2xl font-semibold text-primary-dark">32</p>
+                <p class="mt-1 text-[11px] text-slate-500">Harimo zemejwe n'izitegereje kwemezwa.</p>
+              </div>
+              <div class="card">
+                <p class="text-xs font-medium text-slate-500">Inyungu zakorewe</p>
+                <p class="mt-2 text-2xl font-semibold text-primary-dark">540,000 Frw</p>
+                <p class="mt-1 text-[11px] text-slate-500">Inyungu rusange y'Ikimina muri uyu mwaka.</p>
+              </div>
+              <div class="card">
+                <p class="text-xs font-medium text-slate-500">Expenses</p>
+                <p class="mt-2 text-2xl font-semibold text-primary-dark">120,000 Frw</p>
+                <p class="mt-1 text-[11px] text-slate-500">Amafaranga asohotse mu bikorwa bitandukanye.</p>
+              </div>
+            </div>
+
+            <div class="card">
+              <p class="text-sm font-semibold text-primary-dark">Imiterere y'umutungo mu kwezi kose</p>
+              <p class="text-xs text-slate-600">
+                Ishusho y'ukuntu ishoramari, inguzanyo, assets n'andi mafaranga byifashe buri kwezi (Frw).
+              </p>
+              <div class="mt-4">
+                <canvas id="portfolioChart" height="200"></canvas>
+              </div>
+              <p class="mt-2 text-[11px] text-slate-500">
+                Imirongo igaragaza: ishoramari (imigabane yose), inguzanyo ziriho, assets n'amafaranga asohoka
+                (expenses) buri kwezi.
+              </p>
+            </div>
+
+            <div class="grid gap-6 lg:grid-cols-2">
+              <!-- Members table -->
+              <div>
+                <p class="text-sm font-semibold text-primary-dark">Urutonde rw'abanyamuryango</p>
+                <p class="text-xs text-slate-600">
+                  Abanyamuryango baheruka kwiyandikisha no kuvugurura amakuru yabo.
+                </p>
+                <div class="mt-3 table-wrapper">
+                  <table class="table">
+                    <thead>
+                    <tr>
+                      <th>Izina</th>
+                      <th>Telefoni</th>
+                      <th>Imiterere</th>
+                      <th>Ibikorwa</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Nzabonimpa Jean</td>
+                        <td>0788 000 111</td>
+                        <td><span class="badge badge-success">Yemejwe</span></td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Uwase Aline</td>
+                        <td>0722 333 444</td>
+                        <td><span class="badge badge-warning">Irategereje</span></td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Habimana Eric</td>
+                        <td>0790 555 666</td>
+                        <td><span class="badge badge-success">Yemejwe</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Loans approval table -->
+              <div>
+                <p class="text-sm font-semibold text-primary-dark">Inguzanyo zisaba kwemezwa</p>
+                <p class="text-xs text-slate-600">
+                  Izi nguzanyo ziracyategereje icyemezo cyawe nk'umuyobozi.
+                </p>
+                <div class="mt-3 table-wrapper">
+                  <table class="table">
+                    <thead>
+                    <tr>
+                      <th>Uwasabye</th>
+                      <th>Umubare (Frw)</th>
+                      <th>Itariki</th>
+                      <th>Status</th>
+                      <th>Ibikorwa</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Uwimana Claire</td>
+                        <td>300,000</td>
+                        <td>2026-02-01</td>
+                        <td><span class="badge badge-warning">Iragenzurwa</span></td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Mugisha David</td>
+                        <td>500,000</td>
+                        <td>2026-02-10</td>
+                        <td><span class="badge badge-warning">Irategereje</span></td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+                </div>
+
+                <!-- USER VIEW MODAL -->
+                <div id="user-view-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+                  <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
+                    <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+                      <h2 class="text-lg font-semibold text-primary-dark">Amakuru y'Umunyamukoresha</h2>
+                      <button id="view-modal-close" class="text-gray-500 hover:text-gray-700" title="Funga">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                      </button>
+                    </div>
+                    <div class="px-6 py-4">
+                      <div id="user-details" class="space-y-2 text-sm text-slate-700">
+                        <!-- populated by JS -->
+                      </div>
+                    </div>
+                    <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
+                      <button id="view-close" class="btn-ghost">Funga</button>
+                    </div>
+                  </div>
+                </div>
+
+            <!-- Recent payments -->
+            <div>
+              <p class="text-sm font-semibold text-primary-dark">Payments ziheruka</p>
+              <p class="text-xs text-slate-600">
+                Uko kwishyura kw'inguzanyo kwagiye gukorwa mu minsi ya vuba.
+              </p>
+              <div class="mt-3 table-wrapper">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Uwishyuye</th>
+                      <th>Itariki</th>
+                      <th>Umubare (Frw)</th>
+                      <th>Inguzanyo</th>
+                      <th>Status</th>
+                      <th>Ibikorwa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Uwase Aline</td>
+                      <td>2026-02-12</td>
+                      <td>70,000</td>
+                      <td>#LN-1024</td>
+                        <td><span class="badge badge-success">Byakiriwe</span></td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                    </tr>
+                    <tr>
+                      <td>Habimana Eric</td>
+                      <td>2026-02-11</td>
+                      <td>55,000</td>
+                      <td>#LN-1018</td>
+                        <td><span class="badge badge-success">Byakiriwe</span></td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                    </tr>
+                    <tr>
+                      <td>Mukamana Rose</td>
+                      <td>2026-02-09</td>
+                      <td>40,000</td>
+                      <td>#LN-1007</td>
+                        <td><span class="badge badge-success">Byakiriwe</span></td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- USERS (admin CRUD) -->
+          <div id="section-users" class="hidden space-y-4">
+            <p class="text-sm font-semibold text-primary-dark">Abakoresha (Users)</p>
+            <div class="card">
+              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <p class="text-xs text-slate-600">Hano umuyobozi ashobora kurema, guhindura no gusiba abakoresha bose (members cyangwa non-members).</p>
+                <div class="flex gap-2">
+                  <button id="btn-new-user" class="btn-secondary text-xs">Umunyamukoresha Mushya</button>
+                  <button id="btn-refresh-users" class="btn-primary text-xs">Kugarura Urutonde</button>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <input id="users-search" type="search" placeholder="Shakisha amazina / email / telefoni" class="rounded-lg border px-3 py-2 text-sm" />
+                    <button id="users-search-btn" class="btn-secondary text-xs">Shakisha</button>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button id="users-prev" class="btn-ghost text-xs">Prev</button>
+                    <span id="users-page" class="text-sm">1</span>
+                    <button id="users-next" class="btn-ghost text-xs">Next</button>
+                  </div>
+                </div>
+
+                <div class="table-wrapper">
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Amazina</th>
+                        <th>Email</th>
+                        <th>Telefoni</th>
+                        <th>Member</th>
+                        <th>Admin</th>
+                        <th>Ibikorwa</th>
+                      </tr>
+                    </thead>
+                    <tbody id="users-tbody">
+                      <!-- filled by JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ACCOUNTS (admin CRUD) -->
+          <div id="section-accounts" class="hidden space-y-4">
+            <p class="text-sm font-semibold text-primary-dark">Amafaranga / Konti (Accounts)</p>
+            <div class="card">
+              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <p class="text-xs text-slate-600">Umuyobozi ashobora kurema, guhindura no gusiba konti z'Ikimina (cash, bank, mobile money).</p>
+                <div class="flex gap-2">
+                  <button id="btn-new-account" class="btn-secondary text-xs">Konti Nshya</button>
+                  <button id="btn-refresh-accounts" class="btn-primary text-xs">Kugarura Urutonde</button>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <input id="accounts-search" type="search" placeholder="Shakisha izina / numero" class="rounded-lg border px-3 py-2 text-sm" />
+                    <button id="accounts-search-btn" class="btn-secondary text-xs">Shakisha</button>
+                  </div>
+                </div>
+
+                <div class="table-wrapper">
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Izina</th>
+                        <th>Ubwoko</th>
+                        <th>Account Number</th>
+                        <th>Created At</th>
+                        <th>Ibikorwa</th>
+                      </tr>
+                    </thead>
+                    <tbody id="accounts-tbody">
+                      <!-- filled by JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- ACCOUNT MODAL -->
+            <div id="account-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4">
+              <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
+                <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+                  <h2 id="account-modal-title" class="text-lg font-semibold text-primary-dark">Konti Nshya</h2>
+                  <button id="account-modal-close" class="text-gray-500 hover:text-gray-700">✕</button>
+                </div>
+                <div class="px-6 py-4">
+                  <form id="account-form" class="space-y-4">
+                    <input type="hidden" id="account-id" name="id" />
+                    <div>
+                      <label for="account-name" class="block text-xs font-medium text-slate-700">Izina *</label>
+                      <input id="account-name" name="name" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required />
+                    </div>
+                    <div>
+                      <label for="account-type" class="block text-xs font-medium text-slate-700">Ubwoko *</label>
+                      <select id="account-type" name="type" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                        <option value="cash">cash</option>
+                        <option value="bank">bank</option>
+                        <option value="mobile_money">mobile_money</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="account-number" class="block text-xs font-medium text-slate-700">Account Number</label>
+                      <input id="account-number" name="account_number" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
+                    </div>
+                  </form>
+                </div>
+                <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
+                  <button id="account-cancel" class="btn-ghost">Funga</button>
+                  <button id="account-save" class="btn-primary">Bika</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- MEMBERS -->
+          <div id="section-members" class="hidden space-y-4">
+            <p class="text-sm font-semibold text-primary-dark">Abanyamuryango</p>
+            <div class="card">
+              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <p class="text-xs text-slate-600">
+                  Kurikirana abanyamuryango, kwemeza abashya no guhindura imiterere yabo.
+                </p>
+                <div class="flex gap-2">
+                  <button class="btn-secondary text-xs">Umunyamuryango mushya</button>
+                  <button class="btn-primary text-xs">Export Raporo</button>
+                </div>
+              </div>
+              <div class="mt-4 table-wrapper">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Izina</th>
+                      <th>Telefoni</th>
+                      <th>Imigabane (Frw)</th>
+                      <th>Inguzanyo (Frw)</th>
+                      <th>Imiterere</th>
+                      <th>Ibikorwa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Nzabonimpa Jean</td>
+                      <td>0788 000 111</td>
+                      <td>600,000</td>
+                      <td>200,000</td>
+                        <td><span class="badge badge-success">Akora neza</span></td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                    </tr>
+                    <tr>
+                      <td>Uwase Aline</td>
+                      <td>0722 333 444</td>
+                      <td>200,000</td>
+                      <td>0</td>
+                        <td><span class="badge badge-warning">Irategereje kwemezwa</span></td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- LOANS -->
+          <div id="section-loans" class="hidden space-y-4">
+            <p class="text-sm font-semibold text-primary-dark">Inguzanyo</p>
+            <div class="grid gap-4 lg:grid-cols-3">
+              <div class="card lg:col-span-5">
+                <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <p class="text-xs text-slate-600">Urutonde rw'inguzanyo ziriho, zemejwe n'izitegereje icyemezo.</p>
+                  <div class="flex gap-2">
+                    <button id="btn-new-loan" class="btn-secondary text-xs">Inguzanyo Nshya</button>
+                    <button id="btn-refresh-loans" class="btn-primary text-xs">Kugarura Urutonde</button>
+                  </div>
+                </div>
+                <div class="mt-3 table-wrapper">
+                  <table class="table">
+                    <thead>
+                    <tr>
+                      <th>Code</th>
+                      <th>Umunyamuryango</th>
+                      <th>Umubare (Frw)</th>
+                      <th>Umwenda usigaye</th>
+                      <th>Status</th>
+                      <th>Ibikorwa</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                      <!-- JSON Data from database -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SHARES -->
+          <div id="section-shares" class="hidden space-y-4">
+            <p class="text-sm font-semibold text-primary-dark">Imigabane</p>
+            <div class="card">
+              <p class="text-xs text-slate-600">
+                Kurikirana uko imigabane y'abanyamuryango yinjira, uko ikwirakwizwa n'uko inyungu igenwa.
+              </p>
+              <div class="mt-3 table-wrapper">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Ukwezi</th>
+                      <th>Imigabane yinjijwe (Frw)</th>
+                      <th>Inyungu zakorewe (Frw)</th>
+                      <th>Abanyamuryango bakora neza</th>
+                      <th>Ibikorwa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Mutarama 2026</td>
+                      <td>1,200,000</td>
+                      <td>150,000</td>
+                        <td>110</td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                    </tr>
+                    <tr>
+                      <td>Gashyantare 2026</td>
+                      <td>1,450,000</td>
+                      <td>180,000</td>
+                        <td>118</td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- PAYMENTS -->
+          <div id="section-payments" class="hidden space-y-4">
+            <p class="text-sm font-semibold text-primary-dark">Kwishyura</p>
+            <div class="card">
+              <p class="text-xs text-slate-600">
+                Kwakira ubwishyu bw'inguzanyo, kubona aho buva n'aho bugana.
+              </p>
+              <div class="mt-3 table-wrapper">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Uwishyuye</th>
+                      <th>Itariki</th>
+                      <th>Umubare (Frw)</th>
+                      <th>Uburyo</th>
+                      <th>Ibikorwa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Uwimana Claire</td>
+                      <td>2026-02-12</td>
+                      <td>60,000</td>
+                        <td>Mobile Money</td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                    </tr>
+                    <tr>
+                      <td>Mugisha David</td>
+                      <td>2026-02-10</td>
+                      <td>80,000</td>
+                        <td>Banki</td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- EXPENSES -->
+          <div id="section-expenses" class="hidden space-y-4">
+            <p class="text-sm font-semibold text-primary-dark">Expenses z'Ikimina</p>
+            <div class="card">
+              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <p class="text-xs text-slate-600">Ibikorwa byose byishyuwe n'Ikimina: ibikoresho, inyubako, inama n'ibindi.</p>
+                <div class="flex gap-2">
+                  <button id="btn-new-expense" class="btn-secondary text-xs">Ongeza Expense</button>
+                  <button id="btn-refresh-expenses" class="btn-primary text-xs">Sobanura</button>
+                </div>
+              </div>
+              <div class="mt-4">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <input id="expenses-search" type="search" placeholder="Shakisha category / description" class="rounded-lg border px-3 py-2 text-sm" />
+                    <button id="expenses-search-btn" class="btn-secondary text-xs">Shakisha</button>
+                  </div>
+                </div>
+              <div class="table-wrapper">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Konto</th>
+                      <th>Itariki</th>
+                      <th>Icyerekezo</th>
+                      <th>Igipimo (Frw)</th>
+                      <th>Ibikorwa</th>
+                    </tr>
+                  </thead>
+                  <tbody id="expenses-tbody">
+                  </tbody>
+                </table>
+              </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Expense Modal -->
+          <div id="expense-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4">
+            <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
+              <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+                <h2 id="expense-modal-title" class="text-lg font-semibold text-primary-dark">Ongeza Expense</h2>
+                <button id="expense-modal-close" class="text-gray-500 hover:text-gray-700">✕</button>
+              </div>
+              <div class="px-6 py-4">
+                <form id="expense-form" class="space-y-4">
+                  <input type="hidden" id="expense-id" name="id" />
+                  <div>
+                    <label for="expense-account" class="block text-xs font-medium text-slate-700">Konto *</label>
+                    <select id="expense-account" name="account_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
+                      <option value="">-- Hitamo Konto --</option>
+                    </select>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label for="expense-date" class="block text-xs font-medium text-slate-700">Itariki *</label>
+                      <input id="expense-date" name="expense_date" type="date" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required />
+                    </div>
+                    <div>
+                      <label for="expense-category" class="block text-xs font-medium text-slate-700">Icyerekezo *</label>
+                      <input id="expense-category" name="category" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="e.g., Office Supplies" required />
+                    </div>
+                  </div>
+                  <div>
+                    <label for="expense-amount" class="block text-xs font-medium text-slate-700">Igipimo (Frw) *</label>
+                    <input id="expense-amount" name="amount" type="number" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" step="0.01" required />
+                  </div>
+                  <div>
+                    <label for="expense-description" class="block text-xs font-medium text-slate-700">Ibisobanuro</label>
+                    <textarea id="expense-description" name="description" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows="2" placeholder="Additional notes..."></textarea>
+                  </div>
+                </form>
+              </div>
+              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
+                <button id="expense-cancel" class="btn-ghost">Siba</button>
+                <button id="expense-save" class="btn-primary">Bika</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TRANSACTION Modal -->
+          <div id="transaction-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4">
+            <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
+              <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+                <h2 id="transaction-modal-title" class="text-lg font-semibold text-primary-dark">Ongeza / Hindura Transaction</h2>
+                <button id="transaction-modal-close" class="text-gray-500 hover:text-gray-700">✕</button>
+              </div>
+              <div class="px-6 py-4">
+                <form id="transaction-form" class="space-y-4" enctype="multipart/form-data">
+                  <input type="hidden" id="transaction-id" name="id" />
+                  <div>
+                    <label for="transaction-date" class="block text-xs font-medium text-slate-700">Itariki *</label>
+                    <input id="transaction-date" name="tx_date" type="date" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required />
+                  </div>
+                  <div>
+                    <label for="transaction-user" class="block text-xs font-medium text-slate-700">User *</label>
+                    <select id="transaction-user" name="user_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
+                      <option value="">-- Hitamo User --</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="transaction-account" class="block text-xs font-medium text-slate-700">Konto *</label>
+                    <select id="transaction-account" name="account_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
+                      <option value="">-- Hitamo Konto --</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="transaction-type" class="block text-xs font-medium text-slate-700">Ubwoko (Type) *</label>
+                    <select id="transaction-type" name="type" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
+                      <option value="">-- Hitamo Type --</option>
+                      <option value="contribution">contribution</option>
+                      <option value="withdrawal_deduction">withdrawal_deduction</option>
+                      <option value="loan_payment">loan_payment</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="transaction-amount" class="block text-xs font-medium text-slate-700">Igipimo (Frw) *</label>
+                    <input id="transaction-amount" name="amount" type="number" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" step="0.01" required />
+                  </div>
+                  <div>
+                    <label for="transaction-ref" class="block text-xs font-medium text-slate-700">Inyandiko (optional)</label>
+                    <input id="transaction-ref" name="reference_file" type="file" class="mt-1 w-full text-sm" />
+                  </div>
+                </form>
+              </div>
+              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
+                <button id="transaction-cancel" class="btn-ghost">Funga</button>
+                <button id="transaction-save" class="btn-primary">Bika</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- LOAN Modal -->
+          <div id="loan-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4">
+            <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
+              <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+                <h2 id="loan-modal-title" class="text-lg font-semibold text-primary-dark">Ongeza / Hindura Inguzanyo</h2>
+                <button id="loan-modal-close" class="text-gray-500 hover:text-gray-700">✕</button>
+              </div>
+              <div class="px-6 py-4">
+                <form id="loan-form" class="space-y-4" enctype="multipart/form-data">
+                  <input type="hidden" id="loan-id" name="id" />
+                  <div>
+                    <label for="loan-account" class="block text-xs font-medium text-slate-700">Konti (aho amafaranga aturuka) *</label>
+                    <select id="loan-account" name="account_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
+                      <option value="">-- Hitamo Konti --</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="loan-borrower" class="block text-xs font-medium text-slate-700">Uwasabye inguzanyo (Umunyamuryango) *</label>
+                    <select id="loan-borrower" name="borrower_user_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
+                      <option value="">-- Hitamo Uwasabye --</option>
+                    </select>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label for="loan-principal" class="block text-xs font-medium text-slate-700">Umubare (Frw) *</label>
+                      <input id="loan-principal" name="principal_amount" type="number" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" step="0.01" required />
+                    </div>
+                    <div>
+                      <label for="loan-rate" class="block text-xs font-medium text-slate-700">Inyungu y'ukwezi (rate) *</label>
+                      <input id="loan-rate" name="monthly_rate" type="number" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" step="0.0001" required />
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label for="loan-term" class="block text-xs font-medium text-slate-700">Igihe izamara (amezi) *</label>
+                      <input id="loan-term" name="term_months" type="number" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required />
+                    </div>
+                    <div>
+                      <label for="loan-start" class="block text-xs font-medium text-slate-700">Itariki itangirira *</label>
+                      <input id="loan-start" name="start_date" type="date" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required />
+                    </div>
+                  </div>
+                  <div>
+                    <label for="loan-status" class="block text-xs font-medium text-slate-700">Status</label>
+                    <select id="loan-status" name="status" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                      <option value="requested">requested</option>
+                      <option value="approved">approved</option>
+                      <option value="disbursed">disbursed</option>
+                      <option value="closed">closed</option>
+                      <option value="rejected">rejected</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="loan-approved-by" class="block text-xs font-medium text-slate-700">Byemejwe na: </label>
+                    <select id="loan-approved-by" name="approved_by" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                      <option value="">-- Hitamo Umukoresha --</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="loan-disbursed-by" class="block text-xs font-medium text-slate-700">Yatanze amafaranga na (optional)</label>
+                    <select id="loan-disbursed-by" name="disbursed_by" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                      <option value="">-- Hitamo Umukoresha --</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-slate-700">Abamwishingizi (Guarantors)</label>
+                    <div id="loan-guarantors-list" class="mt-2 space-y-2"></div>
+                    <button type="button" id="btn-add-guarantor" class="btn-secondary text-xs mt-2">+ Ongeza Umwishingizi</button>
+                  </div>
+                  <div>
+                    <label for="loan-notes" class="block text-xs font-medium text-slate-700">Ibyiyongera / Ibisobanuro</label>
+                    <textarea id="loan-notes" name="notes" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows="3"></textarea>
+                  </div>
+                  <div>
+                    <label for="loan-ref" class="block text-xs font-medium text-slate-700">Icyemezo / Inyandiko (optional)</label>
+                    <input id="loan-ref" name="reference_file" type="file" class="mt-1 w-full text-sm" />
+                  </div>
+                </form>
+              </div>
+              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
+                <button id="loan-cancel" class="btn-ghost">Funga</button>
+                <button id="loan-save" class="btn-primary">Bika</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- USER MODAL -->
+          <div id="user-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4">
+            <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
+              <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+                <h2 id="modal-title" class="text-lg font-semibold text-primary-dark">Umunyamukoresha Mushya</h2>
+                <button id="modal-close" class="text-gray-500 hover:text-gray-700">
+                  <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="px-6 py-4">
+                <form id="user-form" class="space-y-6">
+                  <input type="hidden" name="id" id="user-id" />
+                  
+                  <!-- Personal Info Section -->
+                  <div>
+                    <h3 class="mb-4 text-sm font-semibold text-primary-dark">Amakuru y'Umunyamuryango</h3>
+                    <div class="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label for="user-names" class="block text-xs font-medium text-slate-700">Amazina *</label>
+                        <input id="user-names" name="names" type="text" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Izina ryombi" required />
+                      </div>
+                      <div>
+                        <label for="user-nid" class="block text-xs font-medium text-slate-700">NID / Passport</label>
+                        <input id="user-nid" name="nid_passport" type="text" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="1199080023975090" />
+                      </div>
+                      <div>
+                        <label for="user-email" class="block text-xs font-medium text-slate-700">Email</label>
+                        <input id="user-email" name="email" type="email" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="email@example.com" />
+                      </div>
+                      <div>
+                        <label for="user-phone1" class="block text-xs font-medium text-slate-700">Telefoni ya Mbere *</label>
+                        <input id="user-phone1" name="phone1" type="text" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="0784921483" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Optional Phone Section -->
+                  <div class="border-t pt-4">
+                    <label class="flex items-center gap-2">
+                      <input id="has-phone2" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
+                      <span class="text-sm font-medium text-slate-700">Ifite Telefoni y'Kabiri?</span>
+                    </label>
+                    <div id="phone2-section" class="mt-4 hidden">
+                      <label class="block text-xs font-medium text-slate-700">Telefoni y'Kabiri</label>
+                      <input id="user-phone2" name="phone2" type="text" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="0788 000 000" />
+                    </div>
+                  </div>
+
+                  <!-- Password Section -->
+                  <div class="border-t pt-4">
+                    <label class="block text-xs font-medium text-slate-700">Ijambo ry'ibanga *</label>
+                    <input id="user-password" name="password" type="password" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Shyiramo ijambo ry'ibanga" />
+                    <p class="mt-1 text-[11px] text-slate-500">(Ubwabo niba ushaka guhindura)</p>
+                  </div>
+
+                  <!-- Guarantor Section -->
+                  <div class="border-t pt-4">
+                    <label class="flex items-center gap-2">
+                      <input id="has-guarantor" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
+                      <span class="text-sm font-medium text-slate-700">Ifite Umwishingira?</span>
+                    </label>
+                    <div id="guarantor-section" class="mt-4 hidden space-y-4">
+                      <h3 class="text-sm font-semibold text-primary-dark">Amakuru y'Umwishingira</h3>
+                      <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <label class="block text-xs font-medium text-slate-700">Izina ry'Umwishingira</label>
+                          <input id="user-guarantee-name" name="guarantee_name" type="text" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Izina ryombi" />
+                        </div>
+                        <div>
+                          <label class="block text-xs font-medium text-slate-700">NID / Passport y'Umwishingira</label>
+                          <input id="user-guarantee-nid" name="guarantee_nid_passport" type="text" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="1199080023975090" />
+                        </div>
+                        <div>
+                          <label class="block text-xs font-medium text-slate-700">Email y'Umwishingira</label>
+                          <input id="user-guarantee-email" name="guarantee_email" type="email" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="email@example.com" />
+                        </div>
+                        <div>
+                          <label class="block text-xs font-medium text-slate-700">Telefoni ya Mbere y'Umwishingira</label>
+                          <input id="user-guarantee-phone1" name="guarantee_phone1" type="text" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="0784921483" />
+                        </div>
+                      </div>
+                      <div>
+                        <label class="flex items-center gap-2">
+                          <input id="has-guarantee-phone2" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
+                          <span class="text-xs font-medium text-slate-700">Telefoni y'Kabiri y'Umwishingira</span>
+                        </label>
+                        <div id="guarantee-phone2-section" class="mt-2 hidden">
+                          <input id="user-guarantee-phone2" name="guarantee_phone2" type="text" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="0788 000 000" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Status Section -->
+                  <div class="border-t pt-4">
+                    <label class="block text-xs font-medium text-slate-700 mb-3">Imiterere</label>
+                    <div class="flex flex-wrap gap-4">
+                      <label class="flex items-center gap-2">
+                        <input id="user-is-member" name="is_member" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
+                        <span class="text-sm text-slate-700">Umunyamuryango</span>
+                      </label>
+                      <label class="flex items-center gap-2">
+                        <input id="user-is-admin" name="is_admin" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
+                        <span class="text-sm text-slate-700">Admin</span>
+                      </label>
+                    </div>
+                  </div>
+                </form>
+              </div>
+              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
+                <button id="user-cancel" class="btn-ghost">Siba</button>
+                <button id="user-save" type="submit" class="btn-primary">Bika</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TRANSACTIONS (admin CRUD) -->
+          <div id="section-transactions" class="hidden space-y-4">
+            <p class="text-sm font-semibold text-primary-dark">Transactions (Amasoko)</p>
+            <div class="card">
+              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <p class="text-xs text-slate-600">Urutonde rw'amasoko yose (contribution, withdrawal_deduction, loan_payment)</p>
+                <div class="flex gap-2">
+                  <button id="btn-new-transaction" class="btn-secondary text-xs">Transaction Nshya</button>
+                  <button id="btn-refresh-transactions" class="btn-primary text-xs">Kugarura Urutonde</button>
+                </div>
+              </div>
+              <div class="mt-3 table-wrapper">
+                <table class="table">
+                  <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Itariki</th>
+                    <th>User</th>
+                    <th>Konti</th>
+                    <th>Ubwoko</th>
+                    <th>Igipimo (Frw)</th>
+                    <th>Ibikorwa</th>
+                  </tr>
+                  </thead>
+                  <tbody id="transactions-tbody">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ASSETS (admin CRUD) -->
+          <div id="section-assets" class="hidden space-y-4">
+            <p class="text-sm font-semibold text-primary-dark">Imutungo (Assets)</p>
+            <div class="card">
+              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <p class="text-xs text-slate-600">Imutungo udakoresha ako kanya ariko ufitiye agaciro Ikimina (inyubako, ibikoresho, imodoka n'ibindi).</p>
+                <div class="flex gap-2">
+                  <button id="btn-new-asset" class="btn-secondary text-xs">Imutungo Ishya</button>
+                  <button id="btn-refresh-assets" class="btn-primary text-xs">Sobanura</button>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <input id="assets-search" type="search" placeholder="Shakisha izina / aho bihagaze" class="rounded-lg border px-3 py-2 text-sm" />
+                    <button id="assets-search-btn" class="btn-secondary text-xs">Shakisha</button>
+                  </div>
+                </div>
+
+              <div class="table-wrapper">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Izina</th>
+                      <th>Itariki y'guha</th>
+                      <th>Agaciro (Frw)</th>
+                      <th>Aho bihagaze</th>
+                      <th>Iseta</th>
+                      <th>Ibiciro (Frw)</th>
+                      <th>Ibikorwa</th>
+                    </tr>
+                  </thead>
+                  <tbody id="assets-tbody">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Asset Modal -->
+          <div id="asset-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4">
+            <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
+              <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+                <h2 id="asset-modal-title" class="text-lg font-semibold text-primary-dark">Ongeza Asset</h2>
+                <button id="asset-modal-close" class="text-gray-500 hover:text-gray-700">✕</button>
+              </div>
+              <div class="px-6 py-4">
+                <form id="asset-form" class="space-y-4">
+                  <input type="hidden" id="asset-id" name="id" />
+                  <div>
+                    <label for="asset-name" class="block text-xs font-medium text-slate-700">Izina ry'umutungo *</label>
+                    <input id="asset-name" name="name" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required />
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label for="asset-purchase-date" class="block text-xs font-medium text-slate-700">Itariki y'guha *</label>
+                      <input id="asset-purchase-date" name="purchase_date" type="date" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required />
+                    </div>
+                    <div>
+                      <label for="asset-purchase-value" class="block text-xs font-medium text-slate-700">Agaciro (Frw) *</label>
+                      <input id="asset-purchase-value" name="purchase_value" type="number" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required />
+                    </div>
+                  </div>
+                  <div>
+                    <label for="asset-location" class="block text-xs font-medium text-slate-700">Aho bihagaze</label>
+                    <input id="asset-location" name="location" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="e.g., Office, Warehouse" />
+                  </div>
+                  <div>
+                    <label for="asset-notes" class="block text-xs font-medium text-slate-700">Icyitonderezwa</label>
+                    <textarea id="asset-notes" name="notes" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows="2" placeholder="Additional notes..."></textarea>
+                  </div>
+                  <div>
+                    <label for="asset-certificate-name" class="block text-xs font-medium text-slate-700">Izina ry'iseta</label>
+                    <input id="asset-certificate-name" name="certificate_name" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="e.g., Certificate of Ownership" />
+                  </div>
+                  <div>
+                    <label for="asset-certificate-file" class="block text-xs font-medium text-slate-700">Iseta (File)</label>
+                    <input id="asset-certificate-file" name="certificate_file" type="file" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
+                    <p class="mt-1 text-xs text-slate-500">PDF, Image, or Document file</p>
+                  </div>
+                  <div>
+                    <label class="flex items-center gap-2 text-xs font-medium text-slate-700">
+                      <input id="has-sold-date" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
+                      Ari igiciro cyabiciro?
+                    </label>
+                  </div>
+                  <div id="sold-section" class="hidden space-y-3 p-3 bg-slate-100 rounded">
+                    <div class="grid grid-cols-2 gap-3">
+                      <div>
+                        <label for="asset-sold-date" class="block text-xs font-medium text-slate-700">Itariki y'ibiciro</label>
+                        <input id="asset-sold-date" name="sold_date" type="date" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
+                      </div>
+                      <div>
+                        <label for="asset-sold-value" class="block text-xs font-medium text-slate-700">Agaciro (Frw)</label>
+                        <input id="asset-sold-value" name="sold_value" type="number" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              </div>
+              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
+                <button id="asset-cancel" class="btn-ghost">Siba</button>
+                <button id="asset-save" class="btn-primary">Bika</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- REPORTS -->
+          <div id="section-reports" class="hidden space-y-4">
+            <p class="text-sm font-semibold text-primary-dark">Raporo</p>
+            <div class="card">
+              <p class="text-xs text-slate-600">
+                Hitamo raporo ushaka kubona: ku banyamuryango, inguzanyo, imigabane cyangwa umutungo.
+              </p>
+              <form class="mt-3 grid gap-3 text-xs md:grid-cols-4">
+              <div>
+                <label class="block font-medium text-slate-700"> Icyiciro cya Raporo </label>
+                <select
+                  title="Icyiciro cya Raporo"
+                  class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                    <option>Abanyamuryango</option>
+                    <option>Inguzanyo</option>
+                    <option>Imigabane</option>
+                    <option>Expenses &amp; Assets</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block font-medium text-slate-700"> Guhera kuwa </label>
+                  <input
+                    type="date"
+                    title="Guhera kuwa"
+                    class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label class="block font-medium text-slate-700"> Kugeza kuwa </label>
+                  <input
+                    type="date"
+                    title="Kugeza kuwa"
+                    class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <div class="flex items-end">
+                  <button type="button" class="btn-secondary w-full justify-center">
+                    Kwerekana Raporo
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- SETTINGS -->
+          <div id="section-settings" class="hidden space-y-4">
+            <p class="text-sm font-semibold text-primary-dark">Settings z'Ikimina</p>
+            <div class="grid gap-4 lg:grid-cols-3">
+              <div class="card lg:col-span-2">
+                <p class="text-xs text-slate-600">
+                  Gena imiterere rusange y'inyungu n'uburyo bw'inguzanyo. Izi mibare zikoreshwa mu kubara
+                  inyungu n'amafaranga yishyurwa.
+                </p>
+                <form class="mt-4 grid gap-4 text-xs md:grid-cols-2">
+                  <div>
+                    <label for="settings-investment-rate" class="block font-medium text-slate-700">
+                      % Inyungu ku Munyamuryango
+                    </label>
+                    <input
+                      id="settings-investment-rate"
+                      type="number"
+                      value="18"
+                      class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <label for="settings-loan-term" class="block font-medium text-slate-700">
+                      % Inyungu ku Utari Umunyamuryango
+                    </label>
+                    <input
+                      id="settings-loan-term"
+                      type="number"
+                      value="24"
+                      class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <label for="settings-interest-rate" class="block font-medium text-slate-700">
+                      % yo Kuvana Imigabane
+                    </label>
+                    <input
+                      id="settings-interest-rate"
+                      type="number"
+                      value="5"
+                      class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <label for="settings-loan-term" class="block font-medium text-slate-700">
+                      Loan Term (amezi)
+                    </label>
+                    <input
+                      id="settings-loan-term"
+                      type="number"
+                      value="12"
+                      class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <label for="settings-method" class="block font-medium text-slate-700">
+                      Method
+                    </label>
+                    <input
+                      id="settings-method"
+                      type="text"
+                      value="Reducing Balance"
+                      readonly
+                      class="mt-1 w-full cursor-not-allowed rounded-lg border border-[color:var(--color-border)] bg-slate-50 px-3 py-2 text-xs text-slate-600"
+                    />
+                  </div>
+                </form>
+                <div class="mt-4 flex justify-end gap-2">
+                  <button class="btn-secondary text-xs">
+                    Bika Imikorere
+                  </button>
+                </div>
+              </div>
+              <div class="card">
+                <p class="text-xs font-semibold text-slate-600">Ibisobanuro byihuse</p>
+                <ul class="mt-3 space-y-2 text-[11px] text-slate-600">
+                  <li>
+                    <span class="font-semibold">% Inyungu ku Munyamuryango</span> – Inyungu yishyurwa
+                    abanyamuryango ku nguzanyo bafata.
+                  </li>
+                  <li>
+                    <span class="font-semibold">% Inyungu ku Utari Umunyamuryango</span> – Inyungu y'inyongera
+                    ku bantu batari abanyamuryango.
+                  </li>
+                  <li>
+                    <span class="font-semibold">% yo Kuvana Imigabane</span> – Igice gikurwaho nk'ikiguzi
+                    igihe umuntu avanye imigabane.
+                  </li>
+                  <li>
+                    <span class="font-semibold">Loan Term</span> – Igihe cy'inyongera gituma reducing balance
+                    ikora neza.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      // Portfolio line chart - months vs amounts (Frw)
+      const chartEl = document.getElementById("portfolioChart");
+      if (chartEl && window.Chart) {
+        const months = ["Mut", "Gas", "Wer", "Mata", "Gic", "Kam"];
+        const investment = [1200000, 1450000, 1600000, 1750000, 1900000, 2100000];
+        const loans = [600000, 720000, 800000, 780000, 760000, 740000];
+        const assets = [850000, 900000, 950000, 1000000, 1100000, 1150000];
+        const expenses = [80000, 60000, 90000, 70000, 65000, 85000];
+
+        new Chart(chartEl, {
+          type: "line",
+          data: {
+            labels: months,
+            datasets: [
+              {
+                label: "Ishoramari (Imigabane yose)",
+                data: investment,
+                borderColor: "#2F6B4F",
+                backgroundColor: "rgba(47, 107, 79, 0.1)",
+                tension: 0.35,
+                borderWidth: 2,
+              },
+              {
+                label: "Inguzanyo ziriho",
+                data: loans,
+                borderColor: "#E89C2C",
+                backgroundColor: "rgba(232, 156, 44, 0.08)",
+                tension: 0.35,
+                borderWidth: 2,
+              },
+              {
+                label: "Assets",
+                data: assets,
+                borderColor: "#6B4A2D",
+                backgroundColor: "rgba(107, 74, 45, 0.08)",
+                tension: 0.35,
+                borderWidth: 2,
+              },
+              {
+                label: "Expenses",
+                data: expenses,
+                borderColor: "#DC2626",
+                backgroundColor: "rgba(220, 38, 38, 0.06)",
+                tension: 0.35,
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: {
+                  usePointStyle: true,
+                  boxWidth: 8,
+                },
+              },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const value = ctx.parsed.y || 0;
+                    return `${ctx.dataset.label}: ${value.toLocaleString("rw-RW")} Frw`;
+                  },
+                },
+              },
+            },
+            scales: {
+              y: {
+                ticks: {
+                  callback: (v) => `${Number(v).toLocaleString("rw-RW")} Frw`,
+                },
+                grid: {
+                  color: "rgba(148, 163, 184, 0.2)",
+                },
+              },
+              x: {
+                grid: {
+                  display: false,
+                },
+              },
+            },
+          },
+        });
+      }
+
+      // Global user management functions (available from any tab)
+      const apiUrl = 'users_api.php';
+      const viewModal = document.getElementById('user-view-modal');
+      const viewModalClose = document.getElementById('view-modal-close');
+      const viewClose = document.getElementById('view-close');
+      let globalEscapeHtml = (s) => {
+        if (s === null || s === undefined) return '';
+        const str = String(s);
+        return str.replace(/[&<>'"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
+      };
+
+      let openViewModal = () => { viewModal.classList.remove('hidden'); viewModal.classList.add('flex'); };
+      let closeViewModal = () => { viewModal.classList.add('hidden'); viewModal.classList.remove('flex'); };
+
+      let viewUserDetails = async (id) => {
+        try{
+          const res = await fetch(`${apiUrl}?id=${encodeURIComponent(id)}`, {cache:'no-store'});
+          if (!res.ok) {
+            const text = await res.text();
+            console.error('View fetch error status', res.status, text);
+            alert('Error fetching user details: ' + res.status);
+            return;
+          }
+          const json = await res.json();
+          if(json.success && json.data){
+            const d = json.data;
+            const out = document.getElementById('user-details');
+            out.innerHTML = `
+              <div><strong>ID:</strong> ${globalEscapeHtml(d.id)}</div>
+              <div><strong>Amazina:</strong> ${globalEscapeHtml(d.names)}</div>
+              <div><strong>NID/Passport:</strong> ${globalEscapeHtml(d.nid_passport)}</div>
+              <div><strong>Email:</strong> ${globalEscapeHtml(d.email)}</div>
+              <div><strong>Telefoni 1:</strong> ${globalEscapeHtml(d.phone1)}</div>
+              <div><strong>Telefoni 2:</strong> ${globalEscapeHtml(d.phone2 || '')}</div>
+              <div><strong>Umwishingira:</strong> ${globalEscapeHtml(d.guarantee_name || '')}</div>
+              <div><strong>G. NID:</strong> ${globalEscapeHtml(d.guarantee_nid_passport || '')}</div>
+              <div><strong>G. Email:</strong> ${globalEscapeHtml(d.guarantee_email || '')}</div>
+              <div><strong>G. Phone1:</strong> ${globalEscapeHtml(d.guarantee_phone1 || '')}</div>
+              <div><strong>G. Phone2:</strong> ${globalEscapeHtml(d.guarantee_phone2 || '')}</div>
+              <div><strong>Is Member:</strong> ${d.is_member ? 'Yes' : 'No'}</div>
+              <div><strong>Is Admin:</strong> ${d.is_admin ? 'Yes' : 'No'}</div>
+            `;
+            openViewModal();
+          } else {
+            console.error('View response', json);
+            alert(json.message || 'No details available');
+          }
+        }catch(err){ console.error('View error', err); alert('Network error'); }
+      };
+
+      // Global event delegation: handle Reba clicks from any table (works across all tabs)
+      document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('btn-view')) {
+          const id = e.target.dataset.id;
+          viewUserDetails(id);
+        }
+      });
+
+      // View modal close handlers
+      viewModalClose.addEventListener('click', closeViewModal);
+      viewClose.addEventListener('click', closeViewModal);
+      viewModal.addEventListener('click', (e) => { if (e.target === viewModal) closeViewModal(); });
+
+      // Simple tab switching for admin sections
+      const menu = document.getElementById("admin-menu");
+      const sections = [
+        "overview",
+        "members",
+        "users",
+        "loans",
+        "accounts",
+        "shares",
+        "payments",
+        "expenses",
+        "transactions",
+        "assets",
+        "reports",
+        "settings",
+      ];
+      const titles = {
+        overview: "Isuzuma rusange ry'Ikimina",
+        members: "Urutonde n'imicungire y'abanyamuryango",
+        users: "Imicungire y'abakoresha (Create / Edit / Delete)",
+        accounts: "Amafaranga (Accounts) - Imicungire y'ama konti",
+        loans: "Inguzanyo zose z'Ikimina",
+        shares: "Imigabane n'inyungu zayo",
+        payments: "Kwishyura kw'inguzanyo",
+        expenses: "Expenses z'Ikimina",
+        transactions: "Transactions - Izafari z'amafaranga",
+        assets: "Imutungo (Assets) y'Ikimina",
+        reports: "Raporo z'ingenzi z'Ikimina",
+        settings: "Igenamiterere (Settings) z'Ikimina",
+      };
+
+      menu.querySelectorAll("button[data-section]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const key = btn.getAttribute("data-section");
+
+          // active link style
+          menu.querySelectorAll("button[data-section]").forEach((b) => {
+            b.classList.remove("sidebar-link-active");
+          });
+          btn.classList.add("sidebar-link-active");
+
+          // toggle sections
+          sections.forEach((s) => {
+            const el = document.getElementById(`section-${s}`);
+            if (el) {
+              el.classList.toggle("hidden", s !== key);
+            }
+          });
+
+          const titleEl = document.getElementById("section-title");
+          if (titleEl && titles[key]) {
+            titleEl.textContent = titles[key];
+          }
+        });
+      });
+      // Users management JS
+      (function () {
+        const form = document.getElementById('user-form');
+        const tbody = document.getElementById('users-tbody');
+        const btnNew = document.getElementById('btn-new-user');
+        const btnRefresh = document.getElementById('btn-refresh-users');
+        const saveBtn = document.getElementById('user-save');
+        const modal = document.getElementById('user-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalClose = document.getElementById('modal-close');
+
+        let currentPage = 1;
+        let perPage = 10;
+        let currentQuery = '';
+        let lastTotal = 0;
+
+        // Use escapeHtml from global scope
+        function escapeHtml(s){
+          return globalEscapeHtml(s);
+        }
+
+        function openModal(){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
+        function closeModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
+
+        async function fetchUsers(page = currentPage, q = currentQuery){
+          try{
+            const url = `${apiUrl}?page=${page}&per_page=${perPage}` + (q ? `&q=${encodeURIComponent(q)}` : '');
+            const res = await fetch(url, {cache: 'no-store'});
+            if (!res.ok) {
+              if (res.status === 403) {
+                alert('Unauthorized. Please log in as admin.');
+                return;
+              }
+              const txt = await res.text();
+              console.error('fetchUsers error', res.status, txt);
+              alert('Error loading users: ' + res.status);
+              return;
+            }
+            const json = await res.json();
+            if(json.success){
+              currentPage = json.page || page;
+              perPage = json.per_page || perPage;
+              lastTotal = json.total || 0;
+              renderUsersTable(json.data || []);
+              updatePagination();
+            } else {
+              alert(json.message || 'Error loading users');
+            }
+          }catch(e){ console.error(e); alert('Network error'); }
+        }
+
+        function renderUsersTable(users){
+          tbody.innerHTML = '';
+          users.forEach(u => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${u.id}</td>
+              <td>${escapeHtml(u.names)}</td>
+              <td>${escapeHtml(u.email)}</td>
+              <td>${escapeHtml(u.phone1 || '')}</td>
+              <td>${u.is_member ? 'Yes' : 'No'}</td>
+              <td>${u.is_admin ? 'Yes' : 'No'}</td>
+              <td>
+                <button class="btn-ghost btn-view" data-id="${u.id}">Reba</button>
+                <button class="btn-ghost btn-edit" data-id="${u.id}">Hindura</button>
+                <button class="btn-ghost-danger btn-delete" data-id="${u.id}">Siba</button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+          // attach handlers for edit and delete only (view is handled globally via event delegation)
+          tbody.querySelectorAll('.btn-edit').forEach(b=>b.addEventListener('click', onEdit));
+          tbody.querySelectorAll('.btn-delete').forEach(b=>b.addEventListener('click', onDelete));
+        }
+
+        function updatePagination(){
+          const pageEl = document.getElementById('users-page');
+          const prev = document.getElementById('users-prev');
+          const next = document.getElementById('users-next');
+          const totalPages = Math.max(1, Math.ceil(lastTotal / perPage));
+          pageEl.textContent = `${currentPage} / ${totalPages}`;
+          prev.disabled = currentPage <= 1;
+          next.disabled = currentPage >= totalPages;
+        }
+
+        function clearForm(){
+          form.reset();
+          document.getElementById('user-id').value = '';
+          saveBtn.textContent = 'Bika';
+          modalTitle.textContent = 'Umunyamukoresha Mushya';
+          // Reset conditional sections
+          document.getElementById('has-phone2').checked = false;
+          document.getElementById('phone2-section').classList.add('hidden');
+          document.getElementById('has-guarantor').checked = false;
+          document.getElementById('guarantor-section').classList.add('hidden');
+          document.getElementById('has-guarantee-phone2').checked = false;
+          document.getElementById('guarantee-phone2-section').classList.add('hidden');
+        }
+
+        function fillForm(u){
+          document.getElementById('user-id').value = u.id;
+          document.getElementById('user-names').value = u.names || '';
+          document.getElementById('user-nid').value = u.nid_passport || '';
+          document.getElementById('user-email').value = u.email || '';
+          document.getElementById('user-phone1').value = u.phone1 || '';
+          document.getElementById('user-password').value = '';
+          document.getElementById('user-is-member').checked = !!u.is_member;
+          document.getElementById('user-is-admin').checked = !!u.is_admin;
+
+          // Handle phone2
+          const hasPhone2 = u.phone2 && u.phone2.trim() !== '';
+          document.getElementById('has-phone2').checked = hasPhone2;
+          document.getElementById('phone2-section').classList.toggle('hidden', !hasPhone2);
+          document.getElementById('user-phone2').value = u.phone2 || '';
+
+          // Handle guarantor
+          const hasGuarantor = u.guarantee_name && u.guarantee_name.trim() !== '';
+          document.getElementById('has-guarantor').checked = hasGuarantor;
+          document.getElementById('guarantor-section').classList.toggle('hidden', !hasGuarantor);
+          document.getElementById('user-guarantee-name').value = u.guarantee_name || '';
+          document.getElementById('user-guarantee-nid').value = u.guarantee_nid_passport || '';
+          document.getElementById('user-guarantee-email').value = u.guarantee_email || '';
+          document.getElementById('user-guarantee-phone1').value = u.guarantee_phone1 || '';
+
+          // Handle guarantee phone2
+          const hasGuaranteePhone2 = u.guarantee_phone2 && u.guarantee_phone2.trim() !== '';
+          document.getElementById('has-guarantee-phone2').checked = hasGuaranteePhone2;
+          document.getElementById('guarantee-phone2-section').classList.toggle('hidden', !hasGuaranteePhone2);
+          document.getElementById('user-guarantee-phone2').value = u.guarantee_phone2 || '';
+
+          saveBtn.textContent = 'Hindura';
+          modalTitle.textContent = 'Guhindura Umukoresha';
+          openModal();
+        }
+
+        async function onEdit(e){
+          const id = e.currentTarget.dataset.id;
+          try{
+            const res = await fetch(`${apiUrl}?id=${encodeURIComponent(id)}`, {cache:'no-store'});
+            const json = await res.json();
+            if(json.success && json.data){ fillForm(json.data); }
+          }catch(e){console.error(e);}
+        }
+
+        async function onDelete(e){
+          const id = e.currentTarget.dataset.id;
+          if(!confirm('Urashaka koko gusiba uyu mukoresha?')) return;
+          const fd = new FormData(); fd.append('action','delete'); fd.append('id', id);
+          try{
+            const res = await fetch(apiUrl, {method:'POST', body: fd});
+            const json = await res.json();
+            if(json.success){ fetchUsers(1); }
+            else alert(json.message || 'Error deleting');
+          }catch(err){ console.error(err); alert('Network error'); }
+        }
+
+        form.addEventListener('submit', async (ev)=>{
+          ev.preventDefault();
+          const id = document.getElementById('user-id').value;
+          const action = id ? 'update' : 'create';
+          const fd = new FormData(form);
+          fd.append('action', action);
+          try{
+            const res = await fetch(apiUrl, {method:'POST', body: fd});
+            const json = await res.json();
+            if(json.success){ fetchUsers(1); clearForm(); closeModal(); }
+            else alert(json.message || 'Error saving user');
+          }catch(e){ console.error(e); alert('Network error'); }
+        });
+
+        // Modal handlers
+        btnNew.addEventListener('click', ()=>{ clearForm(); openModal(); document.getElementById('user-names').focus(); });
+        btnRefresh.addEventListener('click', ()=> fetchUsers(1));
+        document.getElementById('user-cancel').addEventListener('click', closeModal);
+        modalClose.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
+
+        // Ensure save button submits the form (in case it's outside the form)
+        if (saveBtn) {
+          saveBtn.addEventListener('click', (e) => {
+            if (typeof form.requestSubmit === 'function') { form.requestSubmit(); } else { form.submit(); }
+          });
+        }
+
+        // Conditional visibility toggles
+        document.getElementById('has-phone2').addEventListener('change', (e)=>{
+          const section = document.getElementById('phone2-section');
+          section.classList.toggle('hidden', !e.target.checked);
+        });
+        document.getElementById('has-guarantor').addEventListener('change', (e)=>{
+          const section = document.getElementById('guarantor-section');
+          section.classList.toggle('hidden', !e.target.checked);
+        });
+        document.getElementById('has-guarantee-phone2').addEventListener('change', (e)=>{
+          const section = document.getElementById('guarantee-phone2-section');
+          section.classList.toggle('hidden', !e.target.checked);
+        });
+
+        // Search and pagination controls
+        const searchInput = document.getElementById('users-search');
+        const searchBtn = document.getElementById('users-search-btn');
+        const prevBtn = document.getElementById('users-prev');
+        const nextBtn = document.getElementById('users-next');
+
+        let searchTimer = null;
+        searchInput.addEventListener('input', (e)=>{
+          clearTimeout(searchTimer);
+          searchTimer = setTimeout(()=>{
+            currentQuery = e.target.value.trim();
+            fetchUsers(1, currentQuery);
+          }, 300);
+        });
+        searchBtn.addEventListener('click', ()=>{ currentQuery = searchInput.value.trim(); fetchUsers(1, currentQuery); });
+
+        prevBtn.addEventListener('click', ()=>{ if (currentPage>1){ currentPage--; fetchUsers(currentPage, currentQuery); } });
+        nextBtn.addEventListener('click', ()=>{ const totalPages = Math.max(1, Math.ceil(lastTotal / perPage)); if (currentPage<totalPages){ currentPage++; fetchUsers(currentPage, currentQuery); } });
+
+        // Fetch current session info (admin name) and show in header
+        (async function loadSession(){
+          try{
+            const resp = await fetch('../get_session.php', {cache: 'no-store'});
+            const js = await resp.json();
+            if(js.success && js.data && js.data.names){
+              const el = document.getElementById('admin-name');
+              if(el) el.textContent = js.data.names;
+            }
+          }catch(e){ /* ignore */ }
+        })();
+
+        // initial load
+        fetchUsers(1);
+      })();
+
+      // Accounts management JS
+      (function(){
+        const api = 'accounts_api.php';
+        const tbody = document.getElementById('accounts-tbody');
+        const btnNew = document.getElementById('btn-new-account');
+        const btnRefresh = document.getElementById('btn-refresh-accounts');
+        const modal = document.getElementById('account-modal');
+        const modalClose = document.getElementById('account-modal-close');
+        const saveBtn = document.getElementById('account-save');
+        const cancelBtn = document.getElementById('account-cancel');
+        const form = document.getElementById('account-form');
+
+        if(!tbody) return; // nothing to do if section not present
+
+        function openModal(){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
+        function closeModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
+
+        async function fetchAccounts(){
+          try{
+            const res = await fetch(`${api}?per_page=200`);
+            if(!res.ok){ console.error('fetchAccounts', res.status); return; }
+            const json = await res.json();
+            if(json.success){ renderAccountsTable(json.data || []); }
+            else console.error('accounts load', json);
+          }catch(err){ console.error('fetchAccounts error', err); }
+        }
+
+        function renderAccountsTable(rows){
+          tbody.innerHTML = '';
+          rows.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${r.account_id}</td>
+              <td>${globalEscapeHtml(r.name)}</td>
+              <td>${globalEscapeHtml(r.type)}</td>
+              <td>${globalEscapeHtml(r.account_number || '')}</td>
+              <td>${globalEscapeHtml(r.created_at)}</td>
+              <td>
+                <button class="btn-ghost btn-edit-account" data-id="${r.account_id}">Hindura</button>
+                <button class="btn-ghost-danger btn-delete-account" data-id="${r.account_id}">Siba</button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+
+          tbody.querySelectorAll('.btn-delete-account').forEach(b => b.addEventListener('click', async (e)=>{
+            const id = b.getAttribute('data-id');
+            if(!confirm('Urashaka gusiba iyi konti?')) return;
+            const fd = new FormData(); fd.append('action','delete'); fd.append('id', id);
+            try{
+              const res = await fetch(api, {method:'POST', body: fd});
+              const json = await res.json();
+              if(json.success) fetchAccounts(); else alert(json.message||'Error');
+            }catch(err){ console.error(err); alert('Network error'); }
+          }));
+
+          tbody.querySelectorAll('.btn-edit-account').forEach(b => b.addEventListener('click', async ()=>{
+            const id = b.getAttribute('data-id');
+            try{
+              const res = await fetch(`${api}?id=${encodeURIComponent(id)}`);
+              const json = await res.json();
+              if(json.success && json.data){
+                const d = json.data;
+                document.getElementById('account-id').value = d.account_id;
+                document.getElementById('account-name').value = d.name || '';
+                document.getElementById('account-type').value = d.type || 'cash';
+                document.getElementById('account-number').value = d.account_number || '';
+                openModal();
+              } else alert(json.message||'Not found');
+            }catch(err){ console.error(err); }
+          }));
+        }
+
+        if(btnNew) btnNew.addEventListener('click', ()=>{ form.reset(); document.getElementById('account-id').value = ''; openModal(); document.getElementById('account-name').focus(); });
+        if(btnRefresh) btnRefresh.addEventListener('click', fetchAccounts);
+        if(modalClose) modalClose.addEventListener('click', closeModal);
+        if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
+        if(modal) modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+
+        if(saveBtn){ saveBtn.addEventListener('click', async ()=>{
+          const id = document.getElementById('account-id').value;
+          const fd = new FormData(form);
+          fd.append('action', id ? 'update' : 'create');
+          if(id) fd.append('id', id);
+          try{
+            const res = await fetch(api, {method:'POST', body: fd});
+            const json = await res.json();
+            if(json.success){ closeModal(); fetchAccounts(); } else { alert(json.message || 'Error saving'); }
+          }catch(err){ console.error(err); alert('Network error'); }
+        }); }
+
+        // initial load
+        fetchAccounts();
+      })();
+
+      // Assets management JS
+      (function(){
+        const api = 'assets_api.php';
+        const tbody = document.getElementById('assets-tbody');
+        const btnNew = document.getElementById('btn-new-asset');
+        const btnRefresh = document.getElementById('btn-refresh-assets');
+        const searchInput = document.getElementById('assets-search');
+        const searchBtn = document.getElementById('assets-search-btn');
+        const modal = document.getElementById('asset-modal');
+        const modalClose = document.getElementById('asset-modal-close');
+        const saveBtn = document.getElementById('asset-save');
+        const cancelBtn = document.getElementById('asset-cancel');
+        const form = document.getElementById('asset-form');
+
+        if(!tbody) return; // nothing to do if section not present
+
+        let currentQuery = '';
+        let searchTimer = null;
+
+        function openModal(){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
+        function closeModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
+
+        async function fetchAssets(q = currentQuery){
+          try{
+            const url = `${api}?per_page=200` + (q ? `&q=${encodeURIComponent(q)}` : '');
+            const res = await fetch(url);
+            if(!res.ok){ console.error('fetchAssets', res.status); return; }
+            const json = await res.json();
+            if(json.success){ renderAssetsTable(json.data || []); }
+            else console.error('assets load', json);
+          }catch(err){ console.error('fetchAssets error', err); }
+        }
+
+        function renderAssetsTable(rows){
+          tbody.innerHTML = '';
+          rows.forEach(r => {
+            const tr = document.createElement('tr');
+            let certificateHtml = '';
+            if (r.certificate_file && r.certificate_mime && r.certificate_file !== null) {
+              const mimeType = r.certificate_mime;
+              if (mimeType && mimeType.startsWith('image/')) {
+                try {
+                  const hexStr = r.certificate_file;
+                  const bytes = [];
+                  for (let i = 0; i < hexStr.length; i += 2) {
+                    bytes.push(parseInt(hexStr.substr(i, 2), 16));
+                  }
+                  const binStr = String.fromCharCode(...bytes);
+                  const b64 = btoa(binStr);
+                  certificateHtml = `<img src="data:${mimeType};base64,${b64}" alt="Certificate" class="h-16 w-auto rounded" />`;
+                } catch(e) {
+                  certificateHtml = `<span class="text-xs text-slate-500">📄 ${globalEscapeHtml(r.certificate_name || 'Document')}</span>`;
+                }
+              } else {
+                certificateHtml = `<span class="text-xs text-slate-500">📄 ${globalEscapeHtml(r.certificate_name || 'Document')}</span>`;
+              }
+            }
+            tr.innerHTML = `
+              <td>${r.asset_id}</td>
+              <td>${globalEscapeHtml(r.name)}</td>
+              <td>${globalEscapeHtml(r.purchase_date)}</td>
+              <td>${Number(r.purchase_value).toLocaleString('rw-RW')} Frw</td>
+              <td>${globalEscapeHtml(r.location || '')}</td>
+              <td>${certificateHtml}</td>
+              <td>${Number(r.sold_value||0).toLocaleString('rw-RW')} Frw</td>
+              <td>
+                <button class="btn-ghost btn-edit-asset" data-id="${r.asset_id}">Hindura</button>
+                <button class="btn-ghost-danger btn-delete-asset" data-id="${r.asset_id}">Siba</button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+
+          tbody.querySelectorAll('.btn-delete-asset').forEach(b => b.addEventListener('click', async ()=>{
+            const id = b.getAttribute('data-id');
+            if(!confirm('Urashaka gusiba iyi Imutungo?')) return;
+            const fd = new FormData(); fd.append('action','delete'); fd.append('id', id);
+            try{
+              const res = await fetch(api, {method:'POST', body: fd});
+              const json = await res.json();
+              if(json.success) fetchAssets(); else alert(json.message||'Error');
+            }catch(err){ console.error(err); alert('Network error'); }
+          }));
+
+          tbody.querySelectorAll('.btn-edit-asset').forEach(b => b.addEventListener('click', async ()=>{
+            const id = b.getAttribute('data-id');
+            try{
+              const res = await fetch(`${api}?id=${encodeURIComponent(id)}`);
+              const json = await res.json();
+              if(json.success && json.data){
+                const d = json.data;
+                document.getElementById('asset-id').value = d.asset_id;
+                document.getElementById('asset-name').value = d.name || '';
+                document.getElementById('asset-purchase-date').value = d.purchase_date || '';
+                document.getElementById('asset-purchase-value').value = d.purchase_value || '';
+                document.getElementById('asset-location').value = d.location || '';
+                document.getElementById('asset-notes').value = d.notes || '';
+                document.getElementById('asset-certificate-name').value = d.certificate_name || '';
+                const hasSold = d.sold_value && d.sold_value > 0;
+                document.getElementById('has-sold-date').checked = hasSold;
+                document.getElementById('sold-section').classList.toggle('hidden', !hasSold);
+                document.getElementById('asset-sold-date').value = d.sold_date || '';
+                document.getElementById('asset-sold-value').value = d.sold_value || '';
+                openModal();
+              } else alert(json.message||'Not found');
+            }catch(err){ console.error(err); }
+          }));
+        }
+
+        if(btnNew) btnNew.addEventListener('click', ()=>{ form.reset(); document.getElementById('asset-id').value = ''; document.getElementById('has-sold-date').checked = false; document.getElementById('sold-section').classList.add('hidden'); openModal(); document.getElementById('asset-name').focus(); });
+        if(btnRefresh) btnRefresh.addEventListener('click', ()=>{ currentQuery = ''; searchInput.value = ''; fetchAssets(); });
+
+        // Search functionality
+        if(searchInput){
+          searchInput.addEventListener('input', (e)=>{
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(()=>{
+              currentQuery = e.target.value.trim();
+              fetchAssets(currentQuery);
+            }, 300);
+          });
+        }
+        if(searchBtn){
+          searchBtn.addEventListener('click', ()=>{
+            currentQuery = searchInput.value.trim();
+            fetchAssets(currentQuery);
+          });
+        }
+
+        if(modalClose) modalClose.addEventListener('click', closeModal);
+        if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
+        if(modal) modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+
+        // Handle sold checkbox toggle
+        if(document.getElementById('has-sold-date')) {
+          document.getElementById('has-sold-date').addEventListener('change', (e)=>{
+            document.getElementById('sold-section').classList.toggle('hidden', !e.target.checked);
+          });
+        }
+
+        if(saveBtn){ saveBtn.addEventListener('click', async ()=>{
+          const id = document.getElementById('asset-id').value;
+          const hasSold = document.getElementById('has-sold-date').checked;
+          
+          // If not sold, clear the sold date and value fields
+          if (!hasSold) {
+            document.getElementById('asset-sold-date').value = '';
+            document.getElementById('asset-sold-value').value = '';
+          }
+          
+          const fd = new FormData(form);
+          fd.append('action', id ? 'update' : 'create');
+          if(id) fd.append('id', id);
+          try{
+            console.log('Submitting asset form with data:', fd);
+            const res = await fetch(api, {method:'POST', body: fd});
+            const json = await res.json();
+            if(json.success){ closeModal(); fetchAssets(); } else { alert(json.message || 'Error saving'); }
+          }catch(err){ console.error(err); alert('Network error'); }
+        }); }
+
+        // initial load
+        fetchAssets();
+      })();
+
+      // Expenses management JS
+      (function(){
+        const api = 'expenses_api.php';
+        const tbody = document.getElementById('expenses-tbody');
+        const btnNew = document.getElementById('btn-new-expense');
+        const btnRefresh = document.getElementById('btn-refresh-expenses');
+        const searchInput = document.getElementById('expenses-search');
+        const searchBtn = document.getElementById('expenses-search-btn');
+        const modal = document.getElementById('expense-modal');
+        const modalClose = document.getElementById('expense-modal-close');
+        const saveBtn = document.getElementById('expense-save');
+        const cancelBtn = document.getElementById('expense-cancel');
+        const form = document.getElementById('expense-form');
+        const accountSelect = document.getElementById('expense-account');
+
+        if(!tbody) return;
+
+        let currentQuery = '';
+        let searchTimer = null;
+
+        function openModal(){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
+        function closeModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
+
+        // Load accounts for dropdown
+        async function loadAccounts(){
+          try{
+            // Use the dedicated accounts API to avoid cross-endpoint output mixing
+            const res = await fetch('accounts_api.php');
+            const text = await res.text();
+            let json = null;
+            try{
+              json = JSON.parse(text);
+            }catch(parseErr){
+              console.error('loadAccounts: response not JSON', text);
+              alert('Failed to load accounts: server returned non-JSON response. See console for details.');
+              return;
+            }
+
+            if(!res.ok){
+              console.error('loadAccounts HTTP error:', res.status, json);
+              alert('Failed to load accounts: ' + (json.message || ('HTTP ' + res.status)) + (json.output ? '\n\nServer output:\n' + json.output : '') + (json.debug_log ? '\n\nDebug log: ' + json.debug_log : ''));
+              return;
+            }
+
+            if(json.success){
+              accountSelect.innerHTML = '<option value="">-- Hitamo Konto --</option>';
+              json.data.forEach(acc => {
+                const opt = document.createElement('option');
+                opt.value = acc.account_id;
+                opt.textContent = acc.name;
+                accountSelect.appendChild(opt);
+              });
+              console.log('Accounts loaded:', json.data.length);
+            } else {
+              console.error('Load accounts error:', json.message, json);
+              alert('Failed to load accounts: ' + (json.message || 'Unknown error') + (json.output ? '\n\nServer output:\n' + json.output : '') + (json.debug_log ? '\n\nDebug log: ' + json.debug_log : ''));
+            }
+          }catch(err){ console.error('Load accounts fetch error', err); alert('Failed to load accounts: ' + err.message); }
+        }
+
+        async function fetchExpenses(q = currentQuery){
+          try{
+            const url = `${api}?per_page=200` + (q ? `&q=${encodeURIComponent(q)}` : '');
+            const res = await fetch(url);
+            if(!res.ok){ console.error('fetchExpenses', res.status); return; }
+            const json = await res.json();
+            if(json.success){ renderExpensesTable(json.data || []); }
+            else console.error('expenses load', json);
+          }catch(err){ console.error('fetchExpenses error', err); }
+        }
+
+        function renderExpensesTable(rows){
+          tbody.innerHTML = '';
+          rows.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${r.expense_id}</td>
+              <td>${globalEscapeHtml(r.account_name || '')}</td>
+              <td>${globalEscapeHtml(r.expense_date)}</td>
+              <td>${globalEscapeHtml(r.category)}</td>
+              <td>${Number(r.amount).toLocaleString('rw-RW')} Frw</td>
+              <td>
+                <button class="btn-ghost btn-edit-expense" data-id="${r.expense_id}">Hindura</button>
+                <button class="btn-ghost-danger btn-delete-expense" data-id="${r.expense_id}">Siba</button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+
+          tbody.querySelectorAll('.btn-delete-expense').forEach(b => b.addEventListener('click', async ()=>{
+            const id = b.getAttribute('data-id');
+            if(!confirm('Urashaka gusiba iyi Expense?')) return;
+            const fd = new FormData(); fd.append('action','delete'); fd.append('id', id);
+            try{
+              const res = await fetch(api, {method:'POST', body: fd});
+              const json = await res.json();
+              if(json.success) fetchExpenses(); else alert(json.message||'Error');
+            }catch(err){ console.error(err); alert('Network error'); }
+          }));
+
+          tbody.querySelectorAll('.btn-edit-expense').forEach(b => b.addEventListener('click', async ()=>{
+            const id = b.getAttribute('data-id');
+            try{
+              const res = await fetch(`${api}?id=${encodeURIComponent(id)}`);
+              const json = await res.json();
+              if(json.success && json.data){
+                const d = json.data;
+                document.getElementById('expense-id').value = d.expense_id;
+                document.getElementById('expense-account').value = d.account_id;
+                document.getElementById('expense-date').value = d.expense_date || '';
+                document.getElementById('expense-category').value = d.category || '';
+                document.getElementById('expense-amount').value = d.amount || '';
+                document.getElementById('expense-description').value = d.description || '';
+                openModal();
+              } else alert(json.message||'Not found');
+            }catch(err){ console.error(err); }
+          }));
+        }
+
+        if(btnNew) btnNew.addEventListener('click', ()=>{ form.reset(); document.getElementById('expense-id').value = ''; openModal(); document.getElementById('expense-account').focus(); });
+        if(btnRefresh) btnRefresh.addEventListener('click', ()=>{ currentQuery = ''; searchInput.value = ''; fetchExpenses(); });
+
+        // Search functionality
+        if(searchInput){
+          searchInput.addEventListener('input', (e)=>{
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(()=>{
+              currentQuery = e.target.value.trim();
+              fetchExpenses(currentQuery);
+            }, 300);
+          });
+        }
+        if(searchBtn){
+          searchBtn.addEventListener('click', ()=>{
+            currentQuery = searchInput.value.trim();
+            fetchExpenses(currentQuery);
+          });
+        }
+
+        if(modalClose) modalClose.addEventListener('click', closeModal);
+        if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
+        if(modal) modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+
+        if(saveBtn){ saveBtn.addEventListener('click', async ()=>{
+          const id = document.getElementById('expense-id').value;
+          const fd = new FormData(form);
+          fd.append('action', id ? 'update' : 'create');
+          if(id) fd.append('id', id);
+          try{
+            const res = await fetch(api, {method:'POST', body: fd});
+            const text = await res.text();
+            // Try to parse JSON; if server returned HTML or an error page, show it
+            let json = null;
+            try{
+              json = JSON.parse(text);
+            }catch(parseErr){
+              console.error('Response not JSON:', text);
+              alert('Server returned non-JSON response. See console for details.');
+              console.log('Raw response:', text);
+              return;
+            }
+
+            if(!res.ok){
+              alert(`HTTP Error ${res.status}: ${json.message || text}`);
+              return;
+            }
+
+            if(json.success){ closeModal(); fetchExpenses(); } else { alert(json.message || 'Error saving'); }
+          }catch(err){ console.error('Fetch error:', err); alert('Network error: ' + err.message); }
+        }); }
+
+        // initial load
+        loadAccounts();
+        fetchExpenses();
+      })();
+
+      // Loans management JS
+      (function(){
+        const api = 'loans_api.php';
+        const tbodySelector = '#section-loans table tbody';
+        const modal = document.getElementById('loan-modal');
+        const form = document.getElementById('loan-form');
+        const saveBtn = document.getElementById('loan-save');
+        const cancelBtn = document.getElementById('loan-cancel');
+        const modalClose = document.getElementById('loan-modal-close');
+        const accountSelect = document.getElementById('loan-account');
+        const borrowerSelect = document.getElementById('loan-borrower');
+        const approvedSelect = document.getElementById('loan-approved-by');
+        const disbursedSelect = document.getElementById('loan-disbursed-by');
+        const btnNewLoan = document.getElementById('btn-new-loan');
+        const btnRefreshLoans = document.getElementById('btn-refresh-loans');
+        const btnAddGuarantor = document.getElementById('btn-add-guarantor');
+        const guarantorsListEl = document.getElementById('loan-guarantors-list');
+        let guarantorCounter = 0;
+
+        function openModal(){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
+        function closeModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
+
+        async function loadUsersInto(selectEl){
+          try{
+            const res = await fetch('users_api.php?per_page=500', {credentials: 'include'});
+            const json = await res.json();
+            if(json.success){
+              selectEl.innerHTML = '<option value="">-- Hitamo --</option>';
+              json.data.forEach(u => { const opt = document.createElement('option'); opt.value = u.id; opt.textContent = u.names; selectEl.appendChild(opt); });
+            } else console.error('loadUsers error', json);
+          }catch(err){ console.error('loadUsers fetch error', err); }
+        }
+
+        async function loadAccountsLocal(){
+          try{
+            const res = await fetch('accounts_api.php', {credentials: 'include'});
+            const text = await res.text();
+            let json = null;
+            try{ json = JSON.parse(text); } catch(e){ console.error('accounts not json', text); return; }
+            if(json.success){ accountSelect.innerHTML = '<option value="">-- Hitamo Konto --</option>'; json.data.forEach(acc=>{ const opt=document.createElement('option'); opt.value=acc.account_id; opt.textContent=acc.name; accountSelect.appendChild(opt); }); }
+          }catch(err){ console.error(err); }
+        }
+
+        async function addGuarantorRow(guarantorId='', guaranteeAmount=''){
+          guarantorCounter++;
+          const idx = guarantorCounter;
+          const row = document.createElement('div');
+          row.className = 'flex gap-2 guarantor-row';
+          row.id = 'guarantor-' + idx;
+          row.innerHTML = `
+            <select name="guarantor_user_id_${idx}" class="flex-1 rounded-lg border px-3 py-2 text-sm guarantor-select" data-idx="${idx}">
+              <option value="">-- Hitamo Umwishingizi --</option>
+            </select>
+            <input name="guarantee_amount_${idx}" type="number" step="0.01" placeholder="Umubare (Frw)" class="w-32 rounded-lg border px-3 py-2 text-sm guarantee-amount" min="0" />
+            <div class="text-xs text-gray-700 bg-blue-50 p-2 rounded flex-1" id="guarantee-details-${idx}" style="display:none;">
+              <div class="text-gray-600">
+                <span id="detail-contrib-${idx}">0</span> 
+                <span> - </span>
+                <span id="detail-withdraw-${idx}">0</span>
+                <span> - </span>
+                <span id="detail-loans-${idx}">0</span>
+                <span> - 120,000</span>
+              </div>
+              <div class="mt-1 pt-1 border-t-2 border-blue-400 font-bold text-blue-700 text-sm">
+                Max Inzira: <span id="detail-max-${idx}">0</span>
+              </div>
+            </div>
+            <button type="button" class="btn-ghost-danger btn-remove-guarantor text-xs" data-idx="${idx}">Siba</button>
+          `;
+          guarantorsListEl.appendChild(row);
+          
+          // Load eligible guarantors into this select
+          const selectEl = row.querySelector('select');
+          const guaranteeDetails = row.querySelector(`#guarantee-details-${idx}`);
+          const amountInput = row.querySelector(`input[name="guarantee_amount_${idx}"]`);
+          
+          try {
+            const res = await fetch('loans_api.php?action=eligible_guarantors', {credentials: 'include'});
+            const json = await res.json();
+            if(json.success && json.data){
+              const guarantorData = {};
+              json.data.forEach(u => { 
+                const opt = document.createElement('option'); 
+                opt.value = u.id; 
+                opt.textContent = u.names;
+                opt.dataset.maxGuarantee = u.available_guarantee;
+                opt.dataset.contrib = u.total_contributions_and_payments;
+                opt.dataset.withdraw = u.total_deductions;
+                opt.dataset.loans = u.total_loan_principal;
+                selectEl.appendChild(opt);
+                guarantorData[u.id] = {
+                  max: u.available_guarantee,
+                  contrib: u.total_contributions_and_payments,
+                  withdraw: u.total_deductions,
+                  loans: u.total_loan_principal
+                };
+              });
+              selectEl.dataset.guarantorData = JSON.stringify(guarantorData);
+            }
+          } catch(err) { console.error('Failed to load eligible guarantors:', err); }
+          
+          // When guarantor is selected, show breakdown
+          selectEl.addEventListener('change', function(){
+            const selectedId = this.value;
+            if(selectedId && this.dataset.guarantorData){
+              const guarantorData = JSON.parse(this.dataset.guarantorData);
+              const data = guarantorData[selectedId];
+              document.getElementById(`detail-contrib-${idx}`).textContent = Number(data.contrib).toLocaleString('rw-RW') + ' Frw';
+              document.getElementById(`detail-withdraw-${idx}`).textContent = Number(data.withdraw).toLocaleString('rw-RW') + ' Frw';
+              document.getElementById(`detail-loans-${idx}`).textContent = Number(data.loans).toLocaleString('rw-RW') + ' Frw';
+              document.getElementById(`detail-max-${idx}`).textContent = Number(data.max).toLocaleString('rw-RW') + ' Frw';
+              guaranteeDetails.style.display = 'block';
+            } else {
+              guaranteeDetails.style.display = 'none';
+            }
+          });
+          
+          // Validate guarantee amount doesn't exceed max
+          amountInput.addEventListener('change', function(){
+            const selectedId = selectEl.value;
+            if(selectedId && selectEl.dataset.guarantorData){
+              const guarantorData = JSON.parse(selectEl.dataset.guarantorData);
+              const maxAmt = guarantorData[selectedId].max;
+              const enteredAmt = parseFloat(this.value) || 0;
+              if(enteredAmt > maxAmt){
+                alert(`Inzira nta mugabane wibura ${Number(maxAmt).toLocaleString('rw-RW')} Frw`);
+                this.value = maxAmt;
+              }
+            }
+          });
+          
+          // Set guarantor if provided with edit
+          selectEl.value = guarantorId || '';
+          if(guarantorId && selectEl.dataset.guarantorData){
+            const guarantorData = JSON.parse(selectEl.dataset.guarantorData);
+            const data = guarantorData[guarantorId];
+            if(data){
+              document.getElementById(`detail-contrib-${idx}`).textContent = Number(data.contrib).toLocaleString('rw-RW') + ' Frw';
+              document.getElementById(`detail-withdraw-${idx}`).textContent = Number(data.withdraw).toLocaleString('rw-RW') + ' Frw';
+              document.getElementById(`detail-loans-${idx}`).textContent = Number(data.loans).toLocaleString('rw-RW') + ' Frw';
+              document.getElementById(`detail-max-${idx}`).textContent = Number(data.max).toLocaleString('rw-RW') + ' Frw';
+              guaranteeDetails.style.display = 'block';
+            }
+          }
+          
+          // Set amount if provided
+          amountInput.value = guaranteeAmount || '';
+          
+          // Remove button handler
+          row.querySelector('.btn-remove-guarantor').addEventListener('click', (e)=>{ e.preventDefault(); row.remove(); });
+        }
+
+        async function fetchLoans(q=''){
+          try{
+            const res = await fetch(api + '?per_page=200' + (q?('&q='+encodeURIComponent(q)):''), {credentials: 'include'});
+            if(!res.ok){ console.error('fetchLoans http', res.status); return; }
+            const json = await res.json();
+            if(json.success) renderLoans(json.data||[]);
+          }catch(err){ console.error('fetchLoans', err); }
+        }
+
+        function renderLoans(rows){
+          const tbody = document.querySelector(tbodySelector);
+          if(!tbody) return;
+          tbody.innerHTML = '';
+          rows.forEach(r=>{
+            const tr = document.createElement('tr');
+            const statusBadge = r.status === 'approved' ? '<span class="badge badge-success">Yemejwe</span>' 
+                              : r.status === 'disbursed' ? '<span class="badge badge-info">Yatanze amafaranga</span>'
+                              : r.status === 'closed' ? '<span class="badge badge-gray">Zarangiye</span>'
+                              : r.status === 'defaulted' ? '<span class="badge badge-danger">Yarenze</span>'
+                              : '<span class="badge badge-warning">Yatanze</span>';
+            tr.innerHTML = `
+              <td>#LN-${r.loan_id}</td>
+              <td>${globalEscapeHtml(r.borrower_name||'')}</td>
+              <td>${Number(r.principal_amount||0).toLocaleString('rw-RW')} Frw</td>
+              <td>${Number(r.principal_amount||0).toLocaleString('rw-RW')} Frw</td>
+              <td>${statusBadge}</td>
+              <td>
+                <button class="btn-ghost btn-edit-loan" data-id="${r.loan_id}">Hindura</button>
+                <button class="btn-ghost-danger btn-delete-loan" data-id="${r.loan_id}">Siba</button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+
+        // Delegated event handlers for dynamically created buttons
+        const tbody = document.querySelector(tbodySelector);
+        if(tbody){
+          tbody.addEventListener('click', async (e)=>{
+            const editBtn = e.target.closest('.btn-edit-loan');
+            const deleteBtn = e.target.closest('.btn-delete-loan');
+            
+            if(editBtn){
+              const id = editBtn.getAttribute('data-id');
+              try{
+                const res = await fetch(api + '?id=' + encodeURIComponent(id), {credentials: 'include'});
+                if(!res.ok) { alert('HTTP Error: ' + res.status); return; }
+                const text = await res.text();
+                console.log('Raw response:', text);
+                let json = null;
+                try{ json = JSON.parse(text); } catch(e){ console.error('Response not JSON:', text); alert('Server error: Invalid response. Check console.'); return; }
+                if(json.success && json.data){
+                  const d = json.data;
+                  document.getElementById('loan-id').value = d.loan_id;
+                  document.getElementById('loan-account').value = d.account_id || '';
+                  document.getElementById('loan-borrower').value = d.borrower_user_id || '';
+                  document.getElementById('loan-principal').value = d.principal_amount || '';
+                  document.getElementById('loan-rate').value = d.monthly_rate || '';
+                  document.getElementById('loan-term').value = d.term_months || '';
+                  document.getElementById('loan-start').value = d.start_date || '';
+                  document.getElementById('loan-status').value = d.status || 'requested';
+                  document.getElementById('loan-notes').value = d.notes || '';
+                  document.getElementById('loan-approved-by').value = d.approved_by || '';
+                  document.getElementById('loan-disbursed-by').value = d.disbursed_by || '';
+                  
+                  // Load guarantors
+                  guarantorsListEl.innerHTML = '';
+                  guarantorCounter = 0;
+                  if (d.guarantors && Array.isArray(d.guarantors) && d.guarantors.length > 0) {
+                    for (const g of d.guarantors) {
+                      await addGuarantorRow(g.guarantor_user_id, g.guarantee_amount);
+                    }
+                  } else {
+                    await addGuarantorRow();
+                  }
+                  
+                  openModal();
+                } else alert(json.message ||'Loan not found');
+              }catch(err){ console.error('Edit loan error:', err); alert('Error: ' + err.message); }
+            }
+            
+            if(deleteBtn){
+              const id = deleteBtn.getAttribute('data-id');
+              if(!confirm('Urashaka gusiba iyi nguzanyo?')) return;
+              const fd = new FormData(); 
+              fd.append('action','delete'); 
+              fd.append('id', id);
+              try{ 
+                const res = await fetch(api, {method:'POST', body: fd, credentials: 'include'}); 
+                const json = await res.json(); 
+                if(json.success) fetchLoans(); 
+                else alert(json.message||'Error'); 
+              }catch(err){ console.error(err); alert('Network error'); }
+            }
+          });
+        }
+
+        if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
+        if(modalClose) modalClose.addEventListener('click', closeModal);
+        if(modal) modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+
+        if(btnNewLoan) btnNewLoan.addEventListener('click', ()=>{ 
+          form.reset(); 
+          document.getElementById('loan-id').value = ''; 
+          guarantorsListEl.innerHTML = '';
+          guarantorCounter = 0;
+          addGuarantorRow();
+          openModal(); 
+          document.getElementById('loan-borrower').focus(); 
+        });
+        if(btnRefreshLoans) btnRefreshLoans.addEventListener('click', ()=>{ fetchLoans(); });
+        if(btnAddGuarantor) btnAddGuarantor.addEventListener('click', (e)=>{ e.preventDefault(); addGuarantorRow(); });
+        
+        // fallback: delegated handler in case elements were not present when script ran
+        if(!btnNewLoan || !btnRefreshLoans){
+          document.addEventListener('click', (e)=>{
+            try{
+              const newBtn = e.target.closest && e.target.closest('#btn-new-loan');
+              if(newBtn){ form.reset(); document.getElementById('loan-id').value = ''; guarantorsListEl.innerHTML = ''; guarantorCounter = 0; addGuarantorRow(); openModal(); document.getElementById('loan-borrower').focus(); return; }
+              const refBtn = e.target.closest && e.target.closest('#btn-refresh-loans');
+              if(refBtn){ fetchLoans(); return; }
+            }catch(_){ }
+          });
+        }
+
+        if(saveBtn) saveBtn.addEventListener('click', async ()=>{
+          const id = document.getElementById('loan-id').value;
+          const fd = new FormData(form);
+          fd.append('action', id ? 'update' : 'create');
+          if(id) fd.append('id', id);
+          
+          // Collect guarantor data
+          const guarantorsArray = [];
+          document.querySelectorAll('.guarantor-row').forEach(row => {
+            const selects = row.querySelectorAll('select[name^="guarantor_user_id"]');
+            const inputs = row.querySelectorAll('input[name^="guarantee_amount"]');
+            if(selects.length > 0 && inputs.length > 0){
+              const userId = selects[0].value;
+              const amount = inputs[0].value;
+              if(userId && amount) guarantorsArray.push({user_id: userId, amount: amount});
+            }
+          });
+          fd.append('guarantors', JSON.stringify(guarantorsArray));
+          
+          try{
+            const res = await fetch(api, {method:'POST', body: fd, credentials: 'include'});
+            const text = await res.text();
+            let json = null;
+            try{ json = JSON.parse(text); } catch(e){ console.error('Loans response not JSON', text); alert('Server returned non-JSON response. See console.'); return; }
+            if(!res.ok){ alert(`HTTP Error ${res.status}: ${json.message || text}`); return; }
+            if(json.success){ closeModal(); fetchLoans(); } else alert(json.message || 'Error saving');
+          }catch(err){ console.error(err); alert('Network error'); }
+        });
+
+        // initial load for loans dropdowns and list
+        loadUsersInto(borrowerSelect);
+        loadUsersInto(approvedSelect);
+        loadUsersInto(disbursedSelect);
+        loadAccountsLocal();
+        fetchLoans();
+      })();
+
+      // Transactions management JS
+      (function(){
+        const api = 'transactions_api.php';
+        const tbodySelector = '#section-transactions table tbody';
+        const modal = document.getElementById('transaction-modal');
+        const form = document.getElementById('transaction-form');
+        const saveBtn = document.getElementById('transaction-save');
+        const cancelBtn = document.getElementById('transaction-cancel');
+        const modalClose = document.getElementById('transaction-modal-close');
+        const userSelect = document.getElementById('transaction-user');
+        const accountSelect = document.getElementById('transaction-account');
+        const btnNewTransaction = document.getElementById('btn-new-transaction');
+        const btnRefreshTransactions = document.getElementById('btn-refresh-transactions');
+
+        function openModal(){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
+        function closeModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
+
+        async function loadTransactionUsers(selectEl){
+          try{
+            const res = await fetch('users_api.php?per_page=500', {credentials: 'include'});
+            const json = await res.json();
+            if(json.success){
+              selectEl.innerHTML = '<option value="">-- Hitamo --</option>';
+              json.data.forEach(u => { const opt = document.createElement('option'); opt.value = u.id; opt.textContent = u.names; selectEl.appendChild(opt); });
+            } else console.error('loadUsers error', json);
+          }catch(err){ console.error('loadUsers fetch error', err); }
+        }
+
+        async function loadTransactionAccounts(){
+          try{
+            const res = await fetch('accounts_api.php', {credentials: 'include'});
+            const text = await res.text();
+            let json = null;
+            try{ json = JSON.parse(text); } catch(e){ console.error('accounts not json', text); return; }
+            if(json.success){ accountSelect.innerHTML = '<option value="">-- Hitamo Konto --</option>'; json.data.forEach(acc=>{ const opt=document.createElement('option'); opt.value=acc.account_id; opt.textContent=acc.name; accountSelect.appendChild(opt); }); }
+          }catch(err){ console.error(err); }
+        }
+
+        async function fetchTransactions(q=''){
+          try{
+            const res = await fetch(api + '?per_page=200' + (q?('&q='+encodeURIComponent(q)):''), {credentials: 'include'});
+            if(!res.ok){ console.error('fetchTransactions http', res.status); return; }
+            const json = await res.json();
+            if(json.success) renderTransactions(json.data||[]);
+          }catch(err){ console.error('fetchTransactions', err); }
+        }
+
+        function renderTransactions(rows){
+          const tbody = document.querySelector(tbodySelector);
+          if(!tbody) return;
+          tbody.innerHTML = '';
+          rows.forEach(r=>{
+            const tr = document.createElement('tr');
+            const typeLabel = r.type === 'contribution' ? 'Contribution' : r.type === 'withdrawal_deduction' ? 'Withdrawal' : 'Loan Payment';
+            tr.innerHTML = `
+              <td>#TX-${r.trans_id}</td>
+              <td>${r.tx_date||''}</td>
+              <td>${globalEscapeHtml(r.user_name||'')}</td>
+              <td>${globalEscapeHtml(r.account_name||'')}</td>
+              <td>${typeLabel}</td>
+              <td>${Number(r.amount||0).toLocaleString('rw-RW')} Frw</td>
+              <td>
+                <button class="btn-ghost btn-edit-transaction" data-id="${r.trans_id}">Hindura</button>
+                <button class="btn-ghost-danger btn-delete-transaction" data-id="${r.trans_id}">Siba</button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+
+        // Delegated event handlers for dynamically created buttons
+        const tbody = document.querySelector(tbodySelector);
+        if(tbody){
+          tbody.addEventListener('click', async (e)=>{
+            const editBtn = e.target.closest('.btn-edit-transaction');
+            const deleteBtn = e.target.closest('.btn-delete-transaction');
+            
+            if(editBtn){
+              const id = editBtn.getAttribute('data-id');
+              try{
+                const res = await fetch(api + '?id=' + encodeURIComponent(id), {credentials: 'include'});
+                if(!res.ok) { alert('HTTP Error: ' + res.status); return; }
+                const text = await res.text();
+                let json = null;
+                try{ json = JSON.parse(text); } catch(e){ console.error('Response not JSON:', text); alert('Server error: Invalid response. Check console.'); return; }
+                if(json.success && json.data){
+                  const d = json.data;
+                  document.getElementById('transaction-id').value = d.trans_id;
+                  document.getElementById('transaction-date').value = d.tx_date || '';
+                  document.getElementById('transaction-user').value = d.user_id || '';
+                  document.getElementById('transaction-account').value = d.account_id || '';
+                  document.getElementById('transaction-type').value = d.type || '';
+                  document.getElementById('transaction-amount').value = d.amount || '';
+                  openModal();
+                } else alert(json.message||'Transaction not found');
+              }catch(err){ console.error('Edit transaction error:', err); alert('Error: ' + err.message); }
+            }
+            
+            if(deleteBtn){
+              const id = deleteBtn.getAttribute('data-id');
+              if(!confirm('Urashaka gusiba iyi transaction?')) return;
+              const fd = new FormData(); 
+              fd.append('action','delete'); 
+              fd.append('id', id);
+              try{ 
+                const res = await fetch(api, {method:'POST', body: fd, credentials: 'include'}); 
+                const json = await res.json(); 
+                if(json.success) fetchTransactions(); 
+                else alert(json.message||'Error'); 
+              }catch(err){ console.error(err); alert('Network error'); }
+            }
+          });
+        }
+
+        if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
+        if(modalClose) modalClose.addEventListener('click', closeModal);
+        if(modal) modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+
+        if(btnNewTransaction) btnNewTransaction.addEventListener('click', ()=>{ 
+          form.reset(); 
+          document.getElementById('transaction-id').value = ''; 
+          openModal(); 
+          document.getElementById('transaction-date').focus(); 
+        });
+        if(btnRefreshTransactions) btnRefreshTransactions.addEventListener('click', ()=>{ fetchTransactions(); });
+
+        if(saveBtn) saveBtn.addEventListener('click', async ()=>{
+          const id = document.getElementById('transaction-id').value;
+          const fd = new FormData(form);
+          fd.append('action', id ? 'update' : 'create');
+          if(id) fd.append('id', id);
+          
+          try{
+            const res = await fetch(api, {method:'POST', body: fd, credentials: 'include'});
+            const text = await res.text();
+            let json = null;
+            try{ json = JSON.parse(text); } catch(e){ console.error('Transactions response not JSON', text); alert('Server returned non-JSON response. See console.'); return; }
+            if(!res.ok){ alert(`HTTP Error ${res.status}: ${json.message || text}`); return; }
+            if(json.success){ closeModal(); fetchTransactions(); } else alert(json.message || 'Error saving');
+          }catch(err){ console.error(err); alert('Network error'); }
+        });
+
+        // initial load for transactions dropdowns and list
+        loadTransactionUsers(userSelect);
+        loadTransactionAccounts();
+        fetchTransactions();
+      })();
+    </script>
+  </body>
+</html>

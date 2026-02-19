@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="rw">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dashboard - Umunyamuryango | NIG Ikimina</title>
+    <script>
+      // Protect member dashboard from unauthenticated access
+      (async () => {
+        try {
+          const res = await fetch('../get_session.php', {cache: 'no-store'});
+          const json = await res.json();
+          if (!json.success || !json.data || !json.data.is_member) {
+            window.location.href = '../login.php';
+          }
+        } catch (e) {
+          window.location.href = '../login.php';
+        }
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#2F6B4F",
+              "primary-dark": "#1F4D3A",
+              accent: "#E89C2C",
+              brown: "#6B4A2D",
+              "bg-soft": "#F8FAF9",
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="../../css/styles.css" />
+  </head>
+  <body class="min-h-screen bg-[color:var(--color-bg)]">
+    <div class="flex min-h-screen">
+      <!-- Sidebar -->
+      <aside class="hidden w-64 flex-col bg-primary-dark px-4 py-6 text-white md:flex">
+        <div class="flex items-center gap-2 px-2">
+          <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-lg font-bold">
+            N
+          </div>
+          <div>
+            <p class="text-sm font-semibold">NIG Ikimina</p>
+            <p class="text-xs text-emerald-100/80">Umunyamuryango</p>
+          </div>
+        </div>
+        <nav class="mt-8 space-y-1 text-sm">
+          <a href="#" class="sidebar-link sidebar-link-active">Dashboard</a>
+          <a href="#" class="sidebar-link">Imigabane</a>
+          <a href="#" class="sidebar-link">Inguzanyo</a>
+          <a href="#" class="sidebar-link">Inyungu</a>
+          <a href="#" class="sidebar-link">Kwishyura</a>
+          <a href="#" class="sidebar-link">Gusaba Kuvana Imigabane</a>
+          <a href="../logout.php" class="sidebar-link mt-4 text-red-100 hover:bg-red-500/20 hover:text-white">
+            Gusohoka
+          </a>
+        </nav>
+        <p class="mt-auto px-2 pt-6 text-[11px] text-emerald-100/70">
+          Umunyamuryango abasha kubona imiterere yose y’umugabane we n’inguzanyo afite mu Ikimina.
+        </p>
+      </aside>
+
+      <!-- Main content -->
+      <main class="flex-1">
+        <!-- Top bar -->
+        <header class="flex items-center justify-between border-b border-[color:var(--color-border)] bg-white/80 px-4 py-3">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Dashboard - Umunyamuryango
+            </p>
+            <p class="text-sm text-slate-700">Isuzuma rusange ry’umutungo wawe mu Ikimina</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="text-right">
+              <p class="text-xs font-medium text-slate-700">Izina ry’umunyamuryango</p>
+              <p class="text-[11px] text-slate-500">Umunyamuryango wemejwe</p>
+            </div>
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+              M
+            </div>
+          </div>
+        </header>
+
+        <section class="mx-auto max-w-6xl px-4 py-6">
+          <!-- Cards -->
+          <div class="grid gap-4 md:grid-cols-4">
+            <div class="card md:col-span-2">
+              <p class="text-xs font-medium text-slate-500">Imigabane yose</p>
+              <p class="mt-2 text-2xl font-semibold text-primary-dark">1,250,000 Frw</p>
+              <p class="mt-1 text-[11px] text-slate-500">
+                Imigabane wakusanyije kuva winjira mu Ikimina.
+              </p>
+            </div>
+            <div class="card">
+              <p class="text-xs font-medium text-slate-500">Inyungu zakorewe</p>
+              <p class="mt-2 text-2xl font-semibold text-primary-dark">180,000 Frw</p>
+              <p class="mt-1 text-[11px] text-slate-500">Inyungu zigenewe umugabane wawe.</p>
+            </div>
+            <div class="card">
+              <p class="text-xs font-medium text-slate-500">Inguzanyo isanzwe</p>
+              <p class="mt-2 text-2xl font-semibold text-primary-dark">420,000 Frw</p>
+              <p class="mt-1 text-[11px] text-slate-500">Umwenda usigaye kwishyurwa.</p>
+            </div>
+          </div>
+
+          <!-- Monthly shares table -->
+          <div class="mt-8 grid gap-6 lg:grid-cols-2">
+            <div>
+              <p class="text-sm font-semibold text-primary-dark">Imigabane z’ukwezi</p>
+              <p class="text-xs text-slate-600">
+                Uko imigabane yawe yagiye yinjira buri kwezi.
+              </p>
+              <div class="mt-3 table-wrapper">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Ukwezi</th>
+                      <th>Itariki</th>
+                      <th>Umubare (Frw)</th>
+                      <th>Status</th>
+                      <th>Ibikorwa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Mutarama 2026</td>
+                      <td>2026-01-05</td>
+                      <td>50,000</td>
+                        <td><span class="badge badge-success">Yabonetse</span></td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                    </tr>
+                    <tr>
+                      <td>Gashyantare 2026</td>
+                      <td>2026-02-05</td>
+                      <td>60,000</td>
+                        <td><span class="badge badge-success">Yabonetse</span></td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                    </tr>
+                    <tr>
+                      <td>Werurwe 2026</td>
+                      <td>-</td>
+                      <td>0</td>
+                        <td><span class="badge badge-warning">Irategereje</span></td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Payment history -->
+            <div>
+              <p class="text-sm font-semibold text-primary-dark">Amateka y’ubwishyu</p>
+              <p class="text-xs text-slate-600">
+                Uburyo wishyuye inguzanyo n’igihe byabereye.
+              </p>
+              <div class="mt-3 table-wrapper">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Itariki</th>
+                      <th>Umubare wishyuwe</th>
+                      <th>Igice</th>
+                      <th>Status</th>
+                      <th>Ibikorwa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>2026-01-15</td>
+                      <td>80,000</td>
+                      <td>Kwishyura 1</td>
+                        <td><span class="badge badge-success">Byakiriwe</span></td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                    </tr>
+                    <tr>
+                      <td>2026-02-15</td>
+                      <td>80,000</td>
+                      <td>Kwishyura 2</td>
+                        <td><span class="badge badge-success">Byakiriwe</span></td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                    </tr>
+                    <tr>
+                      <td>2026-03-15</td>
+                      <td>80,000</td>
+                      <td>Kwishyura 3</td>
+                        <td><span class="badge badge-warning">Irategereje</span></td>
+                        <td>
+                          <button class="btn-ghost">Hindura</button>
+                          <button class="btn-ghost-danger">Siba</button>
+                        </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Request withdraw shares -->
+          <div class="mt-8 card">
+            <div class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+              <div>
+                <p class="text-sm font-semibold text-primary-dark">Gusaba kuvana imigabane</p>
+                <p class="mt-1 text-xs text-slate-600">
+                  Ushobora gusaba gukuramo igice cy’imigabane yawe. Ubuyobozi buzabanza kugenzura uko Ikimina
+                  gihagaze.
+                </p>
+              </div>
+              <button class="btn-secondary text-xs">
+                Tangira gusaba
+              </button>
+            </div>
+            <form class="mt-4 grid gap-3 text-xs md:grid-cols-3">
+              <div>
+                <label class="block font-medium text-slate-700"> Umubare usaba gukuramo (Frw) </label>
+                <input
+                  type="number"
+                  class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  placeholder="Urugero: 200000"
+                />
+              </div>
+              <div>
+                <label class="block font-medium text-slate-700"> Impamvu nyamukuru </label>
+                <input
+                  type="text"
+                  class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  placeholder="Urugero: Igihe cy’urgence mu muryango"
+                />
+              </div>
+              <div>
+                <label class="block font-medium text-slate-700"> Uburyo bwo kwakira amafaranga </label>
+                <select
+                  title="Uburyo bwo kwakira amafaranga"
+                  class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option>Konti ya Banki</option>
+                  <option>Mobile Money</option>
+                  <option>Hand Cash (mu nama)</option>
+                </select>
+              </div>
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

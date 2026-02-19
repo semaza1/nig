@@ -1,0 +1,93 @@
+2026-02-17T12:50:51+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[],"total":0,"page":1,"per_page":200}
+
+2026-02-17T12:51:00+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[],"total":0,"page":1,"per_page":200}
+
+2026-02-17T12:51:01+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[],"total":0,"page":1,"per_page":200}
+
+2026-02-17T12:52:21+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[],"total":0,"page":1,"per_page":200}
+
+2026-02-17T12:53:19+01:00 - NON-JSON OUTPUT:
+<br />
+<b>Fatal error</b>:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in C:\xampp\htdocs\nig\pages\admin\transactions_api.php:158
+Stack trace:
+#0 C:\xampp\htdocs\nig\pages\admin\transactions_api.php(158): mysqli_stmt-&gt;bind_param('siiidsssii', '2026-02-17', 4, 1, 'contribution', 160000, 'card back.jpeg', 'image/jpeg', NULL, 1)
+#1 {main}
+  thrown in <b>C:\xampp\htdocs\nig\pages\admin\transactions_api.php</b> on line <b>158</b><br />
+
+
+2026-02-17T13:08:48+01:00 - NON-JSON OUTPUT:
+<br />
+<b>Fatal error</b>:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in C:\xampp\htdocs\nig\pages\admin\transactions_api.php:158
+Stack trace:
+#0 C:\xampp\htdocs\nig\pages\admin\transactions_api.php(158): mysqli_stmt-&gt;bind_param('siiidsssii', '2026-02-17', 4, 1, 'contribution', 160000, 'card back.jpeg', 'image/jpeg', NULL, 1)
+#1 {main}
+  thrown in <b>C:\xampp\htdocs\nig\pages\admin\transactions_api.php</b> on line <b>158</b><br />
+
+
+2026-02-17T13:08:52+01:00 - NON-JSON OUTPUT:
+<br />
+<b>Fatal error</b>:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in C:\xampp\htdocs\nig\pages\admin\transactions_api.php:158
+Stack trace:
+#0 C:\xampp\htdocs\nig\pages\admin\transactions_api.php(158): mysqli_stmt-&gt;bind_param('siiidsssii', '2026-02-17', 4, 1, 'contribution', 160000, 'card back.jpeg', 'image/jpeg', NULL, 1)
+#1 {main}
+  thrown in <b>C:\xampp\htdocs\nig\pages\admin\transactions_api.php</b> on line <b>158</b><br />
+
+
+2026-02-17T13:13:42+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[],"total":0,"page":1,"per_page":200}
+
+2026-02-17T13:14:13+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":{"trans_id":"1","tx_date":"2026-02-17","type":"contribution","amount":"1500000.00","user_name":"Semaza Emmy","account_name":"Mobile Money"}}
+
+2026-02-17T13:14:13+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"trans_id":"1","tx_date":"2026-02-17","type":"contribution","amount":"1500000.00","user_name":"Semaza Emmy","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"}],"total":1,"page":1,"per_page":200}
+
+2026-02-17T13:14:39+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"trans_id":"1","tx_date":"2026-02-17","type":"contribution","amount":"1500000.00","user_name":"Semaza Emmy","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"}],"total":1,"page":1,"per_page":200}
+
+2026-02-17T13:30:28+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":{"trans_id":"2","tx_date":"2026-02-17","type":"contribution","amount":"999999999999.99","user_name":"Ngendahimana Joseph","account_name":"Mobile Money"}}
+
+2026-02-17T13:30:28+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"trans_id":"2","tx_date":"2026-02-17","type":"contribution","amount":"999999999999.99","user_name":"Ngendahimana Joseph","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"1","tx_date":"2026-02-17","type":"contribution","amount":"1500000.00","user_name":"Semaza Emmy","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T13:38:05+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"trans_id":"2","tx_date":"2026-02-17","type":"contribution","amount":"999999999999.99","user_name":"Ngendahimana Joseph","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"1","tx_date":"2026-02-17","type":"contribution","amount":"1500000.00","user_name":"Semaza Emmy","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T13:42:16+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"trans_id":"2","tx_date":"2026-02-17","type":"contribution","amount":"999999999999.99","user_name":"Ngendahimana Joseph","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"1","tx_date":"2026-02-17","type":"contribution","amount":"1500000.00","user_name":"Semaza Emmy","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T13:42:16+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"trans_id":"2","tx_date":"2026-02-17","type":"contribution","amount":"999999999999.99","user_name":"Ngendahimana Joseph","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"1","tx_date":"2026-02-17","type":"contribution","amount":"1500000.00","user_name":"Semaza Emmy","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T13:44:26+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"trans_id":"2","tx_date":"2026-02-17","type":"contribution","amount":"999999999999.99","user_name":"Ngendahimana Joseph","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"1","tx_date":"2026-02-17","type":"contribution","amount":"1500000.00","user_name":"Semaza Emmy","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"}],"total":2,"page":1,"per_page":200}
+
+2026-02-17T13:45:07+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":{"trans_id":"3","tx_date":"2026-02-17","type":"contribution","amount":"8009973832.00","user_name":"Irebe Gashumba alain","account_name":"Mobile Money"}}
+
+2026-02-17T13:45:07+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"trans_id":"3","tx_date":"2026-02-17","type":"contribution","amount":"8009973832.00","user_name":"Irebe Gashumba alain","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"2","tx_date":"2026-02-17","type":"contribution","amount":"999999999999.99","user_name":"Ngendahimana Joseph","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"1","tx_date":"2026-02-17","type":"contribution","amount":"1500000.00","user_name":"Semaza Emmy","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"}],"total":3,"page":1,"per_page":200}
+
+2026-02-17T13:56:18+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"trans_id":"3","tx_date":"2026-02-17","type":"contribution","amount":"8009973832.00","user_name":"Irebe Gashumba alain","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"2","tx_date":"2026-02-17","type":"contribution","amount":"999999999999.99","user_name":"Ngendahimana Joseph","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"1","tx_date":"2026-02-17","type":"contribution","amount":"1500000.00","user_name":"Semaza Emmy","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"}],"total":3,"page":1,"per_page":200}
+
+2026-02-17T13:59:14+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"trans_id":"3","tx_date":"2026-02-17","type":"contribution","amount":"8009973832.00","user_name":"Irebe Gashumba alain","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"2","tx_date":"2026-02-17","type":"contribution","amount":"999999999999.99","user_name":"Ngendahimana Joseph","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"1","tx_date":"2026-02-17","type":"contribution","amount":"1500000.00","user_name":"Semaza Emmy","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"}],"total":3,"page":1,"per_page":200}
+
+2026-02-17T14:19:42+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"trans_id":"3","tx_date":"2026-02-17","type":"contribution","amount":"8009973832.00","user_name":"Irebe Gashumba alain","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"2","tx_date":"2026-02-17","type":"contribution","amount":"132783.00","user_name":"Ngendahimana Joseph","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"1","tx_date":"2026-02-17","type":"contribution","amount":"1500000.00","user_name":"Semaza Emmy","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"}],"total":3,"page":1,"per_page":200}
+
+2026-02-17T15:06:51+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"trans_id":"3","tx_date":"2026-02-17","type":"contribution","amount":"8009973832.00","user_name":"Irebe Gashumba alain","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"2","tx_date":"2026-02-17","type":"contribution","amount":"132783.00","user_name":"Ngendahimana Joseph","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"1","tx_date":"2026-02-17","type":"contribution","amount":"1500000.00","user_name":"Semaza Emmy","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"}],"total":3,"page":1,"per_page":200}
+
+2026-02-17T16:29:45+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"trans_id":"3","tx_date":"2026-02-17","type":"contribution","amount":"8009973832.00","user_name":"Irebe Gashumba alain","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"2","tx_date":"2026-02-17","type":"contribution","amount":"132783.00","user_name":"Ngendahimana Joseph","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"1","tx_date":"2026-02-17","type":"contribution","amount":"1500000.00","user_name":"Semaza Emmy","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"}],"total":3,"page":1,"per_page":200}
+
+2026-02-18T10:21:13+01:00 - NON-JSON OUTPUT:
+{"success":true,"data":[{"trans_id":"3","tx_date":"2026-02-17","type":"contribution","amount":"8009973832.00","user_name":"Irebe Gashumba alain","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"2","tx_date":"2026-02-17","type":"contribution","amount":"132783.00","user_name":"Ngendahimana Joseph","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"},{"trans_id":"1","tx_date":"2026-02-17","type":"contribution","amount":"1500000.00","user_name":"Semaza Emmy","account_name":"Mobile Money","created_by_name":"Ngendahimana Joseph"}],"total":3,"page":1,"per_page":200}
+
