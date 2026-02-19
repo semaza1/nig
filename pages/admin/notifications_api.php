@@ -1,96 +1,116 @@
 <?php
-// Admin Notifications API (CRUD + search + filters + pagination)
 header('Content-Type: application/json; charset=utf-8');
 session_start();
 
 $mysqli = require __DIR__ . '/../../config/db.php';
+
 if (!$mysqli) {
-    http_response_code(500);
-    echo json_encode(['success'=>false,'message'=>'Database connection failed']);
-    exit;
+  http_response_code(500);
+  echo json_encode(['success'=>false,'message'=>'DB connection failed']);
+  exit;
 }
 
+// admin check (matches your other APIs)
 if (empty($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
-    http_response_code(403);
-    echo json_encode(['success'=>false,'message'=>'Access denied']);
-    exit;
+  http_response_code(403);
+  echo json_encode(['success'=>false,'message'=>'Access denied']);
+  exit;
 }
 
-function send_json($arr){
-    echo json_encode($arr);
-    exit;
+function out($success, $data=null, $message='') {
+  echo json_encode(['success'=>$success,'data'=>$data,'message'=>$message]);
+  exit;
 }
 
-// Small endpoint for dropdowns
-if (isset($_GET['action']) && $_GET['action'] === 'users') {
-    $res = $mysqli->query("SELECT id, names FROM users ORDER BY names ASC");
-    if (!$res) send_json(['success'=>false,'message'=>'Query error: '.$mysqli->error]);
-    $rows = [];
-    while ($r = $res->fetch_assoc()) $rows[] = $r;
-    send_json(['success'=>true,'data'=>$rows]);
-}
+$method = $_SERVER['REQUEST_METHOD'];
 
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    if (isset($_GET['id'])) {
-        $id = (int)$_GET['id'];
-        $stmt = $mysqli->prepare("SELECT n.*, u.names AS user_name FROM notifications n LEFT JOIN users u ON u.id = n.user_id WHERE n.notification_id = ? LIMIT 1");
-        if (!$stmt) send_json(['success'=>false,'message'=>'Prepare error: '.$mysqli->error]);
-        $stmt->bind_param('i', $id);
-        if (!$stmt->execute()) send_json(['success'=>false,'message'=>'Execute error: '.$stmt->error]);
-        $row = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        if ($row) send_json(['success'=>true,'data'=>$row]);
-        send_json(['success'=>false,'message'=>'Not found']);
-    }
+if ($method === 'GET') {
+  // single item
+  if (!empty($_GET['id'])) {
+    $id = (int)$_GET['id'];
 
-    $page = max(1, (int)($_GET['page'] ?? 1));
-    $per_page = max(1, min(200, (int)($_GET['per_page'] ?? 10)));
-    $q = trim($_GET['q'] ?? '');
-    $status = trim($_GET['status'] ?? '');
-    $channel = trim($_GET['channel'] ?? '');
-    $type = trim($_GET['type'] ?? '');
-
-    $where = [];
-    if ($q !== '') {
-        $esc = $mysqli->real_escape_string($q);
-        $where[] = "(n.message LIKE '%$esc%' OR u.names LIKE '%$esc%' OR n.type LIKE '%$esc%')";
-    }
-    if ($status !== '') {
-        $esc = $mysqli->real_escape_string($status);
-        $where[] = "n.status = '$esc'";
-    }
-    if ($channel !== '') {
-        $esc = $mysqli->real_escape_string($channel);
-        $where[] = "n.channel = '$esc'";
-    }
-    if ($type !== '') {
-        $esc = $mysqli->real_escape_string($type);
-        $where[] = "n.type = '$esc'";
-    }
-    $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
-
-    $totalRes = $mysqli->query("SELECT COUNT(*) AS cnt FROM notifications n LEFT JOIN users u ON u.id = n.user_id $whereSql");
-    if (!$totalRes) send_json(['success'=>false,'message'=>'Count error: '.$mysqli->error]);
-    $total = (int)($totalRes->fetch_assoc()['cnt'] ?? 0);
-
-    $offset = ($page - 1) * $per_page;
-    $sql = "SELECT n.notification_id, n.user_id, u.names AS user_name, n.type, n.channel, n.status, n.scheduled_for, n.sent_at, n.created_at, n.message
+    $sql = "SELECT n.*, u.names AS user_name
             FROM notifications n
             LEFT JOIN users u ON u.id = n.user_id
-            $whereSql
-            ORDER BY n.notification_id DESC
-            LIMIT $offset, $per_page";
-    $res = $mysqli->query($sql);
-    if (!$res) send_json(['success'=>false,'message'=>'Query error: '.$mysqli->error]);
-    $rows = [];
-    while ($r = $res->fetch_assoc()) $rows[] = $r;
+            WHERE n.notification_id = ?";
+    $stmt = $mysqli->prepare($sql);
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $row = $res->fetch_assoc();
+    if (!$row) out(false, null, "Notification not found");
+    out(true, $row, "");
+  }
 
-    send_json(['success'=>true,'data'=>$rows,'total'=>$total,'page'=>$page,'per_page'=>$per_page]);
+  // list
+  $page = max(1, (int)($_GET['page'] ?? 1));
+  $per_page = max(1, min(200, (int)($_GET['per_page'] ?? 10)));
+  $q = trim($_GET['q'] ?? '');
+  $status = trim($_GET['status'] ?? '');
+  $channel = trim($_GET['channel'] ?? '');
+
+  $where = [];
+  $types = "";
+  $params = [];
+
+  if ($q !== '') {
+    $where[] = "(n.message LIKE ? OR n.type LIKE ? OR u.names LIKE ?)";
+    $like = "%{$q}%";
+    $types .= "sss";
+    $params[] = $like; $params[] = $like; $params[] = $like;
+  }
+  if ($status !== '') {
+    $where[] = "n.status = ?";
+    $types .= "s";
+    $params[] = $status;
+  }
+  if ($channel !== '') {
+    $where[] = "n.channel = ?";
+    $types .= "s";
+    $params[] = $channel;
+  }
+
+  $whereSql = $where ? ("WHERE " . implode(" AND ", $where)) : "";
+  $offset = ($page - 1) * $per_page;
+
+  // count
+  $countSql = "SELECT COUNT(*) AS total
+               FROM notifications n
+               LEFT JOIN users u ON u.id = n.user_id
+               $whereSql";
+  $countStmt = $mysqli->prepare($countSql);
+  if ($types !== "") $countStmt->bind_param($types, ...$params);
+  $countStmt->execute();
+  $total = (int)($countStmt->get_result()->fetch_assoc()['total'] ?? 0);
+
+  // rows
+  $listSql = "SELECT n.*, u.names AS user_name
+              FROM notifications n
+              LEFT JOIN users u ON u.id = n.user_id
+              $whereSql
+              ORDER BY n.notification_id DESC
+              LIMIT ? OFFSET ?";
+  $listStmt = $mysqli->prepare($listSql);
+
+  // add limit/offset to params
+  $types2 = $types . "ii";
+  $params2 = $params;
+  $params2[] = $per_page;
+  $params2[] = $offset;
+
+  $listStmt->bind_param($types2, ...$params2);
+  $listStmt->execute();
+  $rows = [];
+  $r = $listStmt->get_result();
+  while ($row = $r->fetch_assoc()) $rows[] = $row;
+
+  out(true, ['rows'=>$rows,'total'=>$total,'page'=>$page,'per_page'=>$per_page], "");
 }
 
-$action = $_POST['action'] ?? '';
+if ($method === 'POST') {
+  $action = $_POST['action'] ?? '';
 
-if ($action === 'create') {
+  if ($action === 'create') {
     $user_id = (int)($_POST['user_id'] ?? 0);
     $type = trim($_POST['type'] ?? '');
     $message = trim($_POST['message'] ?? '');
@@ -98,30 +118,24 @@ if ($action === 'create') {
     $status = trim($_POST['status'] ?? 'queued');
     $scheduled_for = trim($_POST['scheduled_for'] ?? '');
 
-    if ($user_id <= 0 || $type === '' || $message === '') {
-        send_json(['success'=>false,'message'=>'Imirima yibanze irabuze']);
-    }
+    if ($user_id <= 0 || $type === '' || $message === '') out(false, null, "Missing required fields");
 
-    $sched = null;
+    $scheduled = null;
     if ($scheduled_for !== '') {
-        $ts = strtotime($scheduled_for);
-        if ($ts !== false) $sched = date('Y-m-d H:i:s', $ts);
+      // accept datetime-local or normal
+      $scheduled = date('Y-m-d H:i:s', strtotime(str_replace('T',' ', $scheduled_for)));
     }
 
-    $stmt = $mysqli->prepare("INSERT INTO notifications (user_id, type, message, channel, status, scheduled_for) VALUES (?, ?, ?, ?, ?, ?)");
-    if (!$stmt) send_json(['success'=>false,'message'=>'Prepare error: '.$mysqli->error]);
-    $stmt->bind_param('isssss', $user_id, $type, $message, $channel, $status, $sched);
-    if ($stmt->execute()) {
-        $id = $stmt->insert_id;
-        $stmt->close();
-        $res = $mysqli->query("SELECT n.*, u.names AS user_name FROM notifications n LEFT JOIN users u ON u.id = n.user_id WHERE n.notification_id = " . (int)$id);
-        $row = $res ? $res->fetch_assoc() : null;
-        send_json(['success'=>true,'data'=>$row]);
-    }
-    send_json(['success'=>false,'message'=>$stmt->error ?: $mysqli->error]);
-}
+    $sql = "INSERT INTO notifications (user_id, type, message, channel, status, scheduled_for, sent_at)
+            VALUES (?, ?, ?, ?, ?, ?, NULL)";
+    $stmt = $mysqli->prepare($sql);
+    $stmt->bind_param("isssss", $user_id, $type, $message, $channel, $status, $scheduled);
+    $stmt->execute();
 
-if ($action === 'update') {
+    out(true, ['id'=>$mysqli->insert_id], "Created");
+  }
+
+  if ($action === 'update') {
     $id = (int)($_POST['id'] ?? 0);
     $user_id = (int)($_POST['user_id'] ?? 0);
     $type = trim($_POST['type'] ?? '');
@@ -130,47 +144,50 @@ if ($action === 'update') {
     $status = trim($_POST['status'] ?? 'queued');
     $scheduled_for = trim($_POST['scheduled_for'] ?? '');
 
-    if ($id <= 0) send_json(['success'=>false,'message'=>'Invalid id']);
-    if ($user_id <= 0 || $type === '' || $message === '') send_json(['success'=>false,'message'=>'Imirima yibanze irabuze']);
+    if ($id <= 0) out(false, null, "Missing id");
+    if ($user_id <= 0 || $type === '' || $message === '') out(false, null, "Missing required fields");
 
-    $sched = null;
+    $scheduled = null;
     if ($scheduled_for !== '') {
-        $ts = strtotime($scheduled_for);
-        if ($ts !== false) $sched = date('Y-m-d H:i:s', $ts);
+      $scheduled = date('Y-m-d H:i:s', strtotime(str_replace('T',' ', $scheduled_for)));
     }
 
-    // auto-set sent_at when status becomes sent (if not already set)
-    $current = null;
-    $curRes = $mysqli->query("SELECT sent_at FROM notifications WHERE notification_id = " . (int)$id . " LIMIT 1");
-    if ($curRes) $current = $curRes->fetch_assoc();
-    if (!$current) send_json(['success'=>false,'message'=>'Not found']);
-    $sent_at = $current['sent_at'] ?? null;
-    if ($status === 'sent' && empty($sent_at)) {
-        $sent_at = date('Y-m-d H:i:s');
+    // set sent_at automatically if status becomes sent and sent_at is null
+    $currentSent = null;
+    $chk = $mysqli->prepare("SELECT sent_at FROM notifications WHERE notification_id = ?");
+    $chk->bind_param("i", $id);
+    $chk->execute();
+    $cur = $chk->get_result()->fetch_assoc();
+    if (!$cur) out(false, null, "Notification not found");
+    $currentSent = $cur['sent_at'];
+
+    $sent_at = $currentSent;
+    if ($status === 'sent' && empty($currentSent)) {
+      $sent_at = date('Y-m-d H:i:s');
     }
 
-    $stmt = $mysqli->prepare("UPDATE notifications SET user_id=?, type=?, message=?, channel=?, status=?, scheduled_for=?, sent_at=? WHERE notification_id=?");
-    if (!$stmt) send_json(['success'=>false,'message'=>'Prepare error: '.$mysqli->error]);
-    $stmt->bind_param('issssssi', $user_id, $type, $message, $channel, $status, $sched, $sent_at, $id);
-    if ($stmt->execute()) {
-        $stmt->close();
-        $res = $mysqli->query("SELECT n.*, u.names AS user_name FROM notifications n LEFT JOIN users u ON u.id = n.user_id WHERE n.notification_id = " . (int)$id);
-        $row = $res ? $res->fetch_assoc() : null;
-        send_json(['success'=>true,'data'=>$row]);
-    }
-    send_json(['success'=>false,'message'=>$stmt->error ?: $mysqli->error]);
-}
+    $sql = "UPDATE notifications
+            SET user_id=?, type=?, message=?, channel=?, status=?, scheduled_for=?, sent_at=?
+            WHERE notification_id=?";
+    $stmt = $mysqli->prepare($sql);
+    $stmt->bind_param("issssssi", $user_id, $type, $message, $channel, $status, $scheduled, $sent_at, $id);
+    $stmt->execute();
 
-if ($action === 'delete') {
+    out(true, null, "Updated");
+  }
+
+  if ($action === 'delete') {
     $id = (int)($_POST['id'] ?? 0);
-    if ($id <= 0) send_json(['success'=>false,'message'=>'Invalid id']);
+    if ($id <= 0) out(false, null, "Missing id");
+
     $stmt = $mysqli->prepare("DELETE FROM notifications WHERE notification_id = ?");
-    if (!$stmt) send_json(['success'=>false,'message'=>'Prepare error: '.$mysqli->error]);
-    $stmt->bind_param('i', $id);
-    if ($stmt->execute()) send_json(['success'=>true]);
-    send_json(['success'=>false,'message'=>$stmt->error ?: $mysqli->error]);
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+
+    out(true, null, "Deleted");
+  }
+
+  out(false, null, "Unknown action");
 }
 
-send_json(['success'=>false,'message'=>'Invalid request']);
-
-?>
+out(false, null, "Unsupported method");
