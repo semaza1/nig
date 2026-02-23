@@ -18,3 +18,4 @@ function notify_admins($mysqli, string $type, string $message, string $channel='
     create_notification($mysqli, (int)$row['id'], $type, $message, $channel);
   }
 }
+?>

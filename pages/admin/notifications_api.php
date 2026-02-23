@@ -191,3 +191,4 @@ if ($method === 'POST') {
 }
 
 out(false, null, "Unsupported method");
+?>

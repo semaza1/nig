@@ -67,9 +67,7 @@
           <button data-section="overview" class="sidebar-link sidebar-link-active w-full text-left">
             Dashboard
           </button>
-          <button data-section="members" class="sidebar-link w-full text-left">
-            Abanyamuryango
-          </button>
+
           <button data-section="users" class="sidebar-link w-full text-left">
             Abakoresha (Users)
           </button>
@@ -79,12 +77,7 @@
           <button data-section="accounts" class="sidebar-link w-full text-left">
             Amafaranga (Accounts)
           </button>
-          <button data-section="shares" class="sidebar-link w-full text-left">
-            Imigabane
-          </button>
-          <button data-section="payments" class="sidebar-link w-full text-left">
-            Kwishyura
-          </button>
+
           <button data-section="expenses" class="sidebar-link w-full text-left">
             Expenses
           </button>
@@ -176,51 +169,6 @@
             </div>
 
             <div class="grid gap-6 lg:grid-cols-2">
-              <!-- Members table -->
-              <div>
-                <p class="text-sm font-semibold text-primary-dark">Urutonde rw'abanyamuryango</p>
-                <p class="text-xs text-slate-600">
-                  Abanyamuryango baheruka kwiyandikisha no kuvugurura amakuru yabo.
-                </p>
-                <div class="mt-3 table-wrapper">
-                  <table class="table">
-                    <thead>
-                    <tr>
-                      <th>Izina</th>
-                      <th>Telefoni</th>
-                      <th>Imiterere</th>
-                      <th>Ibikorwa</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>Nzabonimpa Jean</td>
-                        <td>0788 000 111</td>
-                        <td><span class="badge badge-success">Yemejwe</span></td>
-                        <td>
-                          <button class="btn-ghost">Hindura</button>
-                          <button class="btn-ghost-danger">Siba</button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>Uwase Aline</td>
-                        <td>0722 333 444</td>
-                        <td><span class="badge badge-warning">Irategereje</span></td>
-                        <td>
-                          <button class="btn-ghost">Hindura</button>
-                          <button class="btn-ghost-danger">Siba</button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>Habimana Eric</td>
-                        <td>0790 555 666</td>
-                        <td><span class="badge badge-success">Yemejwe</span></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
               <!-- Loans approval table -->
               <div>
                 <p class="text-sm font-semibold text-primary-dark">Inguzanyo zisaba kwemezwa</p>
@@ -869,7 +817,7 @@
             <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
               <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
                 <h2 id="modal-title" class="text-lg font-semibold text-primary-dark">Umunyamukoresha Mushya</h2>
-                <button id="modal-close" class="text-gray-500 hover:text-gray-700">
+                <button id="modal-close" class="text-gray-500 hover:text-gray-700" title="Funga">
                   <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                   </svg>
@@ -1140,7 +1088,7 @@
                   <button id="notifications-search-btn" class="btn-secondary text-xs">Shakisha</button>
                 </div>
                 <div class="flex items-center gap-2">
-                  <select id="notifications-filter-type" class="rounded-lg border px-3 py-2 text-sm">
+                  <select id="notifications-filter-type" class="rounded-lg border px-3 py-2 text-sm" title="Filter notifications by type">
                     <option value="">Type zose</option>
                     <option value="loan_due_reminder">loan_due_reminder</option>
                     <option value="loan_requested">loan_requested</option>
@@ -1152,13 +1100,13 @@
                     <option value="asset_recorded">asset_recorded</option>
                     <option value="user_event">user_event</option>
                   </select>
-                  <select id="notifications-filter-channel" class="rounded-lg border px-3 py-2 text-sm">
-                    <option value="">Channel zose</option>
+                  <select id="notifications-filter-channel" class="rounded-lg border px-3 py-2 text-sm" title="Filter notifications by type">
+                    <option  value="">Channel zose</option>
                     <option value="in_app">in_app</option>
                     <option value="sms">sms</option>
                     <option value="email">email</option>
                   </select>
-                  <select id="notifications-filter-status" class="rounded-lg border px-3 py-2 text-sm">
+                  <select id="notifications-filter-status" class="rounded-lg border px-3 py-2 text-sm" title="Filter notifications by type">
                     <option value="">Status zose</option>
                     <option value="queued">queued</option>
                     <option value="sent">sent</option>
@@ -1206,14 +1154,14 @@
                 <form id="notification-form" class="space-y-4">
                   <input type="hidden" id="notification-id" name="id" />
                   <div>
-                    <label class="block text-xs font-medium text-slate-700">User *</label>
+                    <label for="notification-user" class="block text-xs font-medium text-slate-700">User *</label>
                     <select id="notification-user" name="user_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
                       <option value="">-- Hitamo --</option>
                     </select>
                   </div>
                   <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <div>
-                      <label class="block text-xs font-medium text-slate-700">Type *</label>
+                      <label for="notification-type" class="block text-xs font-medium text-slate-700">Type *</label>
                       <select id="notification-type" name="type" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
                         <option value="">-- Hitamo --</option>
                         <option value="loan_due_reminder">loan_due_reminder</option>
@@ -1228,7 +1176,7 @@
                       </select>
                     </div>
                     <div>
-                      <label class="block text-xs font-medium text-slate-700">Channel *</label>
+                      <label for="notification-channel" class="block text-xs font-medium text-slate-700">Channel *</label>
                       <select id="notification-channel" name="channel" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
                         <option value="in_app">in_app</option>
                         <option value="sms">sms</option>
@@ -1238,7 +1186,7 @@
                   </div>
                   <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <div>
-                      <label class="block text-xs font-medium text-slate-700">Status *</label>
+                      <label for="notification-status" class="block text-xs font-medium text-slate-700">Status *</label>
                       <select id="notification-status" name="status" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
                         <option value="queued">queued</option>
                         <option value="sent">sent</option>
@@ -1247,12 +1195,12 @@
                       </select>
                     </div>
                     <div>
-                      <label class="block text-xs font-medium text-slate-700">Scheduled for</label>
+                      <label for="notification-scheduled" class="block text-xs font-medium text-slate-700">Scheduled for</label>
                       <input id="notification-scheduled" name="scheduled_for" type="datetime-local" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
                     </div>
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-slate-700">Message *</label>
+                    <label for="notification-message" class="block text-xs font-medium text-slate-700">Message *</label>
                     <textarea id="notification-message" name="message" rows="3" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required></textarea>
                   </div>
                 </form>
@@ -1607,13 +1555,26 @@
           sections.forEach((s) => {
             const el = document.getElementById(`section-${s}`);
             if (el) {
-              el.classList.toggle("hidden", s !== key);
+              const hide = (s !== key);
+              el.classList.toggle("hidden", hide);
+              if(s === 'notifications'){
+                console.log('notification section visibility set to', !hide);
+              }
             }
           });
 
           const titleEl = document.getElementById("section-title");
           if (titleEl && titles[key]) {
             titleEl.textContent = titles[key];
+          }
+          // ensure the newly shown section is scrolled into view (prefer the inner .card)
+          const sectionEl = document.getElementById(`section-${key}`);
+          const targetCard = sectionEl ? sectionEl.querySelector('.card') : null;
+          const target = targetCard || sectionEl;
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
           }
         });
       });
@@ -2111,8 +2072,14 @@
       })();
 
       // Notifications management JS
+      // Notifications management JS - FIXED VERSION
       (function(){
+        console.log('Initializing notifications module...');
+        
         const api = 'notifications_api.php';
+        
+        // IMPORTANT: Get references to NOTIFICATIONS elements, not assets
+        const section = document.getElementById('section-notifications');
         const tbody = document.getElementById('notifications-tbody');
         const btnNew = document.getElementById('btn-new-notification');
         const btnRefresh = document.getElementById('btn-refresh-notifications');
@@ -2131,10 +2098,16 @@
         const cancelBtn = document.getElementById('notification-cancel');
         const saveBtn = document.getElementById('notification-save');
         const form = document.getElementById('notification-form');
-
         const userSelect = document.getElementById('notification-user');
 
-        if(!tbody) return;
+        // Verify we have the right elements
+        console.log('Notifications tbody found:', !!tbody);
+        console.log('Assets tbody should be different:', document.getElementById('assets-tbody'));
+
+        if(!tbody) {
+          console.error('Notifications tbody not found! Check if element ID is correct.');
+          return;
+        }
 
         let currentPage = 1;
         let perPage = 10;
@@ -2142,20 +2115,31 @@
         let lastTotal = 0;
         let searchTimer = null;
 
-        function openModal(){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
-        function closeModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
+        function openModal(){ 
+          if(modal) {
+            modal.classList.remove('hidden'); 
+            modal.classList.add('flex'); 
+          }
+        }
+        
+        function closeModal(){ 
+          if(modal) {
+            modal.classList.add('hidden'); 
+            modal.classList.remove('flex'); 
+          }
+        }
 
         function statusBadge(s){
-          if(s === 'sent' || s === 'read') return '<span class="badge badge-success">'+globalEscapeHtml(s)+'</span>';
+          if(s === 'sent' || s === 'read') return '<span class="badge badge-success">'+ (s || '') +'</span>';
           if(s === 'failed') return '<span class="badge badge-danger">failed</span>';
           return '<span class="badge badge-warning">queued</span>';
         }
 
         async function loadUsers(){
           try{
-            const res = await fetch(api + '?action=users');
+            const res = await fetch(api + '?action=users', {credentials: 'include'});
             const json = await res.json();
-            if(json.success){
+            if(json.success && userSelect){
               userSelect.innerHTML = '<option value="">-- Hitamo --</option>';
               (json.data || []).forEach(u => {
                 const opt = document.createElement('option');
@@ -2169,9 +2153,9 @@
 
         async function fetchNotifications(page = currentPage){
           const q = currentQuery.trim();
-          const status = (filterStatus?.value || '').trim();
-          const channel = (filterChannel?.value || '').trim();
-          const type = (filterType?.value || '').trim();
+          const status = filterStatus?.value?.trim() || '';
+          const channel = filterChannel?.value?.trim() || '';
+          const type = filterType?.value?.trim() || '';
 
           const url = new URL(api, window.location.href);
           url.searchParams.set('page', page);
@@ -2181,35 +2165,52 @@
           if(channel) url.searchParams.set('channel', channel);
           if(type) url.searchParams.set('type', type);
 
+          console.log('Fetching notifications from:', url.toString());
+          
           try{
-            const res = await fetch(url.toString());
+            const res = await fetch(url.toString(), {credentials: 'include'});
             const json = await res.json();
+            
             if(json.success){
-              render(json.data || []);
-              lastTotal = json.total || 0;
-              currentPage = json.page || page;
+              let rows = json.data?.rows || [];
+              render(rows);
+              
+              lastTotal = json.data?.total || rows.length;
+              currentPage = json.data?.page || page;
               const totalPages = Math.max(1, Math.ceil(lastTotal / perPage));
               if(pageInfo) pageInfo.textContent = `Page ${currentPage} / ${totalPages} (${lastTotal})`;
-            } else {
-              alert(json.message || 'Failed to load notifications');
             }
-          }catch(err){ console.error(err); alert('Network error'); }
+          }catch(err){ 
+            console.error('Fetch error:', err); 
+          }
         }
 
         function render(rows){
+          if(!tbody) return;
+          
           tbody.innerHTML = '';
-          rows.forEach(r => {
+
+          if (!rows || rows.length === 0){
             const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="9" class="text-center py-4 text-sm text-slate-500">Nta notifications zabonetse</td>`;
+            tbody.appendChild(tr);
+            return;
+          }
+
+          rows.forEach((r, index) => {
+            const tr = document.createElement('tr');
+            tr.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+            
             tr.innerHTML = `
-              <td>#NT-${r.notification_id}</td>
-              <td>${globalEscapeHtml(r.user_name || '')}</td>
-              <td>${globalEscapeHtml(r.type || '')}</td>
-              <td>${globalEscapeHtml(r.channel || '')}</td>
-              <td>${statusBadge(r.status || '')}</td>
-              <td>${globalEscapeHtml(r.scheduled_for || '')}</td>
-              <td>${globalEscapeHtml(r.sent_at || '')}</td>
-              <td class="max-w-[320px] truncate" title="${globalEscapeHtml(r.message||'')}">${globalEscapeHtml(r.message||'')}</td>
-              <td>
+              <td class="px-4 py-3 text-sm">#NT-${r.notification_id || ''}</td>
+              <td class="px-4 py-3 text-sm">${r.user_name || ''}</td>
+              <td class="px-4 py-3 text-sm">${r.type || ''}</td>
+              <td class="px-4 py-3 text-sm">${r.channel || ''}</td>
+              <td class="px-4 py-3 text-sm">${statusBadge(r.status || '')}</td>
+              <td class="px-4 py-3 text-sm">${r.scheduled_for || ''}</td>
+              <td class="px-4 py-3 text-sm">${r.sent_at || ''}</td>
+              <td class="px-4 py-3 text-sm max-w-[320px] truncate" title="${(r.message||'').replace(/"/g, '&quot;')}">${r.message || ''}</td>
+              <td class="px-4 py-3 text-sm">
                 <button class="btn-ghost btn-edit-notification" data-id="${r.notification_id}">Hindura</button>
                 <button class="btn-ghost-danger btn-delete-notification" data-id="${r.notification_id}">Siba</button>
               </td>
@@ -2218,69 +2219,93 @@
           });
         }
 
-        tbody.addEventListener('click', async (e)=>{
-          const editBtn = e.target.closest('.btn-edit-notification');
-          const delBtn = e.target.closest('.btn-delete-notification');
-          if(editBtn){
-            const id = editBtn.getAttribute('data-id');
-            try{
-              const res = await fetch(`${api}?id=${encodeURIComponent(id)}`);
-              const json = await res.json();
-              if(json.success && json.data){
-                const d = json.data;
-                document.getElementById('notification-id').value = d.notification_id;
-                document.getElementById('notification-user').value = d.user_id;
-                document.getElementById('notification-type').value = d.type;
-                document.getElementById('notification-channel').value = d.channel || 'in_app';
-                document.getElementById('notification-status').value = d.status || 'queued';
-                document.getElementById('notification-message').value = d.message || '';
-                const sched = d.scheduled_for ? String(d.scheduled_for).replace(' ', 'T').slice(0,16) : '';
-                document.getElementById('notification-scheduled').value = sched;
-                if(modalTitle) modalTitle.textContent = 'Hindura Notification';
-                openModal();
-              } else alert(json.message || 'Not found');
-            }catch(err){ console.error(err); }
-          }
-          if(delBtn){
-            const id = delBtn.getAttribute('data-id');
-            if(!confirm('Urashaka gusiba iyi notification?')) return;
-            const fd = new FormData();
-            fd.append('action','delete');
-            fd.append('id', id);
-            try{
-              const res = await fetch(api, {method:'POST', body: fd});
-              const json = await res.json();
-              if(json.success) fetchNotifications(currentPage);
-              else alert(json.message || 'Delete failed');
-            }catch(err){ console.error(err); }
-          }
-        });
+        // Event delegation for edit/delete buttons
+        if(tbody) {
+          tbody.addEventListener('click', async (e)=>{
+            const editBtn = e.target.closest('.btn-edit-notification');
+            const delBtn = e.target.closest('.btn-delete-notification');
+            
+            if(editBtn){
+              const id = editBtn.getAttribute('data-id');
+              try{
+                const res = await fetch(`${api}?id=${encodeURIComponent(id)}`, {credentials: 'include'});
+                const json = await res.json();
+                if(json.success && json.data){
+                  const d = json.data;
+                  if(document.getElementById('notification-id')) {
+                    document.getElementById('notification-id').value = d.notification_id;
+                    document.getElementById('notification-user').value = d.user_id;
+                    document.getElementById('notification-type').value = d.type;
+                    document.getElementById('notification-channel').value = d.channel || 'in_app';
+                    document.getElementById('notification-status').value = d.status || 'queued';
+                    document.getElementById('notification-message').value = d.message || '';
+                    const sched = d.scheduled_for ? String(d.scheduled_for).replace(' ', 'T').slice(0,16) : '';
+                    document.getElementById('notification-scheduled').value = sched;
+                    if(modalTitle) modalTitle.textContent = 'Hindura Notification';
+                    openModal();
+                  }
+                }
+              }catch(err){ console.error(err); }
+            }
+            
+            if(delBtn){
+              const id = delBtn.getAttribute('data-id');
+              if(!confirm('Urashaka gusiba iyi notification?')) return;
+              const fd = new FormData();
+              fd.append('action','delete');
+              fd.append('id', id);
+              try{
+                const res = await fetch(api, {method:'POST', body: fd, credentials: 'include'});
+                const json = await res.json();
+                if(json.success) fetchNotifications(currentPage);
+              }catch(err){ console.error(err); }
+            }
+          });
+        }
 
-        if(btnNew) btnNew.addEventListener('click', async ()=>{
-          form.reset();
-          document.getElementById('notification-id').value = '';
-          if(modalTitle) modalTitle.textContent = 'Ongeza Notification';
-          await loadUsers();
-          openModal();
-          userSelect.focus();
-        });
-        if(btnRefresh) btnRefresh.addEventListener('click', ()=>fetchNotifications(1));
+        // Event listeners
+        if(btnNew) {
+          btnNew.addEventListener('click', async ()=>{
+            if(form) form.reset();
+            if(document.getElementById('notification-id')) {
+              document.getElementById('notification-id').value = '';
+            }
+            if(modalTitle) modalTitle.textContent = 'Ongeza Notification';
+            await loadUsers();
+            openModal();
+            if(userSelect) userSelect.focus();
+          });
+        }
+        
+        if(btnRefresh) {
+          btnRefresh.addEventListener('click', ()=>fetchNotifications(1));
+        }
+        
         if(modalClose) modalClose.addEventListener('click', closeModal);
         if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
-        if(modal) modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+        if(modal) {
+          modal.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
+        }
 
-        if(saveBtn) saveBtn.addEventListener('click', async ()=>{
-          const id = document.getElementById('notification-id').value;
-          const fd = new FormData(form);
-          fd.append('action', id ? 'update' : 'create');
-          if(id) fd.append('id', id);
-          try{
-            const res = await fetch(api, {method:'POST', body: fd});
-            const json = await res.json();
-            if(json.success){ closeModal(); fetchNotifications(id ? currentPage : 1); }
-            else alert(json.message || 'Error saving');
-          }catch(err){ console.error(err); alert('Network error'); }
-        });
+        if(saveBtn) {
+          saveBtn.addEventListener('click', async ()=>{
+            const id = document.getElementById('notification-id')?.value;
+            if(!form) return;
+            
+            const fd = new FormData(form);
+            fd.append('action', id ? 'update' : 'create');
+            if(id) fd.append('id', id);
+            
+            try{
+              const res = await fetch(api, {method:'POST', body: fd, credentials: 'include'});
+              const json = await res.json();
+              if(json.success){ 
+                closeModal(); 
+                fetchNotifications(id ? currentPage : 1); 
+              }
+            }catch(err){ console.error(err); }
+          });
+        }
 
         if(searchInput){
           searchInput.addEventListener('input', (e)=>{
@@ -2291,6 +2316,7 @@
             }, 250);
           });
         }
+        
         if(searchBtn){
           searchBtn.addEventListener('click', ()=>{
             currentQuery = (searchInput?.value || '').trim();
@@ -2298,20 +2324,25 @@
           });
         }
 
-        filterType?.addEventListener('change', ()=>fetchNotifications(1));
-        filterChannel?.addEventListener('change', ()=>fetchNotifications(1));
-        filterStatus?.addEventListener('change', ()=>fetchNotifications(1));
+        if(filterType) filterType.addEventListener('change', ()=>fetchNotifications(1));
+        if(filterChannel) filterChannel.addEventListener('change', ()=>fetchNotifications(1));
+        if(filterStatus) filterStatus.addEventListener('change', ()=>fetchNotifications(1));
 
-        prevBtn?.addEventListener('click', ()=>{ if(currentPage > 1) fetchNotifications(currentPage-1); });
-        nextBtn?.addEventListener('click', ()=>{
-          const totalPages = Math.max(1, Math.ceil(lastTotal / perPage));
-          if(currentPage < totalPages) fetchNotifications(currentPage+1);
-        });
+        if(prevBtn) {
+          prevBtn.addEventListener('click', ()=>{ if(currentPage > 1) fetchNotifications(currentPage-1); });
+        }
+        
+        if(nextBtn) {
+          nextBtn.addEventListener('click', ()=>{
+            const totalPages = Math.max(1, Math.ceil(lastTotal / perPage));
+            if(currentPage < totalPages) fetchNotifications(currentPage+1);
+          });
+        }
 
-        // initial
+        // Initial load
+        console.log('Initial notifications load');
         fetchNotifications(1);
       })();
-
       // Expenses management JS
       (function(){
         const api = 'expenses_api.php';
