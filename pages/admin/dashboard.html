@@ -53,7 +53,9 @@
   <body class="min-h-screen bg-[color:var(--color-bg)]">
     <div class="flex min-h-screen">
       <!-- Sidebar -->
-      <aside class="hidden w-64 flex-col bg-primary-dark px-4 py-6 text-white md:flex">
+      <!-- I want the aside to be fixed to the left side of the page -->
+      <!-- I want to add a humbeger button that will turn on sidebar on the small screens -->
+      <aside class="hidden w-64 flex-col bg-primary-dark px-4 py-6 text-white md:flex md:fixed md:inset-y-0 md:left-0 lg:w-64 z-20" id="admin-sidebar" >
         <div class="flex items-center gap-2 px-2">
           <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-lg font-bold">
             N
@@ -106,7 +108,8 @@
       </aside>
 
       <!-- Main content -->
-      <main class="flex-1">
+       <!-- I want the main content to be offset from the fixed sidebar and to be visible well on the small screens -->
+      <main class="flex-1 lg:ml-64 px bg-[color:var(--color-bg)] min-h-screen pt-4">
         <!-- Top bar -->
         <header class="flex items-center justify-between border-b border-[color:var(--color-border)] bg-white/80 px-4 py-3">
           <div>
@@ -134,22 +137,22 @@
             <div class="grid gap-4 lg:grid-cols-4">
               <div class="card">
                 <p class="text-xs font-medium text-slate-500">Abanyamuryango bose</p>
-                <p class="mt-2 text-2xl font-semibold text-primary-dark">124</p>
+                <p class="mt-2 text-2xl font-semibold text-primary-dark" id="ov-members"></p>
                 <p class="mt-1 text-[11px] text-slate-500">Abanyamuryango bakora neza muri iki gihe.</p>
               </div>
               <div class="card">
                 <p class="text-xs font-medium text-slate-500">Inguzanyo zose</p>
-                <p class="mt-2 text-2xl font-semibold text-primary-dark">32</p>
+                <p class="mt-2 text-2xl font-semibold text-primary-dark" id="ov-loans"></p>
                 <p class="mt-1 text-[11px] text-slate-500">Harimo zemejwe n'izitegereje kwemezwa.</p>
               </div>
               <div class="card">
                 <p class="text-xs font-medium text-slate-500">Inyungu zakorewe</p>
-                <p class="mt-2 text-2xl font-semibold text-primary-dark">540,000 Frw</p>
+                <p class="mt-2 text-2xl font-semibold text-primary-dark" id="ov-interest"></p>
                 <p class="mt-1 text-[11px] text-slate-500">Inyungu rusange y'Ikimina muri uyu mwaka.</p>
               </div>
               <div class="card">
                 <p class="text-xs font-medium text-slate-500">Expenses</p>
-                <p class="mt-2 text-2xl font-semibold text-primary-dark">120,000 Frw</p>
+                <p class="mt-2 text-2xl font-semibold text-primary-dark" id="ov-expenses"></p>
                 <p class="mt-1 text-[11px] text-slate-500">Amafaranga asohotse mu bikorwa bitandukanye.</p>
               </div>
             </div>
@@ -980,7 +983,7 @@
                     <button id="assets-search-btn" class="btn-secondary text-xs">Shakisha</button>
                   </div>
                 </div>
-
+              </div>
               <div class="table-wrapper">
                 <table class="table">
                   <thead>
@@ -1258,98 +1261,81 @@
           </div>
 
           <!-- SETTINGS -->
-          <div id="section-settings" class="hidden space-y-4">
-            <p class="text-sm font-semibold text-primary-dark">Settings z'Ikimina</p>
-            <div class="grid gap-4 lg:grid-cols-3">
-              <div class="card lg:col-span-2">
-                <p class="text-xs text-slate-600">
-                  Gena imiterere rusange y'inyungu n'uburyo bw'inguzanyo. Izi mibare zikoreshwa mu kubara
-                  inyungu n'amafaranga yishyurwa.
-                </p>
-                <form class="mt-4 grid gap-4 text-xs md:grid-cols-2">
-                  <div>
-                    <label for="settings-investment-rate" class="block font-medium text-slate-700">
-                      % Inyungu ku Munyamuryango
-                    </label>
-                    <input
-                      id="settings-investment-rate"
-                      type="number"
-                      value="18"
-                      class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label for="settings-loan-term" class="block font-medium text-slate-700">
-                      % Inyungu ku Utari Umunyamuryango
-                    </label>
-                    <input
-                      id="settings-loan-term"
-                      type="number"
-                      value="24"
-                      class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label for="settings-interest-rate" class="block font-medium text-slate-700">
-                      % yo Kuvana Imigabane
-                    </label>
-                    <input
-                      id="settings-interest-rate"
-                      type="number"
-                      value="5"
-                      class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label for="settings-loan-term" class="block font-medium text-slate-700">
-                      Loan Term (amezi)
-                    </label>
-                    <input
-                      id="settings-loan-term"
-                      type="number"
-                      value="12"
-                      class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label for="settings-method" class="block font-medium text-slate-700">
-                      Method
-                    </label>
-                    <input
-                      id="settings-method"
-                      type="text"
-                      value="Reducing Balance"
-                      readonly
-                      class="mt-1 w-full cursor-not-allowed rounded-lg border border-[color:var(--color-border)] bg-slate-50 px-3 py-2 text-xs text-slate-600"
-                    />
-                  </div>
-                </form>
-                <div class="mt-4 flex justify-end gap-2">
-                  <button class="btn-secondary text-xs">
-                    Bika Imikorere
-                  </button>
-                </div>
+          <div id="section-settings" class="hidden space-y-6">
+            <div class="flex items-center justify-between">
+              <p class="text-sm font-semibold text-primary-dark">Settings z'Ikimina</p>
+              <button id="btn-new-setting" class="btn-secondary text-xs">+ Setting Nshya</button>
+            </div>
+
+            <!-- Tab bar -->
+            <div class="flex flex-wrap gap-1 border-b border-gray-200" id="settings-tabs">
+              <button data-stab="rates"         class="settings-tab settings-tab-active">💰 Inyungu &amp; Inguzanyo</button>
+              <button data-stab="org"           class="settings-tab">🏢 Ikimina</button>
+              <button data-stab="contributions" class="settings-tab">📅 Imigabane</button>
+              <button data-stab="notifications" class="settings-tab">🔔 Notifications</button>
+              <button data-stab="custom"        class="settings-tab">⚙️ Custom</button>
+            </div>
+
+            <!-- Loading -->
+            <div id="settings-loading" class="card text-center py-8 text-slate-500 text-sm">Gutegura...</div>
+
+            <!-- Panels (one per group) -->
+            <div id="settings-panel-rates"         class="hidden"></div>
+            <div id="settings-panel-org"           class="hidden"></div>
+            <div id="settings-panel-contributions" class="hidden"></div>
+            <div id="settings-panel-notifications" class="hidden"></div>
+            <div id="settings-panel-custom"        class="hidden"></div>
+          </div>
+
+          <!-- Setting CRUD Modal -->
+          <div id="setting-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+            <div class="w-full max-w-lg rounded-lg bg-white shadow-xl">
+              <div class="flex items-center justify-between border-b px-6 py-4">
+                <h2 id="setting-modal-title" class="text-base font-semibold text-primary-dark">Setting Nshya</h2>
+                <button id="setting-modal-close" class="text-gray-400 hover:text-gray-700 text-xl">✕</button>
               </div>
-              <div class="card">
-                <p class="text-xs font-semibold text-slate-600">Ibisobanuro byihuse</p>
-                <ul class="mt-3 space-y-2 text-[11px] text-slate-600">
-                  <li>
-                    <span class="font-semibold">% Inyungu ku Munyamuryango</span> – Inyungu yishyurwa
-                    abanyamuryango ku nguzanyo bafata.
-                  </li>
-                  <li>
-                    <span class="font-semibold">% Inyungu ku Utari Umunyamuryango</span> – Inyungu y'inyongera
-                    ku bantu batari abanyamuryango.
-                  </li>
-                  <li>
-                    <span class="font-semibold">% yo Kuvana Imigabane</span> – Igice gikurwaho nk'ikiguzi
-                    igihe umuntu avanye imigabane.
-                  </li>
-                  <li>
-                    <span class="font-semibold">Loan Term</span> – Igihe cy'inyongera gituma reducing balance
-                    ikora neza.
-                  </li>
-                </ul>
+              <div class="px-6 py-4 space-y-3">
+                <div>
+                  <label class="block text-xs font-medium text-slate-700">Key * <span class="text-slate-400">(a-z, 0-9, _ gusa)</span></label>
+                  <input id="setting-key-input" type="text" placeholder="e.g. max_loan_amount"
+                        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-700">Label (ibisobanuro)</label>
+                  <input id="setting-label-input" type="text" placeholder="e.g. Inguzanyo ntarengwa"
+                        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label for="setting-value-input" class="block text-xs font-medium text-slate-700">Value *</label>
+                    <input id="setting-value-input" type="text"
+                          class="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+                  </div>
+                  <div>
+                    <label for="setting-type-input" class="block text-xs font-medium text-slate-700">Type</label>
+                    <select id="setting-type-input" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                      <option value="text">text</option>
+                      <option value="number">number</option>
+                      <option value="boolean">boolean</option>
+                      <option value="email">email</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label for="setting-group-input" class="block text-xs font-medium text-slate-700">Group</label>
+                  <select id="setting-group-input" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                    <option value="rates">rates</option>
+                    <option value="org">org</option>
+                    <option value="contributions">contributions</option>
+                    <option value="notifications">notifications</option>
+                    <option value="custom">custom</option>
+                  </select>
+                </div>
+                <input type="hidden" id="setting-edit-key" value="" />
+              </div>
+              <div class="flex justify-end gap-2 border-t bg-gray-50 px-6 py-4">
+                <button id="setting-modal-cancel" class="btn-ghost">Funga</button>
+                <button id="setting-modal-save"   class="btn-primary">Bika</button>
               </div>
             </div>
           </div>
@@ -1906,6 +1892,428 @@
         fetchAccounts();
       })();
 
+      // Settings management JS
+      (function () {
+        const api = 'settings_api.php';
+
+        const GROUP_LABELS = {
+          rates:         '💰 Inyungu & Inguzanyo',
+          org:           "🏢 Amakuru y'Ikimina",
+          contributions: '📅 Imigabane & Inama',
+          notifications: '🔔 Notifications',
+          custom:        '⚙️ Custom Settings',
+        };
+
+        // ── CSS for tabs (injected once) ────────────────────────────────
+        const style = document.createElement('style');
+        style.textContent = `
+          .settings-tab {
+            padding: 8px 16px; border-bottom: 2px solid transparent;
+            color:#64748b; font-size:0.8rem; background:none;
+            cursor:pointer; transition:all .15s; white-space:nowrap;
+          }
+          .settings-tab:hover { color:#2F6B4F; }
+          .settings-tab-active { border-bottom-color:#2F6B4F; color:#2F6B4F; font-weight:600; }
+          .toggle-track { width:40px;height:22px;background:#d1d5db;border-radius:999px;position:relative;transition:background .2s;cursor:pointer;display:inline-block;vertical-align:middle; }
+          .toggle-track.on { background:#2F6B4F; }
+          .toggle-thumb { width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2); }
+          .toggle-track.on .toggle-thumb { transform:translateX(18px); }
+        `;
+        document.head.appendChild(style);
+
+        // ── Helpers ─────────────────────────────────────────────────────
+        const esc = s => (s==null?'':String(s)).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
+        const fmt = v => Number(v).toLocaleString('rw-RW');
+
+        // ── Tab switching ────────────────────────────────────────────────
+        let activeTab = 'rates';
+        document.querySelectorAll('.settings-tab').forEach(b => {
+          b.addEventListener('click', () => switchTab(b.dataset.stab));
+        });
+        function switchTab(g) {
+          activeTab = g;
+          document.querySelectorAll('.settings-tab').forEach(b =>
+            b.classList.toggle('settings-tab-active', b.dataset.stab === g));
+          ['rates','org','contributions','notifications','custom'].forEach(x => {
+            const p = document.getElementById('settings-panel-' + x);
+            if (p) p.classList.toggle('hidden', x !== g);
+          });
+        }
+
+        // ── Load all settings ────────────────────────────────────────────
+        async function loadSettings() {
+          const loading = document.getElementById('settings-loading');
+          if (loading) loading.classList.remove('hidden');
+          try {
+            const res  = await fetch(api, { cache:'no-store', credentials:'include' });
+            const json = await res.json();
+            if (!json.success) { alert(json.message); return; }
+            renderAll(json.data || {});
+            if (loading) loading.classList.add('hidden');
+            switchTab(activeTab);
+          } catch(e) {
+            console.error(e);
+            if (loading) loading.textContent = 'Failed to load settings.';
+          }
+        }
+
+        // ── Render all groups ────────────────────────────────────────────
+        function renderAll(groups) {
+          ['rates','org','contributions','notifications','custom'].forEach(g => {
+            const panel = document.getElementById('settings-panel-' + g);
+            if (!panel) return;
+            const rows = groups[g] || [];
+            panel.innerHTML = '';
+
+            if (g === 'custom' && rows.length === 0) {
+              panel.innerHTML = `<div class="card text-center py-8 text-slate-400 text-sm">
+                Nta custom settings. Kanda "+ Setting Nshya" wongere.</div>`;
+              return;
+            }
+
+            // Card wrapper
+            const card = document.createElement('div');
+            card.className = 'card space-y-0';
+
+            // Header row
+            const hdr = document.createElement('div');
+            hdr.className = 'flex items-center justify-between mb-4';
+            hdr.innerHTML = `
+              <div>
+                <p class="text-sm font-semibold text-primary-dark">${GROUP_LABELS[g] || g}</p>
+                <p class="text-xs text-slate-500">Hindura hano maze ukande "Bika Ibizamuka"</p>
+              </div>
+              ${g !== 'custom' ? `<button class="btn-primary text-xs settings-save-group" data-group="${g}">Bika Ibizamuka</button>` : ''}
+            `;
+            card.appendChild(hdr);
+
+            // Table layout for settings rows
+            const table = document.createElement('table');
+            table.className = 'w-full text-sm border-collapse';
+            table.innerHTML = `<thead><tr class="border-b border-gray-100 text-xs text-slate-500">
+              <th class="text-left py-2 pr-3 font-medium w-1/3">Setting</th>
+              <th class="text-left py-2 pr-3 font-medium w-1/2">Value</th>
+              <th class="text-right py-2 font-medium">Ibikorwa</th>
+            </tr></thead>`;
+            const tbody = document.createElement('tbody');
+            tbody.id = 'settings-tbody-' + g;
+
+            rows.forEach(s => tbody.appendChild(buildRow(s)));
+            table.appendChild(tbody);
+            card.appendChild(table);
+
+            // Last updated
+            const upd = rows.find(s => s.updated_at);
+            if (upd) {
+              const note = document.createElement('p');
+              note.className = 'mt-3 text-[10px] text-slate-400 border-t pt-2';
+              note.textContent = `Hindura ya nyuma: ${upd.updated_at}`;
+              card.appendChild(note);
+            }
+            panel.appendChild(card);
+          });
+
+          // Wire group-save buttons
+          document.querySelectorAll('.settings-save-group').forEach(btn =>
+            btn.addEventListener('click', () => saveGroup(btn.dataset.group, btn)));
+        }
+
+        // ── Build a single table row ─────────────────────────────────────
+        function buildRow(s) {
+          const tr = document.createElement('tr');
+          tr.className = 'border-b border-gray-50 hover:bg-slate-50 group';
+          tr.dataset.key = s.setting_key;
+
+          let inputHtml;
+          if (s.readonly) {
+            inputHtml = `<span class="text-slate-400 text-xs">${esc(s.setting_value)}</span>`;
+          } else if (s.type === 'boolean') {
+            const on = s.setting_value === '1';
+            inputHtml = `
+              <span class="toggle-track ${on?'on':''}" data-key="${esc(s.setting_key)}" title="Click to toggle">
+                <span class="toggle-thumb"></span>
+              </span>
+              <input type="hidden" class="settings-field" data-key="${esc(s.setting_key)}" data-type="boolean" value="${on?'1':'0'}" />
+              <span class="ml-2 text-xs text-slate-500 toggle-label">${on?'Enabled':'Disabled'}</span>
+            `;
+          } else {
+            inputHtml = `<input type="${s.type==='number'?'number':'text'}"
+              class="settings-field w-full rounded border border-transparent px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-transparent group-hover:border-gray-200"
+              data-key="${esc(s.setting_key)}" data-type="${esc(s.type)}"
+              value="${esc(s.setting_value)}" ${s.type==='number'?'step="any"':''} />`;
+          }
+
+          const canDelete = !s.is_default_key;
+          tr.innerHTML = `
+            <td class="py-2 pr-3 align-middle">
+              <p class="text-xs font-medium text-slate-700">${esc(s.label||s.setting_key)}</p>
+              <p class="text-[10px] text-slate-400 font-mono">${esc(s.setting_key)}</p>
+            </td>
+            <td class="py-2 pr-3 align-middle">${inputHtml}</td>
+            <td class="py-2 align-middle text-right whitespace-nowrap">
+              <button class="btn-ghost text-xs btn-setting-edit" data-key="${esc(s.setting_key)}">Hindura</button>
+              ${canDelete
+                ? `<button class="btn-ghost-danger text-xs btn-setting-delete" data-key="${esc(s.setting_key)}">Siba</button>`
+                : `<span class="text-[10px] text-slate-300 px-2">default</span>`}
+            </td>
+          `;
+
+          // Toggle click handler
+          const track = tr.querySelector('.toggle-track');
+          if (track) {
+            track.addEventListener('click', () => {
+              const on = track.classList.toggle('on');
+              const hidden = tr.querySelector('input[type="hidden"].settings-field');
+              const label  = tr.querySelector('.toggle-label');
+              if (hidden) hidden.value = on ? '1' : '0';
+              if (label)  label.textContent = on ? 'Enabled' : 'Disabled';
+            });
+          }
+
+          // Inline quick-save on blur for non-boolean, non-readonly
+          tr.querySelectorAll('input.settings-field:not([type="hidden"])').forEach(inp => {
+            inp.addEventListener('blur', () => quickSave(inp.dataset.key, inp.value));
+          });
+
+          // Edit button → open modal pre-filled
+          tr.querySelector('.btn-setting-edit')?.addEventListener('click', () => openEditModal(s));
+
+          // Delete button
+          tr.querySelector('.btn-setting-delete')?.addEventListener('click', () => deleteSetting(s.setting_key));
+
+          return tr;
+        }
+
+        // ── Quick-save single value on blur ─────────────────────────────
+        async function quickSave(key, value) {
+          const fd = new FormData();
+          fd.append('action','update'); fd.append('setting_key',key); fd.append('setting_value',value);
+          try {
+            const res  = await fetch(api, { method:'POST', body:fd, credentials:'include' });
+            const json = await res.json();
+            if (!json.success) console.warn('quickSave failed', json.message);
+          } catch(e) { console.error(e); }
+        }
+
+        // ── Save whole group ─────────────────────────────────────────────
+        async function saveGroup(group, btn) {
+          const tbody = document.getElementById('settings-tbody-' + group);
+          if (!tbody) return;
+
+          const fd = new FormData();
+          fd.append('action','update_group'); fd.append('group',group);
+          tbody.querySelectorAll('.settings-field').forEach(f => {
+            fd.append(f.dataset.key, f.type==='checkbox' ? (f.checked?'1':'0') : f.value);
+          });
+
+          const orig = btn.textContent;
+          btn.textContent = 'Bitegurwa...'; btn.disabled = true;
+          try {
+            const res  = await fetch(api, { method:'POST', body:fd, credentials:'include' });
+            const json = await res.json();
+            if (json.success) {
+              btn.textContent = '✓ Byabitswe!';
+              btn.classList.add('!bg-green-600');
+              setTimeout(() => { btn.textContent=orig; btn.classList.remove('!bg-green-600'); btn.disabled=false; loadSettings(); }, 1800);
+            } else { alert(json.message); btn.textContent=orig; btn.disabled=false; }
+          } catch(e) { console.error(e); btn.textContent=orig; btn.disabled=false; }
+        }
+
+        // ── Delete setting ───────────────────────────────────────────────
+        async function deleteSetting(key) {
+          if (!confirm(`Urashaka gusiba setting "${key}"?`)) return;
+          const fd = new FormData();
+          fd.append('action','delete'); fd.append('setting_key',key);
+          try {
+            const res  = await fetch(api, { method:'POST', body:fd, credentials:'include' });
+            const json = await res.json();
+            if (json.success) loadSettings(); else alert(json.message);
+          } catch(e) { console.error(e); }
+        }
+
+        // ── Modal ────────────────────────────────────────────────────────
+        const modal       = document.getElementById('setting-modal');
+        const modalTitle  = document.getElementById('setting-modal-title');
+        const keyInput    = document.getElementById('setting-key-input');
+        const labelInput  = document.getElementById('setting-label-input');
+        const valueInput  = document.getElementById('setting-value-input');
+        const typeInput   = document.getElementById('setting-type-input');
+        const groupInput  = document.getElementById('setting-group-input');
+        const editKeyEl   = document.getElementById('setting-edit-key');
+
+        function openModal()  { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+        function closeModal() { modal.classList.add('hidden');    modal.classList.remove('flex'); }
+
+        function clearModal() {
+          keyInput.value=''; labelInput.value=''; valueInput.value='';
+          typeInput.value='text'; groupInput.value='custom'; editKeyEl.value='';
+          keyInput.disabled = false;
+          modalTitle.textContent = 'Setting Nshya';
+        }
+
+        function openEditModal(s) {
+          clearModal();
+          editKeyEl.value     = s.setting_key;
+          keyInput.value      = s.setting_key;
+          keyInput.disabled   = true;           // key is the PK, cannot rename
+          labelInput.value    = s.label || '';
+          valueInput.value    = s.setting_value;
+          typeInput.value     = s.type || 'text';
+          groupInput.value    = s.group || 'custom';
+          modalTitle.textContent = 'Hindura Setting';
+          openModal();
+        }
+
+        // New setting button
+        document.getElementById('btn-new-setting')?.addEventListener('click', () => { clearModal(); openModal(); keyInput.focus(); });
+        document.getElementById('setting-modal-close')?.addEventListener('click',  closeModal);
+        document.getElementById('setting-modal-cancel')?.addEventListener('click', closeModal);
+        modal?.addEventListener('click', e => { if (e.target===modal) closeModal(); });
+
+        document.getElementById('setting-modal-save')?.addEventListener('click', async () => {
+          const editKey = editKeyEl.value;
+          const isEdit  = !!editKey;
+          const fd = new FormData();
+
+          if (isEdit) {
+            fd.append('action','update');
+            fd.append('setting_key',   editKey);
+            fd.append('setting_value', valueInput.value.trim());
+          } else {
+            fd.append('action','create');
+            fd.append('setting_key',   keyInput.value.trim());
+            fd.append('setting_value', valueInput.value.trim());
+            fd.append('label',         labelInput.value.trim());
+            fd.append('type',          typeInput.value);
+            fd.append('group',         groupInput.value);
+          }
+
+          try {
+            const res  = await fetch(api, { method:'POST', body:fd, credentials:'include' });
+            const json = await res.json();
+            if (json.success) { closeModal(); loadSettings(); } else alert(json.message);
+          } catch(e) { console.error(e); alert('Network error'); }
+        });
+
+        // ── Auto-load when tab clicked in sidebar ────────────────────────
+        document.querySelector('[data-section="settings"]')
+          ?.addEventListener('click', loadSettings);
+
+      })(); // end Settings module
+
+
+      /* ══════════════════════════════════════════════════════════════════
+        OVERVIEW LIVE CARDS + CHART MODULE
+      ══════════════════════════════════════════════════════════════════ */
+      (function () {
+        const api = 'overview_api.php';
+        let chartInstance = null;
+
+        const fmt = (v, frw=true) => Number(v||0).toLocaleString('rw-RW') + (frw?' Frw':'');
+
+        async function loadOverview() {
+          try {
+            const res  = await fetch(api, { cache:'no-store', credentials:'include' });
+            const json = await res.json();
+            if (!json.success) { console.error('overview', json.message); return; }
+
+            const s = json.stats;
+
+            // ── Cards ─────────────────────────────────────────────────
+            const el = id => document.getElementById(id);
+
+            if (el('ov-members'))  el('ov-members').textContent  = s.total_members;
+            if (el('ov-loans'))    el('ov-loans').textContent    = s.total_loans;
+            if (el('ov-loans-sub'))el('ov-loans-sub').textContent= `Izikora: ${s.active_loans} – Zose: ${s.total_loans}`;
+            if (el('ov-interest')) el('ov-interest').textContent = fmt(s.total_interest);
+            if (el('ov-expenses')) el('ov-expenses').textContent = fmt(s.total_expenses);
+
+            // ── Pending loans table ────────────────────────────────────
+            const pendingTbody = document.querySelector('#section-overview .card table:first-of-type tbody');
+            if (pendingTbody && json.pending_loans) {
+              pendingTbody.innerHTML = '';
+              if (json.pending_loans.length === 0) {
+                pendingTbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-sm text-slate-400">Nta nguzanyo zitegereje</td></tr>`;
+              } else {
+                json.pending_loans.forEach(l => {
+                  const tr = document.createElement('tr');
+                  const badge = l.status==='approved'
+                    ? '<span class="badge badge-success">Yemejwe</span>'
+                    : '<span class="badge badge-warning">Irategereje</span>';
+                  tr.innerHTML = `
+                    <td>${l.borrower_name}</td>
+                    <td>${Number(l.principal_amount).toLocaleString('rw-RW')}</td>
+                    <td>${l.start_date||''}</td>
+                    <td>${badge}</td>
+                    <td><button class="btn-ghost text-xs">Hindura</button></td>
+                  `;
+                  pendingTbody.appendChild(tr);
+                });
+              }
+            }
+
+            // ── Recent payments table ──────────────────────────────────
+            const payTbody = document.querySelector('#section-overview .card:last-of-type table tbody');
+            if (payTbody && json.recent_payments) {
+              payTbody.innerHTML = '';
+              if (json.recent_payments.length === 0) {
+                payTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-sm text-slate-400">Nta payments zibonetse</td></tr>`;
+              } else {
+                json.recent_payments.forEach(p => {
+                  const tr = document.createElement('tr');
+                  tr.innerHTML = `
+                    <td>${p.user_name||''}</td>
+                    <td>${p.tx_date||''}</td>
+                    <td>${Number(p.amount||0).toLocaleString('rw-RW')}</td>
+                    <td>${p.loan_id ? '#LN-'+p.loan_id : '—'}</td>
+                    <td><span class="badge badge-success">Byakiriwe</span></td>
+                    <td><button class="btn-ghost text-xs">Hindura</button></td>
+                  `;
+                  payTbody.appendChild(tr);
+                });
+              }
+            }
+
+            // ── Chart ──────────────────────────────────────────────────
+            const chartEl = document.getElementById('portfolioChart');
+            if (chartEl && window.Chart && json.chart) {
+              const c = json.chart;
+              if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+              chartInstance = new Chart(chartEl, {
+                type: 'line',
+                data: {
+                  labels: c.labels,
+                  datasets: [
+                    { label:'Ishoramari (Imigabane)',  data:c.invest,   borderColor:'#2F6B4F', backgroundColor:'rgba(47,107,79,.1)',  tension:.35, borderWidth:2 },
+                    { label:'Inguzanyo ziriho',         data:c.loans,    borderColor:'#E89C2C', backgroundColor:'rgba(232,156,44,.08)',tension:.35, borderWidth:2 },
+                    { label:'Assets',                   data:c.assets,   borderColor:'#6B4A2D', backgroundColor:'rgba(107,74,45,.08)', tension:.35, borderWidth:2 },
+                    { label:'Expenses',                 data:c.expenses, borderColor:'#DC2626', backgroundColor:'rgba(220,38,38,.06)', tension:.35, borderWidth:2 },
+                  ],
+                },
+                options: {
+                  responsive:true, maintainAspectRatio:false,
+                  plugins: {
+                    legend:{ position:'bottom', labels:{ usePointStyle:true, boxWidth:8 } },
+                    tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${Number(ctx.parsed.y||0).toLocaleString('rw-RW')} Frw` } },
+                  },
+                  scales: {
+                    y:{ ticks:{ callback: v=>`${Number(v).toLocaleString('rw-RW')} Frw` }, grid:{ color:'rgba(148,163,184,.2)' } },
+                    x:{ grid:{ display:false } },
+                  },
+                },
+              });
+            }
+
+          } catch(e) { console.error('loadOverview', e); }
+        }
+
+        // Load on page ready AND when Overview sidebar tab is clicked
+        loadOverview();
+        document.querySelector('[data-section="overview"]')
+          ?.addEventListener('click', loadOverview);
+
+      })(); // end Overview module
+
       // Assets management JS
       (function(){
         const api = 'assets_api.php';
@@ -2137,7 +2545,7 @@
 
         async function loadUsers(){
           try{
-            const res = await fetch(api + '?action=users', {credentials: 'include'});
+            const res = await fetch('users_api.php?per_page=500', {credentials: 'include'});
             const json = await res.json();
             if(json.success && userSelect){
               userSelect.innerHTML = '<option value="">-- Hitamo --</option>';
