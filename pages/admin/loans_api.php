@@ -1,4 +1,6 @@
 <?php
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
 header('Content-Type: application/json; charset=utf-8');
 session_start();
 
@@ -287,45 +289,92 @@ if ($action === 'create') {
 
 if ($action === 'update') {
     $id = (int)($_POST['id'] ?? 0);
-    if ($id <= 0) send_json(['success'=>false,'message'=>'Invalid id']);
+    if ($id <= 0) send_json(['success' => false, 'message' => 'Invalid id']);
 
-    // Detect status changes
-    $oldStatus = null;
+    // Detect status changes before updating
+    $oldStatus   = null;
     $oldBorrower = null;
     $oldRes = $mysqli->query("SELECT status, borrower_user_id FROM loans WHERE loan_id = " . (int)$id . " LIMIT 1");
     if ($oldRes) {
-        $oldRow = $oldRes->fetch_assoc();
-        $oldStatus = $oldRow['status'] ?? null;
+        $oldRow      = $oldRes->fetch_assoc();
+        $oldStatus   = $oldRow['status']           ?? null;
         $oldBorrower = isset($oldRow['borrower_user_id']) ? (int)$oldRow['borrower_user_id'] : null;
     }
-    $account_id = intval($_POST['account_id'] ?? 0);
-    $borrower = intval($_POST['borrower_user_id'] ?? 0);
-    $principal = floatval($_POST['principal_amount'] ?? 0);
-    $monthly_rate = floatval($_POST['monthly_rate'] ?? 0);
-    $term = intval($_POST['term_months'] ?? 0);
-    $start_date = trim($_POST['start_date'] ?? '');
-    $status = trim($_POST['status'] ?? 'requested');
-    $approved_by = !empty($_POST['approved_by']) ? intval($_POST['approved_by']) : null;
+
+    $account_id   = intval($_POST['account_id']       ?? 0);
+    $borrower     = intval($_POST['borrower_user_id']  ?? 0);
+    $principal    = floatval($_POST['principal_amount'] ?? 0);
+    $monthly_rate = floatval($_POST['monthly_rate']    ?? 0);
+    $term         = intval($_POST['term_months']       ?? 0);
+    $start_date   = trim($_POST['start_date']          ?? '');
+    $status       = trim($_POST['status']              ?? 'requested');
+    $approved_by  = !empty($_POST['approved_by'])  ? intval($_POST['approved_by'])  : null;
     $disbursed_by = !empty($_POST['disbursed_by']) ? intval($_POST['disbursed_by']) : null;
-    $notes = trim($_POST['notes'] ?? null);
+    $notes        = trim($_POST['notes']               ?? '');
 
     if ($account_id <= 0 || $borrower <= 0 || $principal <= 0 || $term <= 0 || $start_date === '') {
-        send_json(['success'=>false,'message'=>'Imirima yibanze irabuze cyangwa ifite agaciro kadasobanutse']);
+        send_json(['success' => false, 'message' => 'Imirima yibanze irabuze cyangwa ifite agaciro kadasobanutse']);
     }
 
-    $stmt = $mysqli->prepare("UPDATE loans SET account_id = ?, borrower_user_id = ?, principal_amount = ?, monthly_rate = ?, term_months = ?, start_date = ?, status = ?, approved_by = ?, disbursed_by = ?, notes = ? WHERE loan_id = ?");
-    if (!$stmt) send_json(['success'=>false,'message'=>'Prepare error: '.$mysqli->error]);
-    $stmt->bind_param('iidddssiiisi', $account_id, $borrower, $principal, $monthly_rate, $term, $start_date, $status, $approved_by, $disbursed_by, $notes, $id);
-    if ($stmt->execute()) {
-        // Save guarantors
-        $guarantorsJson = $_POST['guarantors'] ?? '[]';
-        if (!saveGuarantors($mysqli, $id, $guarantorsJson)) {
-            send_json(['success'=>false,'message'=>'Error saving guarantors']);
-        }
-        
-        $res = $mysqli->query("SELECT l.loan_id, l.principal_amount, l.term_months, l.monthly_rate, l.start_date, l.status, a.name as account_name, u.names as borrower_name FROM loans l LEFT JOIN accounts a ON l.account_id = a.account_id LEFT JOIN users u ON l.borrower_user_id = u.id WHERE l.loan_id = " . (int)$id);
-        $row = $res->fetch_assoc();
+    $mysqli->begin_transaction();
+    try {
+        // 1. Update the loan record
+        $stmt = $mysqli->prepare(
+            "UPDATE loans
+             SET account_id = ?, borrower_user_id = ?, principal_amount = ?,
+                 monthly_rate = ?, term_months = ?, start_date = ?, status = ?,
+                 approved_by = ?, disbursed_by = ?, notes = ?
+             WHERE loan_id = ?"
+        );
+        if (!$stmt) throw new Exception('Prepare error: ' . $mysqli->error);
+        $stmt->bind_param(
+            'iidddssiiisi',
+            $account_id, $borrower, $principal, $monthly_rate,
+            $term, $start_date, $status, $approved_by,
+            $disbursed_by, $notes, $id
+        );
+        if (!$stmt->execute()) throw new Exception('Update error: ' . $stmt->error);
+        $stmt->close();
 
+        // 2. Save guarantors (delete old + insert new inside transaction)
+        $stmtG = $mysqli->prepare("DELETE FROM loan_guarantors WHERE loan_id = ?");
+        if (!$stmtG) throw new Exception('Prepare guarantors delete error: ' . $mysqli->error);
+        $stmtG->bind_param('i', $id);
+        if (!$stmtG->execute()) throw new Exception('Delete guarantors error: ' . $stmtG->error);
+        $stmtG->close();
+
+        $guarantorsJson = $_POST['guarantors'] ?? '[]';
+        $guarantors = json_decode($guarantorsJson, true);
+        if (is_array($guarantors)) {
+            foreach ($guarantors as $g) {
+                $gUserId = intval($g['user_id'] ?? 0);
+                $gAmount = floatval($g['amount'] ?? 0);
+                if ($gUserId <= 0 || $gAmount <= 0) continue;
+                $insG = $mysqli->prepare(
+                    "INSERT INTO loan_guarantors (loan_id, guarantor_user_id, guarantee_amount, status)
+                     VALUES (?, ?, ?, 'pending')"
+                );
+                if (!$insG) throw new Exception('Prepare guarantor insert error: ' . $mysqli->error);
+                $insG->bind_param('iid', $id, $gUserId, $gAmount);
+                if (!$insG->execute()) throw new Exception('Insert guarantor error: ' . $insG->error);
+                $insG->close();
+            }
+        }
+
+        $mysqli->commit();
+
+        // 3. Fetch updated row to return
+        $res = $mysqli->query(
+            "SELECT l.loan_id, l.principal_amount, l.term_months, l.monthly_rate,
+                    l.start_date, l.status, a.name AS account_name, u.names AS borrower_name
+             FROM loans l
+             LEFT JOIN accounts a ON l.account_id = a.account_id
+             LEFT JOIN users u ON l.borrower_user_id = u.id
+             WHERE l.loan_id = " . (int)$id
+        );
+        $row = $res ? $res->fetch_assoc() : null;
+
+        // 4. Send notification if status changed
         if ($oldStatus !== null && $oldStatus !== $status) {
             $bId = $borrower > 0 ? (int)$borrower : (int)($oldBorrower ?? 0);
             $msg = "Status y'inguzanyo (#LN-$id) yahindutse: $oldStatus → $status";
@@ -333,22 +382,41 @@ if ($action === 'update') {
             nig_notify_admins($mysqli, 'loan_status_changed', $msg);
         }
 
-        send_json(['success'=>true,'data'=>$row]);
-    } else {
-        send_json(['success'=>false,'message'=>$mysqli->error]);
+        send_json(['success' => true, 'data' => $row]);
+
+    } catch (Exception $e) {
+        $mysqli->rollback();
+        send_json(['success' => false, 'message' => $e->getMessage()]);
     }
 }
 
 if ($action === 'delete') {
     $id = (int)($_POST['id'] ?? 0);
-    if ($id <= 0) send_json(['success'=>false,'message'=>'Invalid id']);
-    $stmt = $mysqli->prepare("DELETE FROM loans WHERE loan_id = ?");
-    $stmt->bind_param('i',$id);
-    if ($stmt->execute()) {
+    if ($id <= 0) send_json(['success' => false, 'message' => 'Invalid id']);
+
+    $mysqli->begin_transaction();
+    try {
+        // 1. Delete guarantors first (removes FK constraint)
+        $stmtG = $mysqli->prepare("DELETE FROM loan_guarantors WHERE loan_id = ?");
+        if (!$stmtG) throw new Exception('Prepare guarantors error: ' . $mysqli->error);
+        $stmtG->bind_param('i', $id);
+        if (!$stmtG->execute()) throw new Exception('Delete guarantors error: ' . $stmtG->error);
+        $stmtG->close();
+
+        // 2. Delete the loan itself
+        $stmtL = $mysqli->prepare("DELETE FROM loans WHERE loan_id = ?");
+        if (!$stmtL) throw new Exception('Prepare loan error: ' . $mysqli->error);
+        $stmtL->bind_param('i', $id);
+        if (!$stmtL->execute()) throw new Exception('Delete loan error: ' . $stmtL->error);
+        $stmtL->close();
+
+        $mysqli->commit();
         nig_notify_admins($mysqli, 'loan_status_changed', "Inguzanyo yasibwe (#LN-$id)");
-        send_json(['success'=>true]);
+        send_json(['success' => true]);
+    } catch (Exception $e) {
+        $mysqli->rollback();
+        send_json(['success' => false, 'message' => $e->getMessage()]);
     }
-    else send_json(['success'=>false,'message'=>$mysqli->error]);
 }
 
 send_json(['success'=>false,'message'=>'Invalid request']);

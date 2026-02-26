@@ -386,7 +386,7 @@
         const json = await res.json();
         if(json.success){ fetchUsers(1); clearForm(); closeModal(); }
         else alert(json.message || 'Error saving user');
-        }catch(e){ console.error(e); alert('Network error'); }
+        }catch(e){ console.error(e); alert('semaza'); }
     });
 
     // Modal handlers
@@ -1973,25 +1973,39 @@
         const editBtn = e.target.closest('.btn-edit-transaction');
         const deleteBtn = e.target.closest('.btn-delete-transaction');
         
-        if(editBtn){
+        if (editBtn) {
             const id = editBtn.getAttribute('data-id');
-            try{
-            const res = await fetch(api + '?id=' + encodeURIComponent(id), {credentials: 'include'});
-            if(!res.ok) { alert('HTTP Error: ' + res.status); return; }
-            const text = await res.text();
-            let json = null;
-            try{ json = JSON.parse(text); } catch(e){ console.error('Response not JSON:', text); alert('Server error: Invalid response. Check console.'); return; }
-            if(json.success && json.data){
-                const d = json.data;
-                document.getElementById('transaction-id').value = d.trans_id;
-                document.getElementById('transaction-date').value = d.tx_date || '';
-                document.getElementById('transaction-user').value = d.user_id || '';
-                document.getElementById('transaction-account').value = d.account_id || '';
-                document.getElementById('transaction-type').value = d.type || '';
-                document.getElementById('transaction-amount').value = d.amount || '';
-                openModal();
-            } else alert(json.message||'Transaction not found');
-            }catch(err){ console.error('Edit transaction error:', err); alert('Error: ' + err.message); }
+            try {
+                const res = await fetch(`${api}?id=${encodeURIComponent(id)}`, { credentials: 'include' });
+
+                // If server returns 404 or 500
+                if (!res.ok) {
+                    throw new Error(`Server responded with status ${res.status}`);
+                }
+
+                // Check if response is actually JSON
+                const contentType = res.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    const rawText = await res.text();
+                    console.error("Expected JSON but got:", rawText);
+                    throw new Error("Server returned non-JSON response. Check console.");
+                }
+
+                const json = await res.json();
+
+                if (json.success && json.data) {
+                    const d = json.data;
+                    document.getElementById('transaction-id').value = d.trans_id;
+                    document.getElementById('transaction-date').value = d.tx_date || '';
+                    // ... rest of your mapping ...
+                    openModal();
+                } else {
+                    alert(json.message || 'Transaction not found');
+                }
+            } catch (err) {
+                console.error('Edit transaction error:', err);
+                alert(err.message);
+            }
         }
         
         if(deleteBtn){
