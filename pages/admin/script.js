@@ -1,91 +1,4 @@
 
-    // Portfolio line chart - months vs amounts (Frw)
-    const chartEl = document.getElementById("portfolioChart");
-    if (chartEl && window.Chart) {
-    const months = ["Mut", "Gas", "Wer", "Mata", "Gic", "Kam"];
-    const investment = [1200000, 1450000, 1600000, 1750000, 1900000, 2100000];
-    const loans = [600000, 720000, 800000, 780000, 760000, 740000];
-    const assets = [850000, 900000, 950000, 1000000, 1100000, 1150000];
-    const expenses = [80000, 60000, 90000, 70000, 65000, 85000];
-
-    new Chart(chartEl, {
-        type: "line",
-        data: {
-        labels: months,
-        datasets: [
-            {
-            label: "Ishoramari (Imigabane yose)",
-            data: investment,
-            borderColor: "#2F6B4F",
-            backgroundColor: "rgba(47, 107, 79, 0.1)",
-            tension: 0.35,
-            borderWidth: 2,
-            },
-            {
-            label: "Inguzanyo ziriho",
-            data: loans,
-            borderColor: "#E89C2C",
-            backgroundColor: "rgba(232, 156, 44, 0.08)",
-            tension: 0.35,
-            borderWidth: 2,
-            },
-            {
-            label: "Assets",
-            data: assets,
-            borderColor: "#6B4A2D",
-            backgroundColor: "rgba(107, 74, 45, 0.08)",
-            tension: 0.35,
-            borderWidth: 2,
-            },
-            {
-            label: "Expenses",
-            data: expenses,
-            borderColor: "#DC2626",
-            backgroundColor: "rgba(220, 38, 38, 0.06)",
-            tension: 0.35,
-            borderWidth: 2,
-            },
-        ],
-        },
-        options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-            position: "bottom",
-            labels: {
-                usePointStyle: true,
-                boxWidth: 8,
-            },
-            },
-            tooltip: {
-            callbacks: {
-                label: (ctx) => {
-                const value = ctx.parsed.y || 0;
-                return `${ctx.dataset.label}: ${value.toLocaleString("rw-RW")} Frw`;
-                },
-            },
-            },
-        },
-        scales: {
-            y: {
-            ticks: {
-                callback: (v) => `${Number(v).toLocaleString("rw-RW")} Frw`,
-            },
-            grid: {
-                color: "rgba(148, 163, 184, 0.2)",
-            },
-            },
-            x: {
-            grid: {
-                display: false,
-            },
-            },
-        },
-        },
-    });
-    }
-
     // Global user management functions (available from any tab)
     const apiUrl = 'users_api.php';
     const viewModal = document.getElementById('user-view-modal');
@@ -931,32 +844,45 @@
 
         // ── Chart ──────────────────────────────────────────────────
         const chartEl = document.getElementById('portfolioChart');
-        if (chartEl && window.Chart && json.chart) {
-            const c = json.chart;
-            if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
-            chartInstance = new Chart(chartEl, {
+        if (chartEl && window.Chart) {
+
+        // fallback values (same output as your static chart)
+        const fallback = {
+            labels: ["Mut", "Gas", "Wer", "Mata", "Gic", "Kam"],
+            invest: [1200000, 1450000, 1600000, 1750000, 1900000, 2100000],
+            loans:  [600000, 720000, 800000, 780000, 760000, 740000],
+            assets: [850000, 900000, 950000, 1000000, 1100000, 1150000],
+            expenses:[80000, 60000, 90000, 70000, 65000, 85000],
+        };
+
+        const c = (json && json.chart) ? json.chart : fallback;
+
+        if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+        chartInstance = new Chart(chartEl, {
             type: 'line',
             data: {
-                labels: c.labels,
-                datasets: [
-                { label:'Ishoramari (Imigabane)',  data:c.invest,   borderColor:'#2F6B4F', backgroundColor:'rgba(47,107,79,.1)',  tension:.35, borderWidth:2 },
-                { label:'Inguzanyo ziriho',         data:c.loans,    borderColor:'#E89C2C', backgroundColor:'rgba(232,156,44,.08)',tension:.35, borderWidth:2 },
-                { label:'Assets',                   data:c.assets,   borderColor:'#6B4A2D', backgroundColor:'rgba(107,74,45,.08)', tension:.35, borderWidth:2 },
-                { label:'Expenses',                 data:c.expenses, borderColor:'#DC2626', backgroundColor:'rgba(220,38,38,.06)', tension:.35, borderWidth:2 },
-                ],
+            labels: c.labels,
+            datasets: [
+                { label:'Ishoramari (Imigabane yose)', data:c.invest,   borderColor:'#2F6B4F', backgroundColor:'rgba(47,107,79,.1)',  tension:.35, borderWidth:2 },
+                { label:'Inguzanyo ziriho',            data:c.loans,    borderColor:'#E89C2C', backgroundColor:'rgba(232,156,44,.08)',tension:.35, borderWidth:2 },
+                { label:'Assets',                      data:c.assets,   borderColor:'#6B4A2D', backgroundColor:'rgba(107,74,45,.08)', tension:.35, borderWidth:2 },
+                { label:'Expenses',                    data:c.expenses, borderColor:'#DC2626', backgroundColor:'rgba(220,38,38,.06)', tension:.35, borderWidth:2 },
+            ],
             },
             options: {
-                responsive:true, maintainAspectRatio:false,
-                plugins: {
+            responsive:true,
+            maintainAspectRatio:false,
+            plugins: {
                 legend:{ position:'bottom', labels:{ usePointStyle:true, boxWidth:8 } },
                 tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${Number(ctx.parsed.y||0).toLocaleString('rw-RW')} Frw` } },
-                },
-                scales: {
+            },
+            scales: {
                 y:{ ticks:{ callback: v=>`${Number(v).toLocaleString('rw-RW')} Frw` }, grid:{ color:'rgba(148,163,184,.2)' } },
                 x:{ grid:{ display:false } },
-                },
             },
-            });
+            },
+        });
         }
 
         } catch(e) { console.error('loadOverview', e); }
@@ -1584,317 +1510,742 @@
 
     // Loans management JS
     (function(){
-    const api = 'loans_api.php';
-    const tbodySelector = '#section-loans table tbody';
-    const modal = document.getElementById('loan-modal');
-    const form = document.getElementById('loan-form');
-    const saveBtn = document.getElementById('loan-save');
-    const cancelBtn = document.getElementById('loan-cancel');
-    const modalClose = document.getElementById('loan-modal-close');
-    const accountSelect = document.getElementById('loan-account');
-    const borrowerSelect = document.getElementById('loan-borrower');
-    const approvedSelect = document.getElementById('loan-approved-by');
-    const disbursedSelect = document.getElementById('loan-disbursed-by');
-    const btnNewLoan = document.getElementById('btn-new-loan');
-    const btnRefreshLoans = document.getElementById('btn-refresh-loans');
-    const btnAddGuarantor = document.getElementById('btn-add-guarantor');
-    const guarantorsListEl = document.getElementById('loan-guarantors-list');
-    let guarantorCounter = 0;
+        const api = 'loans_api.php';
+        const tbodySelector = '#section-loans table tbody';
 
-    function openModal(){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
-    function closeModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
+        const modal = document.getElementById('loan-modal');
+        const form = document.getElementById('loan-form');
+        const saveBtn = document.getElementById('loan-save');
+        const cancelBtn = document.getElementById('loan-cancel');
+        const modalClose = document.getElementById('loan-modal-close');
 
-    async function loadUsersInto(selectEl){
-        try{
-        const res = await fetch('users_api.php?per_page=500', {credentials: 'include'});
-        const json = await res.json();
-        if(json.success){
-            selectEl.innerHTML = '<option value="">-- Hitamo --</option>';
-            json.data.forEach(u => { const opt = document.createElement('option'); opt.value = u.id; opt.textContent = u.names; selectEl.appendChild(opt); });
-        } else console.error('loadUsers error', json);
-        }catch(err){ console.error('loadUsers fetch error', err); }
-    }
+        const btnNewLoan = document.getElementById('btn-new-loan');
+        const btnRefreshLoans = document.getElementById('btn-refresh-loans');
 
-    async function loadAccountsLocal(){
-        try{
-        const res = await fetch('accounts_api.php', {credentials: 'include'});
-        const text = await res.text();
-        let json = null;
-        try{ json = JSON.parse(text); } catch(e){ console.error('accounts not json', text); return; }
-        if(json.success){ accountSelect.innerHTML = '<option value="">-- Hitamo Konto --</option>'; json.data.forEach(acc=>{ const opt=document.createElement('option'); opt.value=acc.account_id; opt.textContent=acc.name; accountSelect.appendChild(opt); }); }
-        }catch(err){ console.error(err); }
-    }
+        const accountSelect = document.getElementById('loan-account');
 
-    async function addGuarantorRow(guarantorId='', guaranteeAmount=''){
-        guarantorCounter++;
-        const idx = guarantorCounter;
-        const row = document.createElement('div');
-        row.className = 'flex gap-2 guarantor-row';
-        row.id = 'guarantor-' + idx;
-        row.innerHTML = `
-        <select name="guarantor_user_id_${idx}" class="flex-1 rounded-lg border px-3 py-2 text-sm guarantor-select" data-idx="${idx}">
-            <option value="">-- Hitamo Umwishingizi --</option>
-        </select>
-        <input name="guarantee_amount_${idx}" type="number" step="0.01" placeholder="Umubare (Frw)" class="w-32 rounded-lg border px-3 py-2 text-sm guarantee-amount" min="0" />
-        <div class="text-xs text-gray-700 bg-blue-50 p-2 rounded flex-1" id="guarantee-details-${idx}" style="display:none;">
-            <div class="text-gray-600">
-            <span id="detail-contrib-${idx}">0</span> 
-            <span> - </span>
-            <span id="detail-withdraw-${idx}">0</span>
-            <span> - </span>
-            <span id="detail-loans-${idx}">0</span>
-            <span> - 120,000</span>
-            </div>
-            <div class="mt-1 pt-1 border-t-2 border-blue-400 font-bold text-blue-700 text-sm">
-            Max Inzira: <span id="detail-max-${idx}">0</span>
-            </div>
-        </div>
-        <button type="button" class="btn-ghost-danger btn-remove-guarantor text-xs" data-idx="${idx}">Siba</button>
-        `;
-        guarantorsListEl.appendChild(row);
-        
-        // Load eligible guarantors into this select
-        const selectEl = row.querySelector('select');
-        const guaranteeDetails = row.querySelector(`#guarantee-details-${idx}`);
-        const amountInput = row.querySelector(`input[name="guarantee_amount_${idx}"]`);
-        
-        try {
-        const res = await fetch('loans_api.php?action=eligible_guarantors', {credentials: 'include'});
-        const json = await res.json();
-        if(json.success && json.data){
-            const guarantorData = {};
-            json.data.forEach(u => { 
-            const opt = document.createElement('option'); 
-            opt.value = u.id; 
-            opt.textContent = u.names;
-            opt.dataset.maxGuarantee = u.available_guarantee;
-            opt.dataset.contrib = u.total_contributions_and_payments;
-            opt.dataset.withdraw = u.total_deductions;
-            opt.dataset.loans = u.total_loan_principal;
-            selectEl.appendChild(opt);
-            guarantorData[u.id] = {
-                max: u.available_guarantee,
-                contrib: u.total_contributions_and_payments,
-                withdraw: u.total_deductions,
-                loans: u.total_loan_principal
-            };
-            });
-            selectEl.dataset.guarantorData = JSON.stringify(guarantorData);
+        // Borrower search UI
+        const borrowerSearch = document.getElementById('borrower-search');
+        const borrowerResults = document.getElementById('borrower-results');
+        const borrowerHidden = document.getElementById('loan-borrower-id');
+        const borrowerSelected = document.getElementById('borrower-selected');
+
+        const borrowerNetEl = document.getElementById('borrower-net');
+        const borrowerUnpaidEl = document.getElementById('borrower-unpaid');
+        const borrowerMemberEl = document.getElementById('borrower-member');
+
+        const loanStatusBadge = document.getElementById('loan-current-status');
+
+        const principalInput = document.getElementById('loan-principal');
+        const guarantorsListEl = document.getElementById('loan-guarantors-list');
+        const btnAddGuarantor = document.getElementById('btn-add-guarantor');
+
+        const requiredGuaranteeEl = document.getElementById('required-guarantee');
+        const guarantorsTotalEl = document.getElementById('guarantors-total');
+        const validationMsgEl = document.getElementById('loan-validation-msg');
+
+        // View modal
+        const viewModal = document.getElementById('loan-view-modal');
+        const viewClose = document.getElementById('loan-view-close');
+        const viewBody = document.getElementById('loan-view-body');
+
+        // Status modal
+        const statusModal = document.getElementById('loan-status-modal');
+        const statusClose = document.getElementById('loan-status-close');
+        const statusCancel = document.getElementById('loan-status-cancel');
+        const statusSave = document.getElementById('loan-status-save');
+        const statusSelect = document.getElementById('loan-status-select');
+        const statusLoanId = document.getElementById('loan-status-loan-id');
+        const statusCurrent = document.getElementById('loan-status-current');
+
+        let guarantorCounter = 0;
+        let borrowerSummary = null; // {net_value, unpaid_loans, is_member...}
+
+        function openModal(){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
+        function closeModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
+
+        function openView(){ viewModal.classList.remove('hidden'); viewModal.classList.add('flex'); }
+        function closeView(){ viewModal.classList.add('hidden'); viewModal.classList.remove('flex'); }
+
+        function openStatus(){ statusModal.classList.remove('hidden'); statusModal.classList.add('flex'); }
+        function closeStatus(){ statusModal.classList.add('hidden'); statusModal.classList.remove('flex'); }
+
+        function money(n){
+            const x = Number(n || 0);
+            return x.toLocaleString('rw-RW') + ' Frw';
         }
-        } catch(err) { console.error('Failed to load eligible guarantors:', err); }
-        
-        // When guarantor is selected, show breakdown
-        selectEl.addEventListener('change', function(){
-        const selectedId = this.value;
-        if(selectedId && this.dataset.guarantorData){
-            const guarantorData = JSON.parse(this.dataset.guarantorData);
-            const data = guarantorData[selectedId];
-            document.getElementById(`detail-contrib-${idx}`).textContent = Number(data.contrib).toLocaleString('rw-RW') + ' Frw';
-            document.getElementById(`detail-withdraw-${idx}`).textContent = Number(data.withdraw).toLocaleString('rw-RW') + ' Frw';
-            document.getElementById(`detail-loans-${idx}`).textContent = Number(data.loans).toLocaleString('rw-RW') + ' Frw';
-            document.getElementById(`detail-max-${idx}`).textContent = Number(data.max).toLocaleString('rw-RW') + ' Frw';
-            guaranteeDetails.style.display = 'block';
-        } else {
-            guaranteeDetails.style.display = 'none';
-        }
-        });
-        
-        // Validate guarantee amount doesn't exceed max
-        amountInput.addEventListener('change', function(){
-        const selectedId = selectEl.value;
-        if(selectedId && selectEl.dataset.guarantorData){
-            const guarantorData = JSON.parse(selectEl.dataset.guarantorData);
-            const maxAmt = guarantorData[selectedId].max;
-            const enteredAmt = parseFloat(this.value) || 0;
-            if(enteredAmt > maxAmt){
-            alert(`Inzira nta mugabane wibura ${Number(maxAmt).toLocaleString('rw-RW')} Frw`);
-            this.value = maxAmt;
-            }
-        }
-        });
-        
-        // Set guarantor if provided with edit
-        selectEl.value = guarantorId || '';
-        if(guarantorId && selectEl.dataset.guarantorData){
-        const guarantorData = JSON.parse(selectEl.dataset.guarantorData);
-        const data = guarantorData[guarantorId];
-        if(data){
-            document.getElementById(`detail-contrib-${idx}`).textContent = Number(data.contrib).toLocaleString('rw-RW') + ' Frw';
-            document.getElementById(`detail-withdraw-${idx}`).textContent = Number(data.withdraw).toLocaleString('rw-RW') + ' Frw';
-            document.getElementById(`detail-loans-${idx}`).textContent = Number(data.loans).toLocaleString('rw-RW') + ' Frw';
-            document.getElementById(`detail-max-${idx}`).textContent = Number(data.max).toLocaleString('rw-RW') + ' Frw';
-            guaranteeDetails.style.display = 'block';
-        }
-        }
-        
-        // Set amount if provided
-        amountInput.value = guaranteeAmount || '';
-        
-        // Remove button handler
-        row.querySelector('.btn-remove-guarantor').addEventListener('click', (e)=>{ e.preventDefault(); row.remove(); });
-    }
 
-    async function fetchLoans(q=''){
-        try{
-        const res = await fetch(api + '?per_page=200' + (q?('&q='+encodeURIComponent(q)):''), {credentials: 'include'});
-        if(!res.ok){ console.error('fetchLoans http', res.status); return; }
-        const json = await res.json();
-        if(json.success) renderLoans(json.data||[]);
-        }catch(err){ console.error('fetchLoans', err); }
-    }
-
-    function renderLoans(rows){
-        const tbody = document.querySelector(tbodySelector);
-        if(!tbody) return;
-        tbody.innerHTML = '';
-        rows.forEach(r=>{
-        const tr = document.createElement('tr');
-        const statusBadge = r.status === 'approved' ? '<span class="badge badge-success">Yemejwe</span>' 
-                            : r.status === 'disbursed' ? '<span class="badge badge-info">Yatanze amafaranga</span>'
-                            : r.status === 'closed' ? '<span class="badge badge-gray">Zarangiye</span>'
-                            : r.status === 'defaulted' ? '<span class="badge badge-danger">Yarenze</span>'
-                            : '<span class="badge badge-warning">Yatanze</span>';
-        tr.innerHTML = `
-            <td>#LN-${r.loan_id}</td>
-            <td>${globalEscapeHtml(r.borrower_name||'')}</td>
-            <td>${Number(r.principal_amount||0).toLocaleString('rw-RW')} Frw</td>
-            <td>${Number(r.principal_amount||0).toLocaleString('rw-RW')} Frw</td>
-            <td>${statusBadge}</td>
-            <td>
-            <button class="btn-ghost btn-edit-loan" data-id="${r.loan_id}">Hindura</button>
-            <button class="btn-ghost-danger btn-delete-loan" data-id="${r.loan_id}">Siba</button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-        });
-    }
-
-    // Delegated event handlers for dynamically created buttons
-    const tbody = document.querySelector(tbodySelector);
-    if(tbody){
-        tbody.addEventListener('click', async (e)=>{
-        const editBtn = e.target.closest('.btn-edit-loan');
-        const deleteBtn = e.target.closest('.btn-delete-loan');
-        
-        if(editBtn){
-            const id = editBtn.getAttribute('data-id');
-            try{
-            const res = await fetch(api + '?id=' + encodeURIComponent(id), {credentials: 'include'});
-            if(!res.ok) { alert('HTTP Error: ' + res.status); return; }
+        async function loadAccountsLocal(){
+            const res = await fetch('accounts_api.php', {credentials:'include'});
             const text = await res.text();
-            console.log('Raw response:', text);
-            let json = null;
-            try{ json = JSON.parse(text); } catch(e){ console.error('Response not JSON:', text); alert('Server error: Invalid response. Check console.'); return; }
-            if(json.success && json.data){
-                const d = json.data;
-                document.getElementById('loan-id').value = d.loan_id;
-                document.getElementById('loan-account').value = d.account_id || '';
-                document.getElementById('loan-borrower').value = d.borrower_user_id || '';
-                document.getElementById('loan-principal').value = d.principal_amount || '';
-                document.getElementById('loan-rate').value = d.monthly_rate || '';
-                document.getElementById('loan-term').value = d.term_months || '';
-                document.getElementById('loan-start').value = d.start_date || '';
-                document.getElementById('loan-status').value = d.status || 'requested';
-                document.getElementById('loan-notes').value = d.notes || '';
-                document.getElementById('loan-approved-by').value = d.approved_by || '';
-                document.getElementById('loan-disbursed-by').value = d.disbursed_by || '';
-                
-                // Load guarantors
-                guarantorsListEl.innerHTML = '';
-                guarantorCounter = 0;
-                if (d.guarantors && Array.isArray(d.guarantors) && d.guarantors.length > 0) {
-                for (const g of d.guarantors) {
-                    await addGuarantorRow(g.guarantor_user_id, g.guarantee_amount);
-                }
-                } else {
-                await addGuarantorRow();
-                }
-                
-                openModal();
-            } else alert(json.message ||'Loan not found');
-            }catch(err){ console.error('Edit loan error:', err); alert('Error: ' + err.message); }
+            let json;
+            try { json = JSON.parse(text); } catch(e){ console.error('accounts non-json', text); return; }
+            if(!json.success) return;
+            accountSelect.innerHTML = '<option value="">-- Hitamo Konti --</option>';
+            json.data.forEach(acc=>{
+            const opt = document.createElement('option');
+            opt.value = acc.account_id;
+            opt.textContent = acc.name;
+            accountSelect.appendChild(opt);
+            });
         }
-        
-        if(deleteBtn){
-            const id = deleteBtn.getAttribute('data-id');
-            if(!confirm('Urashaka gusiba iyi nguzanyo?')) return;
-            const fd = new FormData(); 
-            fd.append('action','delete'); 
-            fd.append('id', id);
-            try{ 
-            const res = await fetch(api, {method:'POST', body: fd, credentials: 'include'}); 
-            const json = await res.json(); 
-            if(json.success) fetchLoans(); 
-            else alert(json.message||'Error'); 
-            }catch(err){ console.error(err); alert('Network error'); }
-        }
+
+        // ---------------------------
+        // Borrower Search (async)
+        // ---------------------------
+        let borrowerTimer = null;
+
+        borrowerSearch.addEventListener('input', ()=>{
+            clearTimeout(borrowerTimer);
+            const q = borrowerSearch.value.trim();
+            borrowerTimer = setTimeout(()=> searchBorrowers(q), 250);
         });
-    }
 
-    if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
-    if(modalClose) modalClose.addEventListener('click', closeModal);
-    if(modal) modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+        async function searchBorrowers(q){
+            borrowerResults.innerHTML = '';
+            borrowerResults.classList.add('hidden');
+            if(q.length < 2) return;
 
-    if(btnNewLoan) btnNewLoan.addEventListener('click', ()=>{ 
-        form.reset(); 
-        document.getElementById('loan-id').value = ''; 
-        guarantorsListEl.innerHTML = '';
-        guarantorCounter = 0;
-        addGuarantorRow();
-        openModal(); 
-        document.getElementById('loan-borrower').focus(); 
-    });
-    if(btnRefreshLoans) btnRefreshLoans.addEventListener('click', ()=>{ fetchLoans(); });
-    if(btnAddGuarantor) btnAddGuarantor.addEventListener('click', (e)=>{ e.preventDefault(); addGuarantorRow(); });
-    
-    // fallback: delegated handler in case elements were not present when script ran
-    if(!btnNewLoan || !btnRefreshLoans){
+            const res = await fetch(`${api}?action=search_users&q=${encodeURIComponent(q)}`, {credentials:'include'});
+            const json = await res.json();
+            if(!json.success) return;
+
+            borrowerResults.classList.remove('hidden');
+            json.data.forEach(u=>{
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'w-full text-left px-3 py-2 hover:bg-slate-50 text-sm';
+            item.textContent = `${u.names} ${u.phone ? ' · '+u.phone : ''} ${Number(u.is_member)===1 ? ' · member' : ' · non-member'}`;
+            item.addEventListener('click', ()=> selectBorrower(u));
+            borrowerResults.appendChild(item);
+            });
+        }
+
+        async function selectBorrower(u){
+            borrowerHidden.value = u.id;
+            borrowerSelected.textContent = `${u.names} ${u.phone ? ' · '+u.phone : ''}`;
+            borrowerResults.innerHTML = '';
+            borrowerResults.classList.add('hidden');
+            borrowerSearch.value = '';
+
+            await loadBorrowerSummary(u.id);
+            await refreshGuarantorRowsEligibility(); // update guarantor searches (exclude borrower)
+            validateFormRules();
+        }
+
+        async function loadBorrowerSummary(userId){
+            borrowerSummary = null;
+            borrowerNetEl.textContent = '...';
+            borrowerUnpaidEl.textContent = '...';
+            borrowerMemberEl.textContent = '...';
+
+            // NEW (optional if you add HTML spans for details)
+            const detailsEl = document.getElementById('borrower-net-details');
+
+            const res = await fetch(`${api}?action=borrower_summary&user_id=${encodeURIComponent(userId)}`, {credentials:'include'});
+            const json = await res.json();
+            if(!json.success) return;
+
+            borrowerSummary = json.data;
+
+            // ✅ numeric net
+            borrowerNetEl.textContent = money(borrowerSummary.net_value);
+            borrowerUnpaidEl.textContent = money(borrowerSummary.unpaid_loans);
+            borrowerMemberEl.textContent = (Number(borrowerSummary.is_member)===1) ? 'Member' : 'Non-member';
+
+            // ✅ breakdown (from backend)
+            const b = borrowerSummary.net_breakdown || null;
+
+            // If you want to show details under net:
+            if(detailsEl){
+                if(!b){
+                detailsEl.innerHTML = '';
+                }else{
+                detailsEl.innerHTML = `
+                    <div class="text-xs text-slate-600 mt-1 space-y-1">
+                    <div>Contrib: <b>${money(b.contrib)}</b></div>
+                    <div>Interest: <b>${money(b.interest)}</b></div>
+                    <div>Withdrawals: <b>${money(b.withdrawals)}</b></div>
+                    <div>Loans: <b>${money(b.loans_principal)}</b></div>
+                    <div>Guaranteed: <b>${money(b.guaranteed_to_others)}</b></div>
+                    <div>Reserve: <b>${money(b.reserve)}</b></div>
+                    <div class="text-[11px] text-slate-500">Net raw: ${money(b.net_raw)} → Net shown: <b>${money(b.net)}</b></div>
+                    </div>
+                `;
+                }
+            }
+
+            validateFormRules();
+            }
+
         document.addEventListener('click', (e)=>{
-        try{
-            const newBtn = e.target.closest && e.target.closest('#btn-new-loan');
-            if(newBtn){ form.reset(); document.getElementById('loan-id').value = ''; guarantorsListEl.innerHTML = ''; guarantorCounter = 0; addGuarantorRow(); openModal(); document.getElementById('loan-borrower').focus(); return; }
-            const refBtn = e.target.closest && e.target.closest('#btn-refresh-loans');
-            if(refBtn){ fetchLoans(); return; }
-        }catch(_){ }
+            // close borrower dropdown if clicked outside
+            if(!borrowerResults.contains(e.target) && e.target !== borrowerSearch){
+            borrowerResults.classList.add('hidden');
+            }
         });
-    }
 
-    if(saveBtn) saveBtn.addEventListener('click', async ()=>{
-        const id = document.getElementById('loan-id').value;
-        const fd = new FormData(form);
-        fd.append('action', id ? 'update' : 'create');
-        if(id) fd.append('id', id);
-        
-        // Collect guarantor data
-        const guarantorsArray = [];
-        document.querySelectorAll('.guarantor-row').forEach(row => {
-        const selects = row.querySelectorAll('select[name^="guarantor_user_id"]');
-        const inputs = row.querySelectorAll('input[name^="guarantee_amount"]');
-        if(selects.length > 0 && inputs.length > 0){
-            const userId = selects[0].value;
-            const amount = inputs[0].value;
-            if(userId && amount) guarantorsArray.push({user_id: userId, amount: amount});
+        // ---------------------------
+        // Guarantors rows
+        // ---------------------------
+        function getRequiredGuarantee(principal){
+            const p = Number(principal||0);
+            if(!borrowerSummary || !borrowerSummary.id) return 0;
+
+            const isMember = Number(borrowerSummary.is_member)===1;
+            const net = Math.max(0, Number(borrowerSummary.net_value||0));
+
+            if(isMember) return Math.max(0, p - net);
+            return p; // non-member
         }
-        });
-        fd.append('guarantors', JSON.stringify(guarantorsArray));
-        
-        try{
-        const res = await fetch(api, {method:'POST', body: fd, credentials: 'include'});
-        const text = await res.text();
-        let json = null;
-        try{ json = JSON.parse(text); } catch(e){ console.error('Loans response not JSON', text); alert('Server returned non-JSON response. See console.'); return; }
-        if(!res.ok){ alert(`HTTP Error ${res.status}: ${json.message || text}`); return; }
-        if(json.success){ closeModal(); fetchLoans(); } else alert(json.message || 'Error saving');
-        }catch(err){ console.error(err); alert('Network error'); }
-    });
 
-    // initial load for loans dropdowns and list
-    loadUsersInto(borrowerSelect);
-    loadUsersInto(approvedSelect);
-    loadUsersInto(disbursedSelect);
-    loadAccountsLocal();
-    fetchLoans();
-    })();
+        function sumGuarantors(){
+            let sum = 0;
+            document.querySelectorAll('.guarantor-row').forEach(row=>{
+            const amt = parseFloat(row.querySelector('.guarantee-amount')?.value || 0) || 0;
+            sum += amt;
+            });
+            return sum;
+        }
+
+        function getGuarantorRowData(row){
+            const select = row.querySelector('.guarantor-search');
+            const hidden = row.querySelector('.guarantor-id');
+            const amtInput = row.querySelector('.guarantee-amount');
+            const netEl = row.querySelector('.guarantor-net');
+            const nameEl = row.querySelector('.guarantor-selected');
+
+            return {select, hidden, amtInput, netEl, nameEl};
+        }
+
+        async function addGuarantorRow(pref = null){
+            guarantorCounter++;
+            const idx = guarantorCounter;
+
+            const row = document.createElement('div');
+            row.className = 'guarantor-row rounded-lg border p-3 space-y-2';
+            row.dataset.idx = idx;
+
+            row.innerHTML = `
+            <div class="flex gap-2 items-start">
+                <div class="flex-1">
+                <label class="block text-xs font-medium text-slate-700">Shakisha Umwishingizi</label>
+                <input type="text" class="guarantor-search mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Andika izina cyangwa phone..." />
+                <div class="guarantor-results mt-1 rounded-lg border bg-white shadow-sm hidden max-h-48 overflow-auto"></div>
+
+                <input type="hidden" class="guarantor-id" />
+                <div class="mt-1 text-xs text-slate-600">
+                    Watoranyije: <span class="guarantor-selected font-semibold">Ntawe</span>
+                </div>
+                <div class="mt-1 text-xs">
+                    Net y'umwishingizi: <span class="guarantor-net font-semibold">-</span>
+                </div>
+                </div>
+
+                <div class="w-40">
+                <label class="block text-xs font-medium text-slate-700">Amount</label>
+                <input type="number" step="0.01" min="0" class="guarantee-amount mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Frw" />
+                </div>
+
+                <div class="pt-6">
+                <button type="button" class="btn-ghost-danger text-xs btn-remove-guarantor">Siba</button>
+                </div>
+            </div>
+            <div class="text-xs text-slate-600">
+                <span class="guarantor-hint"></span>
+            </div>
+            `;
+
+            guarantorsListEl.appendChild(row);
+
+            const {select, hidden, amtInput} = getGuarantorRowData(row);
+            const resultsBox = row.querySelector('.guarantor-results');
+            const removeBtn = row.querySelector('.btn-remove-guarantor');
+
+            removeBtn.addEventListener('click', ()=>{
+            row.remove();
+            validateFormRules();
+            });
+
+            // async search guarantors
+            let timer = null;
+            select.addEventListener('input', ()=>{
+            clearTimeout(timer);
+            const q = select.value.trim();
+            timer = setTimeout(()=> searchGuarantorsForRow(row, q), 250);
+            });
+
+            amtInput.addEventListener('input', ()=> validateFormRules());
+
+            // apply pref (edit)
+            if(pref && pref.user_id){
+            await setGuarantorForRow(row, pref.user_id, pref.display || '', pref.net_value || 0);
+            amtInput.value = pref.amount || '';
+            }
+
+            validateFormRules();
+        }
+
+        async function searchGuarantorsForRow(row, q){
+            const resultsBox = row.querySelector('.guarantor-results');
+            resultsBox.innerHTML = '';
+            resultsBox.classList.add('hidden');
+
+            const borrowerId = borrowerHidden.value;
+            if(!borrowerId || q.length < 2) return;
+
+            const res = await fetch(`${api}?action=eligible_guarantors&borrower_id=${encodeURIComponent(borrowerId)}&q=${encodeURIComponent(q)}`, {credentials:'include'});
+            const json = await res.json();
+            if(!json.success) return;
+
+            resultsBox.classList.remove('hidden');
+
+            json.data.forEach(g=>{
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'w-full text-left px-3 py-2 hover:bg-slate-50 text-sm';
+            item.textContent = `${g.names} ${g.phone ? ' · '+g.phone : ''} · net: ${money(g.net_value)}`;
+            item.addEventListener('click', async ()=>{
+                await setGuarantorForRow(row, g.id, `${g.names}${g.phone ? ' · '+g.phone : ''}`, g.net_value);
+                resultsBox.innerHTML = '';
+                resultsBox.classList.add('hidden');
+            });
+            resultsBox.appendChild(item);
+            });
+        }
+
+        async function setGuarantorForRow(row, id, display, net){
+            const {select, hidden, netEl, nameEl} = getGuarantorRowData(row);
+            hidden.value = id;
+            nameEl.textContent = display || ('#'+id);
+            netEl.textContent = money(net);
+            select.value = '';
+            validateFormRules();
+        }
+
+        async function refreshGuarantorRowsEligibility(){
+            // no direct reload needed; searches will exclude borrower via borrower_id param.
+            validateFormRules();
+        }
+
+        // ---------------------------
+        // Form validation rules
+        // ---------------------------
+        function validateFormRules(){
+            const borrowerId = borrowerHidden.value;
+            const principal = parseFloat(principalInput.value || 0) || 0;
+
+            let ok = true;
+            let msg = '';
+
+            if(!borrowerId){
+            ok = false; msg = 'Hitamo uwasabye inguzanyo (borrower).';
+            } else if(principal <= 0){
+            ok = false; msg = 'Shyiramo umubare w’inguzanyo (loan amount).';
+            } else if(!borrowerSummary){
+            ok = false; msg = 'Tegereza borrower info (net/unpaid)...';
+            } else {
+            const required = getRequiredGuarantee(principal);
+            const totalG = sumGuarantors();
+
+            requiredGuaranteeEl.textContent = money(required);
+            guarantorsTotalEl.textContent = money(totalG);
+
+            // If guarantee required -> must be covered
+            if(required > 0){
+                if(totalG + 0.00001 < required){
+                ok = false;
+                msg = `Abamwishingizi ntibahagije. Bisabwa: ${money(required)}. Batanze: ${money(totalG)}.`;
+                }
+
+                // Validate each guarantor amount <= guarantor net and chosen
+                const used = new Set();
+                document.querySelectorAll('.guarantor-row').forEach(row=>{
+                const gid = row.querySelector('.guarantor-id')?.value || '';
+                const amt = parseFloat(row.querySelector('.guarantee-amount')?.value || 0) || 0;
+                const netTxt = row.querySelector('.guarantor-net')?.textContent || '';
+                const netVal = parseFloat((netTxt.replace(/[^\d.]/g,'') || '0')) || 0; // best-effort
+
+                if(required > 0){
+                    if(!gid || amt <= 0){
+                    ok = false;
+                    if(!msg) msg = 'Hitamo umwishingizi kandi ushyireho amount.';
+                    } else {
+                    if(used.has(gid)){
+                        ok = false;
+                        msg = 'Hari umwishingizi washyizwemo kabiri.';
+                    }
+                    used.add(gid);
+
+                    // netVal parsing can be imperfect with locale; so we ALSO enforce via server.
+                    // Here we do a light UI check only if netVal > 0.
+                    if(netVal > 0 && amt > netVal){
+                        ok = false;
+                        msg = 'Amount y’umwishingizi irenze net ye. Mugabanye amount.';
+                    }
+                    if(gid === borrowerId){
+                        ok = false;
+                        msg = 'Borrower ntashobora kwiyishingira.';
+                    }
+                    }
+                }
+                });
+
+            } else {
+                // no guarantor needed: allow empty guarantor list
+                requiredGuaranteeEl.textContent = money(0);
+                guarantorsTotalEl.textContent = money(sumGuarantors());
+            }
+            }
+
+            validationMsgEl.textContent = msg;
+            validationMsgEl.classList.toggle('hidden', !msg);
+
+            saveBtn.disabled = !ok;
+            saveBtn.classList.toggle('opacity-50', !ok);
+            saveBtn.classList.toggle('cursor-not-allowed', !ok);
+        }
+
+        principalInput.addEventListener('input', validateFormRules);
+
+        // ---------------------------
+       async function fetchLoans(q=''){
+            try{
+            const res = await fetch(
+                api + '?per_page=200' + (q ? ('&q='+encodeURIComponent(q)) : ''),
+                { credentials:'include', cache:'no-store' }
+            );
+
+            const text = await res.text();   // <-- read raw response first
+
+            if(!text || text.trim() === ''){
+                console.error('fetchLoans: Empty response from server');
+                alert('Loans API returned empty response. Check loans_api.php / server logs.');
+                return;
+            }
+
+            let json;
+            try{
+                json = JSON.parse(text);
+            }catch(e){
+                console.error('fetchLoans: Response is not valid JSON:', text);
+                alert('Loans API returned non-JSON output. Open console to see the output.');
+                return;
+            }
+
+            if(!res.ok){
+                console.error('fetchLoans HTTP error', res.status, json);
+                alert(json.message || ('HTTP ' + res.status));
+                return;
+            }
+
+            if(json.success) renderLoans(json.data||[]);
+            else alert(json.message || 'Error loading loans');
+
+            }catch(err){
+            console.error('fetchLoans error:', err);
+            alert('Network/JS error: ' + err.message);
+            }
+            }
+
+        function statusBadge(status){
+            if(status === 'approved') return '<span class="badge badge-success">approved</span>';
+            if(status === 'disbursed') return '<span class="badge badge-info">disbursed</span>';
+            if(status === 'closed') return '<span class="badge badge-gray">closed</span>';
+            if(status === 'defaulted') return '<span class="badge badge-danger">defaulted</span>';
+            if(status === 'rejected') return '<span class="badge badge-danger">rejected</span>';
+            return '<span class="badge badge-warning">requested</span>';
+        }
+
+        function renderLoans(rows){
+            const tbody = document.querySelector(tbodySelector);
+            if(!tbody) return;
+
+            tbody.innerHTML = '';
+            rows.forEach(r=>{
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>#LN-${r.loan_id}</td>
+                <td>
+                <div class="font-semibold">${globalEscapeHtml(r.borrower_name||'')}</div>
+                <div class="text-xs text-slate-600">${globalEscapeHtml(r.borrower_phone||'')}</div>
+                </td>
+                <td>${money(r.principal_amount||0)}</td>
+                <td>${money(r.principal_amount||0)}</td>
+                <td>${globalEscapeHtml(r.start_date || '')}</td>
+                <td>${statusBadge(r.status||'requested')}</td>
+                <td class="space-x-1">
+                <button class="btn-ghost text-xs btn-view-loan" data-id="${r.loan_id}">Reba</button>
+                <button class="btn-ghost text-xs btn-edit-loan" data-id="${r.loan_id}">Hindura</button>
+                <button class="btn-ghost-danger text-xs btn-delete-loan" data-id="${r.loan_id}">Siba</button>
+                <button class="btn-secondary text-xs btn-status-loan" data-id="${r.loan_id}" data-status="${r.status||'requested'}">Change Status</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+            });
+        }
+
+        // ---------------------------
+        // Delegated table actions
+        // ---------------------------
+        const tbody = document.querySelector(tbodySelector);
+        if(tbody){
+            tbody.addEventListener('click', async (e)=>{
+            const viewBtn = e.target.closest('.btn-view-loan');
+            const editBtn = e.target.closest('.btn-edit-loan');
+            const delBtn  = e.target.closest('.btn-delete-loan');
+            const stBtn   = e.target.closest('.btn-status-loan');
+
+            if(viewBtn){
+                const id = viewBtn.dataset.id;
+                await openLoanView(id);
+            }
+
+            if(editBtn){
+                const id = editBtn.dataset.id;
+                await openLoanEdit(id);
+            }
+
+            if(delBtn){
+                const id = delBtn.dataset.id;
+                if(!confirm('Urashaka gusiba iyi nguzanyo?')) return;
+                const fd = new FormData();
+                fd.append('action','delete');
+                fd.append('id', id);
+                const res = await fetch(api, {method:'POST', body: fd, credentials:'include'});
+                const json = await res.json();
+                if(json.success) fetchLoans();
+                else alert(json.message||'Error');
+            }
+
+            if(stBtn){
+                statusLoanId.value = stBtn.dataset.id;
+                statusCurrent.textContent = stBtn.dataset.status || 'requested';
+                statusSelect.value = stBtn.dataset.status || 'requested';
+                openStatus();
+            }
+            });
+        }
+
+        async function openLoanView(id){
+            viewBody.innerHTML = 'Loading...';
+            const res = await fetch(api + '?id=' + encodeURIComponent(id), {credentials:'include'});
+            const json = await res.json();
+            if(!json.success){ viewBody.innerHTML = 'Not found'; openView(); return; }
+            const d = json.data;
+
+            const gHtml = (d.guarantors||[]).map(g=>`
+            <tr>
+                <td>${globalEscapeHtml(g.guarantor_name||'')}</td>
+                <td>${globalEscapeHtml(g.guarantor_phone||'')}</td>
+                <td>${money(g.guarantee_amount||0)}</td>
+                <td>
+                    <div>${money(g.guarantor_net||0)}</div>
+                    ${g.guarantor_breakdown ? `
+                        <div class="text-[11px] text-slate-500">
+                        C:${money(g.guarantor_breakdown.contrib)} I:${money(g.guarantor_breakdown.interest)}
+                        L:${money(g.guarantor_breakdown.loans_principal)}
+                        </div>
+                    ` : ''}
+                </td>
+                <td>${globalEscapeHtml(g.status||'')}</td>
+            </tr>
+            `).join('');
+            const bn = d.borrower_net_breakdown || null;
+
+            const borrowerBreakdownHtml = bn ? `
+            <div class="mt-1 text-xs text-slate-600 space-y-1">
+                <div>Contrib: <b>${money(bn.contrib)}</b> | Interest: <b>${money(bn.interest)}</b></div>
+                <div>Withdrawals: <b>${money(bn.withdrawals)}</b> | Loans: <b>${money(bn.loans_principal)}</b></div>
+                <div>Guaranteed: <b>${money(bn.guaranteed_to_others)}</b> | Reserve: <b>${money(bn.reserve)}</b></div>
+                <div class="text-[11px] text-slate-500">Net raw: ${money(bn.net_raw)} → Net shown: <b>${money(bn.net)}</b></div>
+            </div>
+            ` : '';
+
+            viewBody.innerHTML = `
+            <div class="space-y-2">
+                <div><b>Loan:</b> #LN-${d.loan_id}</div>
+                <div><b>Borrower:</b> ${globalEscapeHtml(d.borrower_name||'')} · ${globalEscapeHtml(d.borrower_phone||'')}</div>
+                <div><b>Amount:</b> ${money(d.principal_amount||0)}</div>
+                <div><b>Status:</b> ${globalEscapeHtml(d.status||'requested')}</div>
+                <div><b>Start date:</b> ${globalEscapeHtml(d.start_date||'')}</div>
+                <div><b>Borrower Net:</b> ${money(d.borrower_net_value||0)}</div>
+                ${borrowerBreakdownHtml}
+                <div><b>Borrower Unpaid loans:</b> ${money(d.borrower_unpaid_loans||0)}</div>
+
+                <div class="mt-3">
+                <b>Guarantors</b>
+                <div class="mt-2 table-wrapper">
+                    <table class="table">
+                    <thead>
+                        <tr>
+                        <th>Name</th><th>Phone</th><th>Amount</th><th>Guarantor Net</th><th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>${gHtml || `<tr><td colspan="5" class="text-sm text-slate-600">Nta bamwishingizi</td></tr>`}</tbody>
+                    </table>
+                </div>
+                </div>
+
+                <div class="mt-2"><b>Notes:</b><br/>${globalEscapeHtml(d.notes||'')}</div>
+            </div>
+            `;
+            openView();
+        }
+
+        async function openLoanEdit(id){
+            const res = await fetch(api + '?id=' + encodeURIComponent(id), {credentials:'include'});
+            const json = await res.json();
+            if(!json.success){ alert(json.message||'Not found'); return; }
+
+            const d = json.data;
+
+            form.reset();
+            document.getElementById('loan-id').value = d.loan_id;
+
+            accountSelect.value = d.account_id || '';
+            borrowerHidden.value = d.borrower_user_id || '';
+            borrowerSelected.textContent = `${d.borrower_name||''} ${d.borrower_phone ? ' · '+d.borrower_phone : ''}`;
+
+            principalInput.value = d.principal_amount || '';
+            document.getElementById('loan-rate').value = d.monthly_rate || '';
+            document.getElementById('loan-term').value = d.term_months || '';
+            document.getElementById('loan-notes').value = d.notes || '';
+
+            loanStatusBadge.textContent = d.status || 'requested';
+
+            // borrower summary
+            await loadBorrowerSummary(d.borrower_user_id);
+
+            // guarantors
+            guarantorsListEl.innerHTML = '';
+            guarantorCounter = 0;
+            if(d.guarantors && d.guarantors.length){
+            for(const g of d.guarantors){
+                await addGuarantorRow({
+                user_id: g.guarantor_user_id,
+                amount: g.guarantee_amount,
+                display: `${g.guarantor_name||''}${g.guarantor_phone ? ' · '+g.guarantor_phone : ''}`,
+                net_value: g.guarantor_net || 0
+                });
+            }
+            } else {
+            await addGuarantorRow();
+            }
+
+            validateFormRules();
+            openModal();
+        }
+
+        // ---------------------------
+        // Buttons / modal close
+        // ---------------------------
+        if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
+        if(modalClose) modalClose.addEventListener('click', closeModal);
+        if(modal) modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+
+        if(viewClose) viewClose.addEventListener('click', closeView);
+        if(viewModal) viewModal.addEventListener('click', (e)=>{ if(e.target===viewModal) closeView(); });
+
+        if(statusClose) statusClose.addEventListener('click', closeStatus);
+        if(statusCancel) statusCancel.addEventListener('click', closeStatus);
+        if(statusModal) statusModal.addEventListener('click', (e)=>{ if(e.target===statusModal) closeStatus(); });
+
+        if(statusSave) statusSave.addEventListener('click', async ()=>{
+            const id = statusLoanId.value;
+            const st = statusSelect.value;
+
+            const fd = new FormData();
+            fd.append('action','change_status');
+            fd.append('id', id);
+            fd.append('status', st);
+
+            const res = await fetch(api, {method:'POST', body: fd, credentials:'include'});
+            const json = await res.json();
+            if(json.success){
+            closeStatus();
+            fetchLoans();
+            } else {
+            alert(json.message || 'Error changing status');
+            }
+        });
+
+        if(btnNewLoan) btnNewLoan.addEventListener('click', async ()=>{
+            form.reset();
+            document.getElementById('loan-id').value = '';
+
+            borrowerHidden.value = '';
+            borrowerSelected.textContent = 'Ntawe';
+            borrowerSummary = null;
+            borrowerNetEl.textContent = '-';
+            borrowerUnpaidEl.textContent = '-';
+            borrowerMemberEl.textContent = '-';
+
+            loanStatusBadge.textContent = 'requested';
+
+            guarantorsListEl.innerHTML = '';
+            guarantorCounter = 0;
+            await addGuarantorRow(); // optional row (will matter only if needed)
+
+            validateFormRules();
+            openModal();
+        });
+
+        if(btnRefreshLoans) btnRefreshLoans.addEventListener('click', ()=> fetchLoans());
+
+        if(btnAddGuarantor) btnAddGuarantor.addEventListener('click', async (e)=>{
+            e.preventDefault();
+            await addGuarantorRow();
+            validateFormRules();
+        });
+
+        if(saveBtn) saveBtn.addEventListener('click', async ()=>{
+            if(saveBtn.disabled) return;
+
+            const id = document.getElementById('loan-id').value;
+            const fd = new FormData(form);
+            fd.append('action', id ? 'update' : 'create');
+            if(id) fd.append('id', id);
+
+            // borrower from hidden
+            fd.set('borrower_user_id', borrowerHidden.value);
+
+            // guarantors array
+            const guarantorsArray = [];
+            document.querySelectorAll('.guarantor-row').forEach(row=>{
+            const gid = row.querySelector('.guarantor-id')?.value || '';
+            const amt = row.querySelector('.guarantee-amount')?.value || '';
+            if(gid && amt) guarantorsArray.push({user_id: gid, amount: amt});
+            });
+            fd.append('guarantors', JSON.stringify(guarantorsArray));
+
+            const res = await fetch(api, {method:'POST', body: fd, credentials:'include'});
+            const text = await res.text();
+            let json;
+            try { json = JSON.parse(text); } catch(e){ console.error('Non-JSON:', text); alert('Server returned non-JSON. Check console.'); return; }
+
+            if(!res.ok){
+            alert(json.message || ('HTTP Error '+res.status));
+            return;
+            }
+
+            if(json.success){
+            closeModal();
+            fetchLoans();
+            } else {
+            alert(json.message || 'Error saving');
+            }
+        });
+
+        // Watch any changes to revalidate
+        ['change','input'].forEach(evt=>{
+            form.addEventListener(evt, ()=> validateFormRules());
+        });
+
+        // init
+        loadAccountsLocal();
+        fetchLoans();
+        })();
 
     // Transactions management JS
     (function(){

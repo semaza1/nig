@@ -71,13 +71,13 @@
           </button>
 
           <button data-section="users" class="sidebar-link w-full text-left">
-            Abakoresha (Users)
+            Abanyamuryango
           </button>
           <button data-section="loans" class="sidebar-link w-full text-left">
             Inguzanyo
           </button>
           <button data-section="accounts" class="sidebar-link w-full text-left">
-            Amafaranga (Accounts)
+            Konte za NIG
           </button>
 
           <button data-section="expenses" class="sidebar-link w-full text-left">
@@ -301,10 +301,10 @@
               </div>
             </div>
 
-            <p class="text-sm font-semibold text-primary-dark">Abakoresha (Users)</p>
+            <p class="text-sm font-semibold text-primary-dark">Abanyamuryango</p>
             <div class="card">
               <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <p class="text-xs text-slate-600">Hano umuyobozi ashobora kurema, guhindura no gusiba abakoresha bose (members cyangwa non-members).</p>
+                <p class="text-xs text-slate-600">Hano umuyobozi ashobora kurema, guhindura no gusiba abanyamuryango n' abataribo.</p>
                 <div class="flex gap-2">
                   <button id="btn-new-user" class="btn-secondary text-xs">Umunyamukoresha Mushya</button>
                   <button id="btn-refresh-users" type="button" class="btn-primary text-xs">Refresh</button>
@@ -475,10 +475,11 @@
               </div>
             </div>
           </div>
-
+          
           <!-- LOANS -->
           <div id="section-loans" class="hidden space-y-4">
             <p class="text-sm font-semibold text-primary-dark">Inguzanyo</p>
+
             <div class="grid gap-4 lg:grid-cols-3">
               <div class="card lg:col-span-5">
                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -488,21 +489,21 @@
                     <button id="btn-refresh-loans" class="btn-primary text-xs">Kugarura Urutonde</button>
                   </div>
                 </div>
+
                 <div class="mt-3 table-wrapper">
                   <table class="table">
                     <thead>
-                    <tr>
-                      <th>Code</th>
-                      <th>Umunyamuryango</th>
-                      <th>Umubare (Frw)</th>
-                      <th>Umwenda usigaye</th>
-                      <th>Status</th>
-                      <th>Ibikorwa</th>
-                    </tr>
+                      <tr>
+                        <th>Code</th>
+                        <th>Borrower</th>
+                        <th>Loan amount</th>
+                        <th>Unpayable amount</th>
+                        <th>Start date</th>
+                        <th>Status</th>
+                        <th>Ibikorwa</th>
+                      </tr>
                     </thead>
-                    <tbody>
-                      <!-- JSON Data from database -->
-                    </tbody>
+                    <tbody><!-- JSON Data --></tbody>
                   </table>
                 </div>
               </div>
@@ -732,88 +733,161 @@
             </div>
           </div>
 
-          <!-- LOAN Modal -->
+          <!-- CREATE / UPDATE MODAL -->
           <div id="loan-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4">
             <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
               <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
-                <h2 id="loan-modal-title" class="text-lg font-semibold text-primary-dark">Ongeza / Hindura Inguzanyo</h2>
+                <div>
+                  <h2 class="text-lg font-semibold text-primary-dark">
+                    Ongeza / Hindura Inguzanyo
+                    <span class="ml-2 text-xs text-slate-600">Status: <b id="loan-current-status">requested</b></span>
+                  </h2>
+                  <p class="text-xs text-slate-600 mt-1">“Bika” izafungurwa gusa igihe conditions zose zuzuye.</p>
+                </div>
                 <button id="loan-modal-close" class="text-gray-500 hover:text-gray-700">✕</button>
               </div>
+
               <div class="px-6 py-4">
                 <form id="loan-form" class="space-y-4" enctype="multipart/form-data">
                   <input type="hidden" id="loan-id" name="id" />
+
                   <div>
                     <label for="loan-account" class="block text-xs font-medium text-slate-700">Konti (aho amafaranga aturuka) *</label>
                     <select id="loan-account" name="account_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
                       <option value="">-- Hitamo Konti --</option>
                     </select>
                   </div>
-                  <div>
-                    <label for="loan-borrower" class="block text-xs font-medium text-slate-700">Uwasabye inguzanyo (Umunyamuryango) *</label>
-                    <select id="loan-borrower" name="borrower_user_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
-                      <option value="">-- Hitamo Uwasabye --</option>
-                    </select>
+
+                  <!-- Borrower Search -->
+                  <div class="relative">
+                    <label class="block text-xs font-medium text-slate-700">Uwasabye inguzanyo (Search) *</label>
+                    <input id="borrower-search" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                          placeholder="Andika izina cyangwa phone..." autocomplete="off" />
+                    <div id="borrower-results" class="absolute z-10 mt-1 w-full rounded-lg border bg-white shadow-sm hidden max-h-56 overflow-auto"></div>
+
+                    <input type="hidden" id="loan-borrower-id" name="borrower_user_id" />
+
+                    <div class="mt-2 text-xs text-slate-700">
+                      Watoranyije: <span id="borrower-selected" class="font-semibold">Ntawe</span>
+                    </div>
+
+                    <!-- Borrower Summary -->
+                    <div class="mt-2 grid grid-cols-3 gap-2 text-xs">
+                      <div class="rounded bg-slate-50 p-2">
+                        <div class="text-slate-500">Borrower Net</div>
+                        <div id="borrower-net" class="font-semibold">-</div>
+                        <div id="borrower-net-details"></div>
+                      </div>
+                      <div class="rounded bg-slate-50 p-2">
+                        <div class="text-slate-500">Unpaid loans</div>
+                        <div id="borrower-unpaid" class="font-semibold">-</div>
+                      </div>
+                      <div class="rounded bg-slate-50 p-2">
+                        <div class="text-slate-500">Type</div>
+                        <div id="borrower-member" class="font-semibold">-</div>
+                      </div>
+                    </div>
                   </div>
+
                   <div class="grid grid-cols-2 gap-3">
                     <div>
                       <label for="loan-principal" class="block text-xs font-medium text-slate-700">Umubare (Frw) *</label>
-                      <input id="loan-principal" name="principal_amount" type="number" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" step="0.01" required />
+                      <input id="loan-principal" name="principal_amount" type="number"
+                            class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" step="0.01" required />
                     </div>
                     <div>
                       <label for="loan-rate" class="block text-xs font-medium text-slate-700">Inyungu y'ukwezi (rate) *</label>
-                      <input id="loan-rate" name="monthly_rate" type="number" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" step="0.0001" required />
+                      <input id="loan-rate" name="monthly_rate" type="number"
+                            class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" step="0.0001" required />
                     </div>
                   </div>
+
                   <div class="grid grid-cols-2 gap-3">
                     <div>
                       <label for="loan-term" class="block text-xs font-medium text-slate-700">Igihe izamara (amezi) *</label>
-                      <input id="loan-term" name="term_months" type="number" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required />
+                      <input id="loan-term" name="term_months" type="number"
+                            class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required />
                     </div>
-                    <div>
-                      <label for="loan-start" class="block text-xs font-medium text-slate-700">Itariki itangirira *</label>
-                      <input id="loan-start" name="start_date" type="date" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required />
+                    <div class="rounded bg-blue-50 p-3 text-xs">
+                      <div class="text-slate-600">Required guarantee</div>
+                      <div class="font-bold text-blue-700" id="required-guarantee">0 Frw</div>
+                      <div class="text-slate-600 mt-1">Guarantors total</div>
+                      <div class="font-bold" id="guarantors-total">0 Frw</div>
                     </div>
                   </div>
-                  <div>
-                    <label for="loan-status" class="block text-xs font-medium text-slate-700">Status</label>
-                    <select id="loan-status" name="status" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
-                      <option value="requested">requested</option>
-                      <option value="approved">approved</option>
-                      <option value="disbursed">disbursed</option>
-                      <option value="closed">closed</option>
-                      <option value="rejected">rejected</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label for="loan-approved-by" class="block text-xs font-medium text-slate-700">Byemejwe na: </label>
-                    <select id="loan-approved-by" name="approved_by" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
-                      <option value="">-- Hitamo Umukoresha --</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label for="loan-disbursed-by" class="block text-xs font-medium text-slate-700">Yatanze amafaranga na (optional)</label>
-                    <select id="loan-disbursed-by" name="disbursed_by" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
-                      <option value="">-- Hitamo Umukoresha --</option>
-                    </select>
-                  </div>
+
+                  <!-- Guarantors -->
                   <div>
                     <label class="block text-xs font-medium text-slate-700">Abamwishingizi (Guarantors)</label>
                     <div id="loan-guarantors-list" class="mt-2 space-y-2"></div>
                     <button type="button" id="btn-add-guarantor" class="btn-secondary text-xs mt-2">+ Ongeza Umwishingizi</button>
+
+                    <div id="loan-validation-msg" class="mt-2 hidden text-xs text-red-600"></div>
                   </div>
+
                   <div>
                     <label for="loan-notes" class="block text-xs font-medium text-slate-700">Ibyiyongera / Ibisobanuro</label>
                     <textarea id="loan-notes" name="notes" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows="3"></textarea>
                   </div>
+
                   <div>
                     <label for="loan-ref" class="block text-xs font-medium text-slate-700">Icyemezo / Inyandiko (optional)</label>
                     <input id="loan-ref" name="reference_file" type="file" class="mt-1 w-full text-sm" />
                   </div>
                 </form>
               </div>
+
               <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
                 <button id="loan-cancel" class="btn-ghost">Funga</button>
-                <button id="loan-save" class="btn-primary">Bika</button>
+                <button id="loan-save" class="btn-primary opacity-50 cursor-not-allowed" disabled>Bika</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- VIEW MODAL -->
+          <div id="loan-view-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4">
+            <div class="max-h-screen w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-xl">
+              <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+                <h2 class="text-lg font-semibold text-primary-dark">Reba Inguzanyo</h2>
+                <button id="loan-view-close" class="text-gray-500 hover:text-gray-700">✕</button>
+              </div>
+              <div class="px-6 py-4">
+                <div id="loan-view-body" class="text-sm">Loading...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STATUS MODAL -->
+          <div id="loan-status-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4">
+            <div class="w-full max-w-md rounded-lg bg-white shadow-xl">
+              <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                <h2 class="text-lg font-semibold text-primary-dark">Change Loan Status</h2>
+                <button id="loan-status-close" class="text-gray-500 hover:text-gray-700">✕</button>
+              </div>
+
+              <div class="px-6 py-4 space-y-3">
+                <input type="hidden" id="loan-status-loan-id" />
+                <div class="text-sm text-slate-700">
+                  Current: <b id="loan-status-current">requested</b>
+                </div>
+
+                <div>
+                  <label for="loan-status-select" class="block text-xs font-medium text-slate-700">New Status</label>
+                  <select id="loan-status-select" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                    <option value="requested">requested</option>
+                    <option value="approved">approved</option>
+                    <option value="disbursed">disbursed</option>
+                    <option value="closed">closed</option>
+                    <option value="defaulted">defaulted</option>
+                    <option value="rejected">rejected</option>
+                  </select>
+                  <p class="text-xs text-slate-600 mt-1">Iyo uhisemo “approved”, start_date izahita ishyirwaho uyu munsi (auto).</p>
+                </div>
+              </div>
+
+              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
+                <button id="loan-status-cancel" class="btn-ghost">Funga</button>
+                <button id="loan-status-save" class="btn-primary">Bika</button>
               </div>
             </div>
           </div>
@@ -1081,7 +1155,7 @@
             <p class="text-sm font-semibold text-primary-dark">Notifications</p>
             <div class="card">
               <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <p class="text-xs text-slate-600">Ubutumwa bwo kumenyesha abakoresha ibiri kubera muri sisitemu (inguzanyo, transactions, expenses, assets...).</p>
+                <p class="text-xs text-slate-600">Ubutumwa bwo kumenyesha abanyamuryango ibiri kubera muri sisitemu (inguzanyo, transactions, expenses, assets...).</p>
                 <div class="flex gap-2">
                   <button id="btn-new-notification" class="btn-secondary text-xs">Notification nshya</button>
                   <button id="btn-refresh-notifications" class="btn-primary text-xs">Sobanura</button>

@@ -170,12 +170,12 @@ if ($action === 'create') {
         $row = $res->fetch_assoc();
         // Notifications
         $msg = "Transaction yanditswe (#TX-$id): $type - " . number_format((float)$amount) . " Frw";
-        nig_create_notification($mysqli, (int)$user_id, 'transaction_recorded', $msg);
+        create_notification($mysqli, (int)$user_id, 'transaction_recorded', $msg);
         // If loan payment, also mark as payment_received
         if ($type === 'loan_payment') {
-            nig_create_notification($mysqli, (int)$user_id, 'payment_received', $msg);
+            create_notification($mysqli, (int)$user_id, 'payment_received', $msg);
         }
-        nig_notify_admins($mysqli, 'transaction_recorded', $msg);
+        notify_admins($mysqli, 'transaction_recorded', $msg);
         send_json(['success'=>true,'data'=>$row]);
     } else {
         $created_by = $_SESSION['id'] ?? 1;
@@ -188,11 +188,11 @@ if ($action === 'create') {
             $row = $res->fetch_assoc();
             // Notifications
             $msg = "Transaction yanditswe (#TX-$id): $type - " . number_format((float)$amount) . " Frw";
-            nig_create_notification($mysqli, (int)$user_id, 'transaction_recorded', $msg);
+            create_notification($mysqli, (int)$user_id, 'transaction_recorded', $msg);
             if ($type === 'loan_payment') {
-                nig_create_notification($mysqli, (int)$user_id, 'payment_received', $msg);
+                create_notification($mysqli, (int)$user_id, 'payment_received', $msg);
             }
-            nig_notify_admins($mysqli, 'transaction_recorded', $msg);
+            notify_admins($mysqli, 'transaction_recorded', $msg);
             send_json(['success'=>true,'data'=>$row]);
         } else {
             send_json(['success'=>false,'message'=>$mysqli->error]);
