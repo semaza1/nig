@@ -52,9 +52,6 @@
   </head>
   <body class="min-h-screen bg-[color:var(--color-bg)]">
     <div class="flex min-h-screen">
-      <!-- Sidebar -->
-      <!-- I want the aside to be fixed to the left side of the page -->
-      <!-- I want to add a humbeger button that will turn on sidebar on the small screens -->
       <aside class="hidden w-64 flex-col bg-primary-dark px-4 py-6 text-white md:flex md:fixed md:inset-y-0 md:left-0 lg:w-64 z-20" id="admin-sidebar" >
         <div class="flex items-center gap-2 px-2">
           <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-lg font-bold">
@@ -494,12 +491,13 @@
                   <table class="table">
                     <thead>
                       <tr>
-                        <th>Code</th>
+                        <th>#</th>
                         <th>Borrower</th>
                         <th>Loan amount</th>
                         <th>Unpayable amount</th>
                         <th>Start date</th>
                         <th>Status</th>
+                        <th>End Date</th>
                         <th>Ibikorwa</th>
                       </tr>
                     </thead>
@@ -600,137 +598,86 @@
             </div>
           </div>
 
-          <!-- EXPENSES -->
-          <div id="section-expenses" class="hidden space-y-4">
-            <p class="text-sm font-semibold text-primary-dark">Expenses z'Ikimina</p>
-            <div class="card">
-              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <p class="text-xs text-slate-600">Ibikorwa byose byishyuwe n'Ikimina: ibikoresho, inyubako, inama n'ibindi.</p>
-                <div class="flex gap-2">
-                  <button id="btn-new-expense" class="btn-secondary text-xs">Ongeza Expense</button>
-                  <button id="btn-refresh-expenses" class="btn-primary text-xs">Sobanura</button>
-                </div>
-              </div>
-              <div class="mt-4">
-                <div class="flex items-center justify-between mb-3">
-                  <div class="flex items-center gap-2">
-                    <input id="expenses-search" type="search" placeholder="Shakisha category / description" class="rounded-lg border px-3 py-2 text-sm" />
-                    <button id="expenses-search-btn" class="btn-secondary text-xs">Shakisha</button>
-                  </div>
-                </div>
-              <div class="table-wrapper">
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Konto</th>
-                      <th>Itariki</th>
-                      <th>Icyerekezo</th>
-                      <th>Igipimo (Frw)</th>
-                      <th>Ibikorwa</th>
-                    </tr>
-                  </thead>
-                  <tbody id="expenses-tbody">
-                  </tbody>
-                </table>
-              </div>
-              </div>
-            </div>
-          </div>
+          <!-- FRONTEND: EXPENSES (transactions.type='expense') --> 
+          <div id="section-expenses" class="hidden space-y-4"> 
+            <p class="text-sm font-semibold text-primary-dark">Expenses z'Ikimina</p> 
+            <div class="card"> 
+              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"> 
+                <p class="text-xs text-slate-600"> Ibikorwa byose byishyuwe n'Ikimina: ibikoresho, inyubako, inama n'ibindi. </p> 
+                <div class="flex gap-2"> 
+                  <button id="btn-new-expense" class="btn-secondary text-xs">Ongeza Expense</button> 
+                  <button id="btn-refresh-expenses" class="btn-primary text-xs">Sobanura</button> 
+                </div> 
+              </div> 
+              <div class="mt-4"> <div class="flex items-center justify-between mb-3"> 
+                  <div class="flex items-center gap-2"> 
+                    <input id="expenses-search" type="search" placeholder="Shakisha category / description" class="rounded-lg border px-3 py-2 text-sm" /> 
+                    <button id="expenses-search-btn" class="btn-secondary text-xs">Shakisha</button> 
+                  </div> 
+                </div> 
+                <div class="table-wrapper"> 
+                  <table class="table"> 
+                    <thead> 
+                      <tr> 
+                        <th>#</th> 
+                        <th>Konti</th> 
+                        <th>Itariki</th> 
+                        <th>Icyiciro</th> 
+                        <th>Igipimo (Frw)</th> 
+                        <th>Ibisobanuro</th> 
+                        <th>Ibikorwa</th> 
+                      </tr> 
+                    </thead> 
+                    <tbody id="expenses-tbody">
 
-          <!-- Expense Modal -->
-          <div id="expense-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4">
-            <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
-              <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
-                <h2 id="expense-modal-title" class="text-lg font-semibold text-primary-dark">Ongeza Expense</h2>
-                <button id="expense-modal-close" class="text-gray-500 hover:text-gray-700">✕</button>
-              </div>
-              <div class="px-6 py-4">
-                <form id="expense-form" class="space-y-4">
-                  <input type="hidden" id="expense-id" name="id" />
-                  <div>
-                    <label for="expense-account" class="block text-xs font-medium text-slate-700">Konto *</label>
-                    <select id="expense-account" name="account_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
-                      <option value="">-- Hitamo Konto --</option>
-                    </select>
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label for="expense-date" class="block text-xs font-medium text-slate-700">Itariki *</label>
-                      <input id="expense-date" name="expense_date" type="date" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required />
-                    </div>
-                    <div>
-                      <label for="expense-category" class="block text-xs font-medium text-slate-700">Icyerekezo *</label>
-                      <input id="expense-category" name="category" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="e.g., Office Supplies" required />
-                    </div>
-                  </div>
-                  <div>
-                    <label for="expense-amount" class="block text-xs font-medium text-slate-700">Igipimo (Frw) *</label>
-                    <input id="expense-amount" name="amount" type="number" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" step="0.01" required />
-                  </div>
-                  <div>
-                    <label for="expense-description" class="block text-xs font-medium text-slate-700">Ibisobanuro</label>
-                    <textarea id="expense-description" name="description" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows="2" placeholder="Additional notes..."></textarea>
-                  </div>
-                </form>
-              </div>
-              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
-                <button id="expense-cancel" class="btn-ghost">Siba</button>
-                <button id="expense-save" class="btn-primary">Bika</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- TRANSACTION Modal -->
-          <div id="transaction-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4">
-            <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
-              <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
-                <h2 id="transaction-modal-title" class="text-lg font-semibold text-primary-dark">Ongeza / Hindura Transaction</h2>
-                <button id="transaction-modal-close" class="text-gray-500 hover:text-gray-700">✕</button>
-              </div>
-              <div class="px-6 py-4">
-                <form id="transaction-form" class="space-y-4" enctype="multipart/form-data">
-                  <input type="hidden" id="transaction-id" name="id" />
-                  <div>
-                    <label for="transaction-date" class="block text-xs font-medium text-slate-700">Itariki *</label>
-                    <input id="transaction-date" name="tx_date" type="date" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required />
-                  </div>
-                  <div>
-                    <label for="transaction-user" class="block text-xs font-medium text-slate-700">User *</label>
-                    <select id="transaction-user" name="user_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
-                      <option value="">-- Hitamo User --</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label for="transaction-account" class="block text-xs font-medium text-slate-700">Konto *</label>
-                    <select id="transaction-account" name="account_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
-                      <option value="">-- Hitamo Konto --</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label for="transaction-type" class="block text-xs font-medium text-slate-700">Ubwoko (Type) *</label>
-                    <select id="transaction-type" name="type" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
-                      <option value="">-- Hitamo Type --</option>
-                      <option value="contribution">contribution</option>
-                      <option value="withdrawal_deduction">withdrawal_deduction</option>
-                      <option value="loan_payment">loan_payment</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label for="transaction-amount" class="block text-xs font-medium text-slate-700">Igipimo (Frw) *</label>
-                    <input id="transaction-amount" name="amount" type="number" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" step="0.01" required />
-                  </div>
-                  <div>
-                    <label for="transaction-ref" class="block text-xs font-medium text-slate-700">Inyandiko (optional)</label>
-                    <input id="transaction-ref" name="reference_file" type="file" class="mt-1 w-full text-sm" />
-                  </div>
-                </form>
-              </div>
-              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
-                <button id="transaction-cancel" class="btn-ghost">Funga</button>
-                <button id="transaction-save" class="btn-primary">Bika</button>
-              </div>
-            </div>
+                    </tbody> 
+                  </table> 
+                </div> 
+              </div> 
+            </div> 
+          </div> 
+          
+          <!-- Expense Modal --> 
+           <div id="expense-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4"> 
+            <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl"> 
+              <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4"> 
+                <h2 id="expense-modal-title" class="text-lg font-semibold text-primary-dark">Ongeza Expense</h2> 
+                <button id="expense-modal-close" class="text-gray-500 hover:text-gray-700">✕</button> 
+              </div> 
+              <div class="px-6 py-4"> 
+                <form id="expense-form" class="space-y-4"> 
+                  <input type="hidden" id="expense-id" name="id" /> 
+                  <div> 
+                    <label for="expense-account" class="block text-xs font-medium text-slate-700">Konto *</label> 
+                    <select id="expense-account" name="account_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required> 
+                      <option value="">-- Hitamo Konto --</option> 
+                    </select> 
+                  </div> 
+                  <div class="grid grid-cols-2 gap-3"> 
+                    <div> 
+                      <label for="expense-date" class="block text-xs font-medium text-slate-700">Itariki *</label> 
+                      <input id="expense-date" name="expense_date" type="date" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required /> 
+                    </div> 
+                    <div> 
+                      <label for="expense-category" class="block text-xs font-medium text-slate-700">Icyiciro *</label> 
+                      <input id="expense-category" name="category" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="e.g., Office Supplies" required /> 
+                    </div> 
+                  </div> 
+                  <div> 
+                    <label for="expense-amount" class="block text-xs font-medium text-slate-700">Igipimo (Frw) *</label> 
+                    <input id="expense-amount" name="amount" type="number" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" step="0.01" required /> 
+                  </div> 
+                  <div> 
+                    <label for="expense-description" class="block text-xs font-medium text-slate-700">Ibisobanuro</label> 
+                    <textarea id="expense-description" name="description" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows="2" placeholder="Additional notes..."></textarea> 
+                  </div> 
+                </form> 
+              </div> 
+              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4"> 
+                <button id="expense-cancel" class="btn-ghost">Siba</button> 
+                <button id="expense-save" class="btn-primary">Bika</button> 
+              </div> 
+            </div> 
           </div>
 
           <!-- CREATE / UPDATE MODAL -->
@@ -761,8 +708,13 @@
                   <!-- Borrower Search -->
                   <div class="relative">
                     <label class="block text-xs font-medium text-slate-700">Uwasabye inguzanyo (Search) *</label>
-                    <input id="borrower-search" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                          placeholder="Andika izina cyangwa phone..." autocomplete="off" />
+                    <input
+                      id="borrower-search"
+                      type="text"
+                      class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                      placeholder="Andika izina cyangwa phone..."
+                      autocomplete="off"
+                    />
                     <div id="borrower-results" class="absolute z-10 mt-1 w-full rounded-lg border bg-white shadow-sm hidden max-h-56 overflow-auto"></div>
 
                     <input type="hidden" id="loan-borrower-id" name="borrower_user_id" />
@@ -792,22 +744,40 @@
                   <div class="grid grid-cols-2 gap-3">
                     <div>
                       <label for="loan-principal" class="block text-xs font-medium text-slate-700">Umubare (Frw) *</label>
-                      <input id="loan-principal" name="principal_amount" type="number"
-                            class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" step="0.01" required />
+                      <input
+                        id="loan-principal"
+                        name="principal_amount"
+                        type="number"
+                        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                        step="0.01"
+                        required
+                      />
                     </div>
                     <div>
                       <label for="loan-rate" class="block text-xs font-medium text-slate-700">Inyungu y'ukwezi (rate) *</label>
-                      <input id="loan-rate" name="monthly_rate" type="number"
-                            class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" step="0.0001" required />
+                      <input
+                        id="loan-rate"
+                        name="monthly_rate"
+                        type="number"
+                        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                        step="0.0001"
+                        required
+                      />
                     </div>
                   </div>
 
                   <div class="grid grid-cols-2 gap-3">
                     <div>
                       <label for="loan-term" class="block text-xs font-medium text-slate-700">Igihe izamara (amezi) *</label>
-                      <input id="loan-term" name="term_months" type="number"
-                            class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required />
+                      <input
+                        id="loan-term"
+                        name="term_months"
+                        type="number"
+                        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                        required
+                      />
                     </div>
+
                     <div class="rounded bg-blue-50 p-3 text-xs">
                       <div class="text-slate-600">Required guarantee</div>
                       <div class="font-bold text-blue-700" id="required-guarantee">0 Frw</div>
@@ -891,6 +861,8 @@
               </div>
             </div>
           </div>
+
+          
 
           <!-- USER MODAL -->
           <div id="user-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4">
@@ -1010,36 +982,142 @@
             </div>
           </div>
 
-          <!-- TRANSACTIONS (admin CRUD) -->
-          <div id="section-transactions" class="hidden space-y-4">
-            <p class="text-sm font-semibold text-primary-dark">Transactions (Amasoko)</p>
-            <div class="card">
-              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <p class="text-xs text-slate-600">Urutonde rw'amasoko yose (contribution, withdrawal_deduction, loan_payment)</p>
-                <div class="flex gap-2">
-                  <button id="btn-new-transaction" class="btn-secondary text-xs">Transaction Nshya</button>
-                  <button id="btn-refresh-transactions" class="btn-primary text-xs">Kugarura Urutonde</button>
-                </div>
-              </div>
-              <div class="mt-3 table-wrapper">
-                <table class="table">
-                  <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Itariki</th>
-                    <th>User</th>
-                    <th>Konti</th>
-                    <th>Ubwoko</th>
-                    <th>Igipimo (Frw)</th>
-                    <th>Ibikorwa</th>
-                  </tr>
-                  </thead>
-                  <tbody id="transactions-tbody">
-                  </tbody>
-                </table>
-              </div>
-            </div>
+          <!-- Transaction modal -->
+<div id="transaction-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-2xl flex flex-col">
+
+    <div class="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+      <h2 id="transaction-modal-title" class="text-lg font-bold text-primary-dark">Ongeza Transaction</h2>
+      <button id="transaction-modal-close" class="text-gray-400 hover:text-gray-600 transition-colors">
+        <span class="text-2xl">&times;</span>
+      </button>
+    </div>
+
+    <div class="px-6 py-4 overflow-y-auto">
+      <form id="transaction-form" class="grid grid-cols-1 md:grid-cols-2 gap-4" enctype="multipart/form-data">
+        <input type="hidden" id="transaction-id" name="id" />
+
+        <div class="md:col-span-2">
+          <label for="transaction-date" class="block text-xs font-semibold text-slate-700 mb-1">Itariki & Igihe *</label>
+          <input id="transaction-date" name="tx_date" type="datetime-local" class="form-input-style" required />
+          <p class="text-[10px] text-slate-500 mt-1">* Igihe cyifashishwa mu kubara interest ku nguzanyo.</p>
+        </div>
+
+        <!-- USER SEARCH + SELECT -->
+        <div class="md:col-span-2">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Shakisha User (Names / NID / Phone) *</label>
+          <input
+            id="transaction-user-search"
+            type="text"
+            class="form-input-style"
+            placeholder="Andika amazina cyangwa NID/Phone..."
+            autocomplete="off"
+          />
+
+          <div class="mt-2">
+            <label for="transaction-user" class="block text-xs font-semibold text-slate-700 mb-1">User</label>
+            <select id="transaction-user" name="user_id" class="form-input-style">
+              <option value="">-- Hitamo User --</option>
+            </select>
+            <p class="text-[10px] text-slate-400 mt-1">
+              Ubwoko (Type) buzagaragara nyuma yo guhitamo user. Expense ishobora kubikwa na "System".
+            </p>
           </div>
+        </div>
+
+        <!-- TYPE (JS will hide/show this wrapper) -->
+        <div id="transaction-type-wrapper" class="hidden">
+          <label for="transaction-type" class="block text-xs font-semibold text-slate-700 mb-1">Ubwoko (Type) *</label>
+          <select id="transaction-type" name="type" class="form-input-style" required>
+            <option value="">-- Hitamo Type --</option>
+            <optgroup label="Members">
+              <option value="contribution">contribution</option>
+              <option value="withdrawal">withdrawal</option>
+            </optgroup>
+            <optgroup label="Loans">
+              <option value="loan_principal">loan_principal (TOTAL paid)</option>
+              <option value="loan_interest">loan_interest (Interest receipt)</option>
+            </optgroup>
+            <optgroup label="System">
+              <option value="expense">expense</option>
+            </optgroup>
+          </select>
+
+          <p class="text-[10px] text-blue-600 mt-1 leading-tight">
+            <b>loan_principal:</b> system ibanza kwishyura interest (ibaruye kugeza kuri iyo tariki), hanyuma asigaye akajya kuri principal.
+            <br />
+            <b>loan_interest:</b> interest yakiriwe ihita igabanywa ku banyamuryango hashingiwe kuri (contribution + previous interest - withdrawals) icyo gihe.
+          </p>
+        </div>
+
+        <!-- ACCOUNT -->
+        <div>
+          <label for="transaction-account" class="block text-xs font-semibold text-slate-700 mb-1">Konto (Account) *</label>
+          <select id="transaction-account" name="account_id" class="form-input-style" required>
+            <option value="">-- Hitamo Konto --</option>
+          </select>
+          <p class="text-[10px] text-slate-400 mt-1">
+            * OUT (withdrawal/expense) ntirenza amafaranga ari kuri konti wahisemo.
+          </p>
+        </div>
+
+        <!-- AMOUNT -->
+        <div>
+          <label for="transaction-amount" class="block text-xs font-semibold text-slate-700 mb-1">Igipimo (Amount Frw) *</label>
+          <input id="transaction-amount" name="amount" type="number" step="0.01" class="form-input-style" required />
+          <p class="text-[10px] text-slate-500 mt-1">
+            * Withdrawal: nturenga Max Withdrawable (harimo guarantee lock + outstanding loan + reserve 120,000).
+          </p>
+        </div>
+
+        <!-- LOAN SELECT -->
+        <div id="loan-id-wrapper" class="hidden md:col-span-2 bg-blue-50 p-3 rounded-lg border border-blue-100">
+          <label for="transaction-loan-id" class="block text-xs font-bold text-blue-800 mb-1">Loan *</label>
+          <select id="transaction-loan-id" name="loan_id" class="form-input-style border-blue-200">
+            <option value="">-- Hitamo Loan --</option>
+          </select>
+          <p class="text-[10px] text-blue-700 mt-1 italic">Loan igomba kuba "Approved" kandi ikaba iy'uwo user.</p>
+        </div>
+
+        <!-- INFO BOX -->
+        <div class="md:col-span-2">
+          <div id="transaction-info-box"></div>
+        </div>
+
+        <!-- DESCRIPTION -->
+        <div class="md:col-span-2">
+          <label for="transaction-description" class="block text-xs font-semibold text-slate-700 mb-1">Ibisobanuro</label>
+          <textarea id="transaction-description" name="description" rows="2" class="form-input-style" maxlength="255"
+            placeholder="Andika ibisobanuro hano..."></textarea>
+        </div>
+
+        <!-- PROOF -->
+        <div class="md:col-span-2">
+          <label for="transaction-proof" class="block text-xs font-semibold text-slate-700 mb-1">
+            Inyemezabwishyu (Proof) <span class="text-red-600">*</span>
+          </label>
+          <input
+            id="transaction-proof"
+            name="proof_file"
+            type="file"
+            class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            accept="image/*,application/pdf"
+          />
+          <p id="transaction-proof-hint" class="text-[10px] text-red-500 mt-1 italic">Itegeko kuri transaction nshya.</p>
+        </div>
+
+        <input type="hidden" id="transaction-direction" name="direction" value="IN" />
+      </form>
+    </div>
+
+    <div class="flex justify-end gap-3 border-t border-gray-100 bg-slate-50 px-6 py-4">
+      <button id="transaction-cancel" class="btn-ghost text-sm px-5 py-2">Funga</button>
+      <button id="transaction-save" class="btn-primary text-sm px-8 py-2 font-bold shadow-md" disabled>
+        Bika Ibikorwa
+      </button>
+    </div>
+  </div>
+</div>
 
           <!-- ASSETS (admin CRUD) -->
           <div id="section-assets" class="hidden space-y-4">

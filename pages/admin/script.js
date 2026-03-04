@@ -1332,1079 +1332,1308 @@
     console.log('Initial notifications load');
     fetchNotifications(1);
     })();
-    // Expenses management JS
-    (function(){
-    const api = 'expenses_api.php';
-    const tbody = document.getElementById('expenses-tbody');
-    const btnNew = document.getElementById('btn-new-expense');
-    const btnRefresh = document.getElementById('btn-refresh-expenses');
-    const searchInput = document.getElementById('expenses-search');
-    const searchBtn = document.getElementById('expenses-search-btn');
-    const modal = document.getElementById('expense-modal');
-    const modalClose = document.getElementById('expense-modal-close');
-    const saveBtn = document.getElementById('expense-save');
-    const cancelBtn = document.getElementById('expense-cancel');
-    const form = document.getElementById('expense-form');
-    const accountSelect = document.getElementById('expense-account');
+    
+    // SCRIPTS: Expenses management (latest first, show # 1..n; no ID column)
+(function(){
 
-    if(!tbody) return;
+  const api = 'expenses_api.php';
+  const tbody = document.getElementById('expenses-tbody');
+  const btnNew = document.getElementById('btn-new-expense');
+  const btnRefresh = document.getElementById('btn-refresh-expenses');
+  const searchInput = document.getElementById('expenses-search');
+  const searchBtn = document.getElementById('expenses-search-btn');
+  const modal = document.getElementById('expense-modal');
+  const modalClose = document.getElementById('expense-modal-close');
+  const saveBtn = document.getElementById('expense-save');
+  const cancelBtn = document.getElementById('expense-cancel');
+  const form = document.getElementById('expense-form');
+  const accountSelect = document.getElementById('expense-account');
 
-    let currentQuery = '';
-    let searchTimer = null;
+  if(!tbody) return;
 
-    function openModal(){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
-    function closeModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
+  let currentQuery = '';
+  let searchTimer = null;
 
-    // Load accounts for dropdown
-    async function loadAccounts(){
-        try{
-        // Use the dedicated accounts API to avoid cross-endpoint output mixing
-        const res = await fetch('accounts_api.php');
-        const text = await res.text();
-        let json = null;
-        try{
-            json = JSON.parse(text);
-        }catch(parseErr){
-            console.error('loadAccounts: response not JSON', text);
-            alert('Failed to load accounts: server returned non-JSON response. See console for details.');
-            return;
-        }
+  function openModal(){
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
 
-        if(!res.ok){
-            console.error('loadAccounts HTTP error:', res.status, json);
-            alert('Failed to load accounts: ' + (json.message || ('HTTP ' + res.status)) + (json.output ? '\n\nServer output:\n' + json.output : '') + (json.debug_log ? '\n\nDebug log: ' + json.debug_log : ''));
-            return;
-        }
+  function closeModal(){
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
 
-        if(json.success){
-            accountSelect.innerHTML = '<option value="">-- Hitamo Konto --</option>';
-            json.data.forEach(acc => {
-            const opt = document.createElement('option');
-            opt.value = acc.account_id;
-            opt.textContent = acc.name;
-            accountSelect.appendChild(opt);
-            });
-            console.log('Accounts loaded:', json.data.length);
-        } else {
-            console.error('Load accounts error:', json.message, json);
-            alert('Failed to load accounts: ' + (json.message || 'Unknown error') + (json.output ? '\n\nServer output:\n' + json.output : '') + (json.debug_log ? '\n\nDebug log: ' + json.debug_log : ''));
-        }
-        }catch(err){ console.error('Load accounts fetch error', err); alert('Failed to load accounts: ' + err.message); }
+  // Store category + notes inside transactions.description as: "CATEGORY :: notes"
+  function packDesc(category, notes){
+    const c = (category || '').trim();
+    const n = (notes || '').trim();
+    return n ? `${c} :: ${n}` : c;
+  }
+
+  function unpackDesc(desc){
+    const s = String(desc || '');
+    const parts = s.split('::');
+    if(parts.length >= 2){
+      return {
+        category: parts[0].trim(),
+        notes: parts.slice(1).join('::').trim()
+      };
     }
+    return { category: s.trim(), notes: '' };
+  }
 
-    async function fetchExpenses(q = currentQuery){
-        try{
-        const url = `${api}?per_page=200` + (q ? `&q=${encodeURIComponent(q)}` : '');
-        const res = await fetch(url);
-        if(!res.ok){ console.error('fetchExpenses', res.status); return; }
-        const json = await res.json();
-        if(json.success){ renderExpensesTable(json.data || []); }
-        else console.error('expenses load', json);
-        }catch(err){ console.error('fetchExpenses error', err); }
-    }
+  async function loadAccounts(){
+    try{
+      const res = await fetch('accounts_api.php');
+      const text = await res.text();
 
-    function renderExpensesTable(rows){
-        tbody.innerHTML = '';
-        rows.forEach(r => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${r.expense_id}</td>
-            <td>${globalEscapeHtml(r.account_name || '')}</td>
-            <td>${globalEscapeHtml(r.expense_date)}</td>
-            <td>${globalEscapeHtml(r.category)}</td>
-            <td>${Number(r.amount).toLocaleString('rw-RW')} Frw</td>
-            <td>
-            <button class="btn-ghost btn-edit-expense" data-id="${r.expense_id}">Hindura</button>
-            <button class="btn-ghost-danger btn-delete-expense" data-id="${r.expense_id}">Siba</button>
-            </td>
-        `;
-        tbody.appendChild(tr);
+      let json = null;
+      try{
+        json = JSON.parse(text);
+      }catch{
+        console.error('loadAccounts not JSON', text);
+        alert('Failed to load accounts');
+        return;
+      }
+
+      if(!res.ok){
+        alert(json.message || ('HTTP '+res.status));
+        return;
+      }
+
+      if(json.success){
+        accountSelect.innerHTML = '<option value="">-- Hitamo Konto --</option>';
+        (json.data || []).forEach(acc => {
+          const opt = document.createElement('option');
+          opt.value = acc.account_id;
+          opt.textContent = acc.name;
+          accountSelect.appendChild(opt);
         });
+      } else {
+        alert(json.message || 'Failed to load accounts');
+      }
 
-        tbody.querySelectorAll('.btn-delete-expense').forEach(b => b.addEventListener('click', async ()=>{
-        const id = b.getAttribute('data-id');
-        if(!confirm('Urashaka gusiba iyi Expense?')) return;
-        const fd = new FormData(); fd.append('action','delete'); fd.append('id', id);
-        try{
-            const res = await fetch(api, {method:'POST', body: fd});
-            const json = await res.json();
-            if(json.success) fetchExpenses(); else alert(json.message||'Error');
-        }catch(err){ console.error(err); alert('Network error'); }
-        }));
+    }catch(err){
+      console.error(err);
+      alert('Failed to load accounts: ' + err.message);
+    }
+  }
 
-        tbody.querySelectorAll('.btn-edit-expense').forEach(b => b.addEventListener('click', async ()=>{
+  async function fetchExpenses(q = currentQuery){
+    try{
+      const url = `${api}?per_page=200` + (q ? `&q=${encodeURIComponent(q)}` : '');
+      const res = await fetch(url);
+      if(!res.ok){
+        console.error('fetchExpenses', res.status);
+        return;
+      }
+
+      const json = await res.json();
+      if(json.success){
+        renderExpensesTable(json.data || []);
+      } else {
+        console.error('expenses load', json);
+      }
+
+    }catch(err){
+      console.error('fetchExpenses error', err);
+    }
+  }
+
+  function renderExpensesTable(rows){
+    tbody.innerHTML = '';
+
+    rows.forEach((r, idx) => {
+
+      const listNo = idx + 1; // newest first -> #1 is latest
+      const { category, notes } = unpackDesc(r.description || '');
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${listNo}</td>
+        <td>${globalEscapeHtml(r.account_name || '')}</td>
+        <td>${globalEscapeHtml(r.expense_date || '')}</td>
+        <td>${globalEscapeHtml(category || '')}</td>
+        <td>${Number(r.amount || 0).toLocaleString('rw-RW')} Frw</td>
+        <td>${globalEscapeHtml(notes || '')}</td>
+        <td>
+          <button class="btn-ghost btn-edit-expense" data-id="${r.transaction_id}">Hindura</button>
+          <button class="btn-ghost-danger btn-delete-expense" data-id="${r.transaction_id}">Siba</button>
+        </td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+
+    // DELETE
+    tbody.querySelectorAll('.btn-delete-expense').forEach(b =>
+      b.addEventListener('click', async ()=>{
         const id = b.getAttribute('data-id');
+        if(!confirm("Urashaka gusiba iyi Expense?")) return;
+
+        const fd = new FormData();
+        fd.append('action','delete');
+        fd.append('id', id);
+
         try{
-            const res = await fetch(`${api}?id=${encodeURIComponent(id)}`);
-            const json = await res.json();
-            if(json.success && json.data){
+          const res = await fetch(api, {method:'POST', body: fd});
+          const json = await res.json();
+          if(json.success){
+            fetchExpenses();
+          } else {
+            alert(json.message || 'Error');
+          }
+        }catch(err){
+          console.error(err);
+          alert('Network error');
+        }
+      })
+    );
+
+    // EDIT
+    tbody.querySelectorAll('.btn-edit-expense').forEach(b =>
+      b.addEventListener('click', async ()=>{
+        const id = b.getAttribute('data-id');
+
+        try{
+          const res = await fetch(`${api}?id=${encodeURIComponent(id)}`);
+          const json = await res.json();
+
+          if(json.success && json.data){
             const d = json.data;
-            document.getElementById('expense-id').value = d.expense_id;
-            document.getElementById('expense-account').value = d.account_id;
+            const {category, notes} = unpackDesc(d.description || '');
+
+            document.getElementById('expense-id').value = d.transaction_id;
+            document.getElementById('expense-account').value = d.account_id || '';
             document.getElementById('expense-date').value = d.expense_date || '';
-            document.getElementById('expense-category').value = d.category || '';
+            document.getElementById('expense-category').value = category || '';
             document.getElementById('expense-amount').value = d.amount || '';
-            document.getElementById('expense-description').value = d.description || '';
+            document.getElementById('expense-description').value = notes || '';
+
             openModal();
-            } else alert(json.message||'Not found');
-        }catch(err){ console.error(err); }
-        }));
-    }
+          } else {
+            alert(json.message || 'Not found');
+          }
 
-    if(btnNew) btnNew.addEventListener('click', ()=>{ form.reset(); document.getElementById('expense-id').value = ''; openModal(); document.getElementById('expense-account').focus(); });
-    if(btnRefresh) btnRefresh.addEventListener('click', ()=>{ currentQuery = ''; searchInput.value = ''; fetchExpenses(); });
+        }catch(err){
+          console.error(err);
+        }
+      })
+    );
+  }
 
-    // Search functionality
-    if(searchInput){
-        searchInput.addEventListener('input', (e)=>{
-        clearTimeout(searchTimer);
-        searchTimer = setTimeout(()=>{
-            currentQuery = e.target.value.trim();
-            fetchExpenses(currentQuery);
-        }, 300);
-        });
-    }
-    if(searchBtn){
-        searchBtn.addEventListener('click', ()=>{
-        currentQuery = searchInput.value.trim();
+  // NEW
+  if(btnNew){
+    btnNew.addEventListener('click', ()=>{
+      form.reset();
+      document.getElementById('expense-id').value = '';
+      openModal();
+      document.getElementById('expense-account').focus();
+    });
+  }
+
+  // REFRESH
+  if(btnRefresh){
+    btnRefresh.addEventListener('click', ()=>{
+      currentQuery = '';
+      if(searchInput) searchInput.value = '';
+      fetchExpenses();
+    });
+  }
+
+  // SEARCH (live)
+  if(searchInput){
+    searchInput.addEventListener('input', (e)=>{
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(()=>{
+        currentQuery = e.target.value.trim();
         fetchExpenses(currentQuery);
-        });
-    }
+      }, 300);
+    });
+  }
 
-    if(modalClose) modalClose.addEventListener('click', closeModal);
-    if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
-    if(modal) modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+  if(searchBtn){
+    searchBtn.addEventListener('click', ()=>{
+      currentQuery = (searchInput ? searchInput.value.trim() : '');
+      fetchExpenses(currentQuery);
+    });
+  }
 
-    if(saveBtn){ saveBtn.addEventListener('click', async ()=>{
-        const id = document.getElementById('expense-id').value;
-        const fd = new FormData(form);
-        fd.append('action', id ? 'update' : 'create');
-        if(id) fd.append('id', id);
-        try{
+  // MODAL controls
+  if(modalClose) modalClose.addEventListener('click', closeModal);
+  if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
+  if(modal) modal.addEventListener('click', (e)=>{
+    if(e.target === modal) closeModal();
+  });
+
+  // SAVE
+  if(saveBtn){
+    saveBtn.addEventListener('click', async ()=>{
+
+      const id = document.getElementById('expense-id').value;
+      const account_id = document.getElementById('expense-account').value;
+      const expense_date = document.getElementById('expense-date').value;
+      const category = document.getElementById('expense-category').value;
+      const amount = document.getElementById('expense-amount').value;
+      const notes = document.getElementById('expense-description').value;
+
+      const fd = new FormData();
+      fd.append('action', id ? 'update' : 'create');
+      if(id) fd.append('id', id);
+      fd.append('account_id', account_id);
+      fd.append('expense_date', expense_date);
+      fd.append('amount', amount);
+      fd.append('description', packDesc(category, notes));
+
+      try{
         const res = await fetch(api, {method:'POST', body: fd});
         const text = await res.text();
-        // Try to parse JSON; if server returned HTML or an error page, show it
+
         let json = null;
         try{
-            json = JSON.parse(text);
-        }catch(parseErr){
-            console.error('Response not JSON:', text);
-            alert('Server returned non-JSON response. See console for details.');
-            console.log('Raw response:', text);
-            return;
+          json = JSON.parse(text);
+        }catch{
+          console.error('Non-JSON response:', text);
+          alert('Server returned non-JSON response. See console.');
+          return;
         }
 
         if(!res.ok){
-            alert(`HTTP Error ${res.status}: ${json.message || text}`);
-            return;
+          alert(`HTTP ${res.status}: ${json.message || 'Error'}`);
+          return;
         }
 
-        if(json.success){ closeModal(); fetchExpenses(); } else { alert(json.message || 'Error saving'); }
-        }catch(err){ console.error('Fetch error:', err); alert('Network error: ' + err.message); }
-    }); }
-
-    // initial load
-    loadAccounts();
-    fetchExpenses();
-    })();
-
-    // Loans management JS
-    (function(){
-        const api = 'loans_api.php';
-        const tbodySelector = '#section-loans table tbody';
-
-        const modal = document.getElementById('loan-modal');
-        const form = document.getElementById('loan-form');
-        const saveBtn = document.getElementById('loan-save');
-        const cancelBtn = document.getElementById('loan-cancel');
-        const modalClose = document.getElementById('loan-modal-close');
-
-        const btnNewLoan = document.getElementById('btn-new-loan');
-        const btnRefreshLoans = document.getElementById('btn-refresh-loans');
-
-        const accountSelect = document.getElementById('loan-account');
-
-        // Borrower search UI
-        const borrowerSearch = document.getElementById('borrower-search');
-        const borrowerResults = document.getElementById('borrower-results');
-        const borrowerHidden = document.getElementById('loan-borrower-id');
-        const borrowerSelected = document.getElementById('borrower-selected');
-
-        const borrowerNetEl = document.getElementById('borrower-net');
-        const borrowerUnpaidEl = document.getElementById('borrower-unpaid');
-        const borrowerMemberEl = document.getElementById('borrower-member');
-
-        const loanStatusBadge = document.getElementById('loan-current-status');
-
-        const principalInput = document.getElementById('loan-principal');
-        const guarantorsListEl = document.getElementById('loan-guarantors-list');
-        const btnAddGuarantor = document.getElementById('btn-add-guarantor');
-
-        const requiredGuaranteeEl = document.getElementById('required-guarantee');
-        const guarantorsTotalEl = document.getElementById('guarantors-total');
-        const validationMsgEl = document.getElementById('loan-validation-msg');
-
-        // View modal
-        const viewModal = document.getElementById('loan-view-modal');
-        const viewClose = document.getElementById('loan-view-close');
-        const viewBody = document.getElementById('loan-view-body');
-
-        // Status modal
-        const statusModal = document.getElementById('loan-status-modal');
-        const statusClose = document.getElementById('loan-status-close');
-        const statusCancel = document.getElementById('loan-status-cancel');
-        const statusSave = document.getElementById('loan-status-save');
-        const statusSelect = document.getElementById('loan-status-select');
-        const statusLoanId = document.getElementById('loan-status-loan-id');
-        const statusCurrent = document.getElementById('loan-status-current');
-
-        let guarantorCounter = 0;
-        let borrowerSummary = null; // {net_value, unpaid_loans, is_member...}
-
-        function openModal(){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
-        function closeModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
-
-        function openView(){ viewModal.classList.remove('hidden'); viewModal.classList.add('flex'); }
-        function closeView(){ viewModal.classList.add('hidden'); viewModal.classList.remove('flex'); }
-
-        function openStatus(){ statusModal.classList.remove('hidden'); statusModal.classList.add('flex'); }
-        function closeStatus(){ statusModal.classList.add('hidden'); statusModal.classList.remove('flex'); }
-
-        function money(n){
-            const x = Number(n || 0);
-            return x.toLocaleString('rw-RW') + ' Frw';
-        }
-
-        async function loadAccountsLocal(){
-            const res = await fetch('accounts_api.php', {credentials:'include'});
-            const text = await res.text();
-            let json;
-            try { json = JSON.parse(text); } catch(e){ console.error('accounts non-json', text); return; }
-            if(!json.success) return;
-            accountSelect.innerHTML = '<option value="">-- Hitamo Konti --</option>';
-            json.data.forEach(acc=>{
-            const opt = document.createElement('option');
-            opt.value = acc.account_id;
-            opt.textContent = acc.name;
-            accountSelect.appendChild(opt);
-            });
-        }
-
-        // ---------------------------
-        // Borrower Search (async)
-        // ---------------------------
-        let borrowerTimer = null;
-
-        borrowerSearch.addEventListener('input', ()=>{
-            clearTimeout(borrowerTimer);
-            const q = borrowerSearch.value.trim();
-            borrowerTimer = setTimeout(()=> searchBorrowers(q), 250);
-        });
-
-        async function searchBorrowers(q){
-            borrowerResults.innerHTML = '';
-            borrowerResults.classList.add('hidden');
-            if(q.length < 2) return;
-
-            const res = await fetch(`${api}?action=search_users&q=${encodeURIComponent(q)}`, {credentials:'include'});
-            const json = await res.json();
-            if(!json.success) return;
-
-            borrowerResults.classList.remove('hidden');
-            json.data.forEach(u=>{
-            const item = document.createElement('button');
-            item.type = 'button';
-            item.className = 'w-full text-left px-3 py-2 hover:bg-slate-50 text-sm';
-            item.textContent = `${u.names} ${u.phone ? ' · '+u.phone : ''} ${Number(u.is_member)===1 ? ' · member' : ' · non-member'}`;
-            item.addEventListener('click', ()=> selectBorrower(u));
-            borrowerResults.appendChild(item);
-            });
-        }
-
-        async function selectBorrower(u){
-            borrowerHidden.value = u.id;
-            borrowerSelected.textContent = `${u.names} ${u.phone ? ' · '+u.phone : ''}`;
-            borrowerResults.innerHTML = '';
-            borrowerResults.classList.add('hidden');
-            borrowerSearch.value = '';
-
-            await loadBorrowerSummary(u.id);
-            await refreshGuarantorRowsEligibility(); // update guarantor searches (exclude borrower)
-            validateFormRules();
-        }
-
-        async function loadBorrowerSummary(userId){
-            borrowerSummary = null;
-            borrowerNetEl.textContent = '...';
-            borrowerUnpaidEl.textContent = '...';
-            borrowerMemberEl.textContent = '...';
-
-            // NEW (optional if you add HTML spans for details)
-            const detailsEl = document.getElementById('borrower-net-details');
-
-            const res = await fetch(`${api}?action=borrower_summary&user_id=${encodeURIComponent(userId)}`, {credentials:'include'});
-            const json = await res.json();
-            if(!json.success) return;
-
-            borrowerSummary = json.data;
-
-            // ✅ numeric net
-            borrowerNetEl.textContent = money(borrowerSummary.net_value);
-            borrowerUnpaidEl.textContent = money(borrowerSummary.unpaid_loans);
-            borrowerMemberEl.textContent = (Number(borrowerSummary.is_member)===1) ? 'Member' : 'Non-member';
-
-            // ✅ breakdown (from backend)
-            const b = borrowerSummary.net_breakdown || null;
-
-            // If you want to show details under net:
-            if(detailsEl){
-                if(!b){
-                detailsEl.innerHTML = '';
-                }else{
-                detailsEl.innerHTML = `
-                    <div class="text-xs text-slate-600 mt-1 space-y-1">
-                    <div>Contrib: <b>${money(b.contrib)}</b></div>
-                    <div>Interest: <b>${money(b.interest)}</b></div>
-                    <div>Withdrawals: <b>${money(b.withdrawals)}</b></div>
-                    <div>Loans: <b>${money(b.loans_principal)}</b></div>
-                    <div>Guaranteed: <b>${money(b.guaranteed_to_others)}</b></div>
-                    <div>Reserve: <b>${money(b.reserve)}</b></div>
-                    <div class="text-[11px] text-slate-500">Net raw: ${money(b.net_raw)} → Net shown: <b>${money(b.net)}</b></div>
-                    </div>
-                `;
-                }
-            }
-
-            validateFormRules();
-            }
-
-        document.addEventListener('click', (e)=>{
-            // close borrower dropdown if clicked outside
-            if(!borrowerResults.contains(e.target) && e.target !== borrowerSearch){
-            borrowerResults.classList.add('hidden');
-            }
-        });
-
-        // ---------------------------
-        // Guarantors rows
-        // ---------------------------
-        function getRequiredGuarantee(principal){
-            const p = Number(principal||0);
-            if(!borrowerSummary || !borrowerSummary.id) return 0;
-
-            const isMember = Number(borrowerSummary.is_member)===1;
-            const net = Math.max(0, Number(borrowerSummary.net_value||0));
-
-            if(isMember) return Math.max(0, p - net);
-            return p; // non-member
-        }
-
-        function sumGuarantors(){
-            let sum = 0;
-            document.querySelectorAll('.guarantor-row').forEach(row=>{
-            const amt = parseFloat(row.querySelector('.guarantee-amount')?.value || 0) || 0;
-            sum += amt;
-            });
-            return sum;
-        }
-
-        function getGuarantorRowData(row){
-            const select = row.querySelector('.guarantor-search');
-            const hidden = row.querySelector('.guarantor-id');
-            const amtInput = row.querySelector('.guarantee-amount');
-            const netEl = row.querySelector('.guarantor-net');
-            const nameEl = row.querySelector('.guarantor-selected');
-
-            return {select, hidden, amtInput, netEl, nameEl};
-        }
-
-        async function addGuarantorRow(pref = null){
-            guarantorCounter++;
-            const idx = guarantorCounter;
-
-            const row = document.createElement('div');
-            row.className = 'guarantor-row rounded-lg border p-3 space-y-2';
-            row.dataset.idx = idx;
-
-            row.innerHTML = `
-            <div class="flex gap-2 items-start">
-                <div class="flex-1">
-                <label class="block text-xs font-medium text-slate-700">Shakisha Umwishingizi</label>
-                <input type="text" class="guarantor-search mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Andika izina cyangwa phone..." />
-                <div class="guarantor-results mt-1 rounded-lg border bg-white shadow-sm hidden max-h-48 overflow-auto"></div>
-
-                <input type="hidden" class="guarantor-id" />
-                <div class="mt-1 text-xs text-slate-600">
-                    Watoranyije: <span class="guarantor-selected font-semibold">Ntawe</span>
-                </div>
-                <div class="mt-1 text-xs">
-                    Net y'umwishingizi: <span class="guarantor-net font-semibold">-</span>
-                </div>
-                </div>
-
-                <div class="w-40">
-                <label class="block text-xs font-medium text-slate-700">Amount</label>
-                <input type="number" step="0.01" min="0" class="guarantee-amount mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Frw" />
-                </div>
-
-                <div class="pt-6">
-                <button type="button" class="btn-ghost-danger text-xs btn-remove-guarantor">Siba</button>
-                </div>
-            </div>
-            <div class="text-xs text-slate-600">
-                <span class="guarantor-hint"></span>
-            </div>
-            `;
-
-            guarantorsListEl.appendChild(row);
-
-            const {select, hidden, amtInput} = getGuarantorRowData(row);
-            const resultsBox = row.querySelector('.guarantor-results');
-            const removeBtn = row.querySelector('.btn-remove-guarantor');
-
-            removeBtn.addEventListener('click', ()=>{
-            row.remove();
-            validateFormRules();
-            });
-
-            // async search guarantors
-            let timer = null;
-            select.addEventListener('input', ()=>{
-            clearTimeout(timer);
-            const q = select.value.trim();
-            timer = setTimeout(()=> searchGuarantorsForRow(row, q), 250);
-            });
-
-            amtInput.addEventListener('input', ()=> validateFormRules());
-
-            // apply pref (edit)
-            if(pref && pref.user_id){
-            await setGuarantorForRow(row, pref.user_id, pref.display || '', pref.net_value || 0);
-            amtInput.value = pref.amount || '';
-            }
-
-            validateFormRules();
-        }
-
-        async function searchGuarantorsForRow(row, q){
-            const resultsBox = row.querySelector('.guarantor-results');
-            resultsBox.innerHTML = '';
-            resultsBox.classList.add('hidden');
-
-            const borrowerId = borrowerHidden.value;
-            if(!borrowerId || q.length < 2) return;
-
-            const res = await fetch(`${api}?action=eligible_guarantors&borrower_id=${encodeURIComponent(borrowerId)}&q=${encodeURIComponent(q)}`, {credentials:'include'});
-            const json = await res.json();
-            if(!json.success) return;
-
-            resultsBox.classList.remove('hidden');
-
-            json.data.forEach(g=>{
-            const item = document.createElement('button');
-            item.type = 'button';
-            item.className = 'w-full text-left px-3 py-2 hover:bg-slate-50 text-sm';
-            item.textContent = `${g.names} ${g.phone ? ' · '+g.phone : ''} · net: ${money(g.net_value)}`;
-            item.addEventListener('click', async ()=>{
-                await setGuarantorForRow(row, g.id, `${g.names}${g.phone ? ' · '+g.phone : ''}`, g.net_value);
-                resultsBox.innerHTML = '';
-                resultsBox.classList.add('hidden');
-            });
-            resultsBox.appendChild(item);
-            });
-        }
-
-        async function setGuarantorForRow(row, id, display, net){
-            const {select, hidden, netEl, nameEl} = getGuarantorRowData(row);
-            hidden.value = id;
-            nameEl.textContent = display || ('#'+id);
-            netEl.textContent = money(net);
-            select.value = '';
-            validateFormRules();
-        }
-
-        async function refreshGuarantorRowsEligibility(){
-            // no direct reload needed; searches will exclude borrower via borrower_id param.
-            validateFormRules();
-        }
-
-        // ---------------------------
-        // Form validation rules
-        // ---------------------------
-        function validateFormRules(){
-            const borrowerId = borrowerHidden.value;
-            const principal = parseFloat(principalInput.value || 0) || 0;
-
-            let ok = true;
-            let msg = '';
-
-            if(!borrowerId){
-            ok = false; msg = 'Hitamo uwasabye inguzanyo (borrower).';
-            } else if(principal <= 0){
-            ok = false; msg = 'Shyiramo umubare w’inguzanyo (loan amount).';
-            } else if(!borrowerSummary){
-            ok = false; msg = 'Tegereza borrower info (net/unpaid)...';
-            } else {
-            const required = getRequiredGuarantee(principal);
-            const totalG = sumGuarantors();
-
-            requiredGuaranteeEl.textContent = money(required);
-            guarantorsTotalEl.textContent = money(totalG);
-
-            // If guarantee required -> must be covered
-            if(required > 0){
-                if(totalG + 0.00001 < required){
-                ok = false;
-                msg = `Abamwishingizi ntibahagije. Bisabwa: ${money(required)}. Batanze: ${money(totalG)}.`;
-                }
-
-                // Validate each guarantor amount <= guarantor net and chosen
-                const used = new Set();
-                document.querySelectorAll('.guarantor-row').forEach(row=>{
-                const gid = row.querySelector('.guarantor-id')?.value || '';
-                const amt = parseFloat(row.querySelector('.guarantee-amount')?.value || 0) || 0;
-                const netTxt = row.querySelector('.guarantor-net')?.textContent || '';
-                const netVal = parseFloat((netTxt.replace(/[^\d.]/g,'') || '0')) || 0; // best-effort
-
-                if(required > 0){
-                    if(!gid || amt <= 0){
-                    ok = false;
-                    if(!msg) msg = 'Hitamo umwishingizi kandi ushyireho amount.';
-                    } else {
-                    if(used.has(gid)){
-                        ok = false;
-                        msg = 'Hari umwishingizi washyizwemo kabiri.';
-                    }
-                    used.add(gid);
-
-                    // netVal parsing can be imperfect with locale; so we ALSO enforce via server.
-                    // Here we do a light UI check only if netVal > 0.
-                    if(netVal > 0 && amt > netVal){
-                        ok = false;
-                        msg = 'Amount y’umwishingizi irenze net ye. Mugabanye amount.';
-                    }
-                    if(gid === borrowerId){
-                        ok = false;
-                        msg = 'Borrower ntashobora kwiyishingira.';
-                    }
-                    }
-                }
-                });
-
-            } else {
-                // no guarantor needed: allow empty guarantor list
-                requiredGuaranteeEl.textContent = money(0);
-                guarantorsTotalEl.textContent = money(sumGuarantors());
-            }
-            }
-
-            validationMsgEl.textContent = msg;
-            validationMsgEl.classList.toggle('hidden', !msg);
-
-            saveBtn.disabled = !ok;
-            saveBtn.classList.toggle('opacity-50', !ok);
-            saveBtn.classList.toggle('cursor-not-allowed', !ok);
-        }
-
-        principalInput.addEventListener('input', validateFormRules);
-
-        // ---------------------------
-       async function fetchLoans(q=''){
-            try{
-            const res = await fetch(
-                api + '?per_page=200' + (q ? ('&q='+encodeURIComponent(q)) : ''),
-                { credentials:'include', cache:'no-store' }
-            );
-
-            const text = await res.text();   // <-- read raw response first
-
-            if(!text || text.trim() === ''){
-                console.error('fetchLoans: Empty response from server');
-                alert('Loans API returned empty response. Check loans_api.php / server logs.');
-                return;
-            }
-
-            let json;
-            try{
-                json = JSON.parse(text);
-            }catch(e){
-                console.error('fetchLoans: Response is not valid JSON:', text);
-                alert('Loans API returned non-JSON output. Open console to see the output.');
-                return;
-            }
-
-            if(!res.ok){
-                console.error('fetchLoans HTTP error', res.status, json);
-                alert(json.message || ('HTTP ' + res.status));
-                return;
-            }
-
-            if(json.success) renderLoans(json.data||[]);
-            else alert(json.message || 'Error loading loans');
-
-            }catch(err){
-            console.error('fetchLoans error:', err);
-            alert('Network/JS error: ' + err.message);
-            }
-            }
-
-        function statusBadge(status){
-            if(status === 'approved') return '<span class="badge badge-success">approved</span>';
-            if(status === 'disbursed') return '<span class="badge badge-info">disbursed</span>';
-            if(status === 'closed') return '<span class="badge badge-gray">closed</span>';
-            if(status === 'defaulted') return '<span class="badge badge-danger">defaulted</span>';
-            if(status === 'rejected') return '<span class="badge badge-danger">rejected</span>';
-            return '<span class="badge badge-warning">requested</span>';
-        }
-
-        function renderLoans(rows){
-            const tbody = document.querySelector(tbodySelector);
-            if(!tbody) return;
-
-            tbody.innerHTML = '';
-            rows.forEach(r=>{
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>#LN-${r.loan_id}</td>
-                <td>
-                <div class="font-semibold">${globalEscapeHtml(r.borrower_name||'')}</div>
-                <div class="text-xs text-slate-600">${globalEscapeHtml(r.borrower_phone||'')}</div>
-                </td>
-                <td>${money(r.principal_amount||0)}</td>
-                <td>${money(r.principal_amount||0)}</td>
-                <td>${globalEscapeHtml(r.start_date || '')}</td>
-                <td>${statusBadge(r.status||'requested')}</td>
-                <td class="space-x-1">
-                <button class="btn-ghost text-xs btn-view-loan" data-id="${r.loan_id}">Reba</button>
-                <button class="btn-ghost text-xs btn-edit-loan" data-id="${r.loan_id}">Hindura</button>
-                <button class="btn-ghost-danger text-xs btn-delete-loan" data-id="${r.loan_id}">Siba</button>
-                <button class="btn-secondary text-xs btn-status-loan" data-id="${r.loan_id}" data-status="${r.status||'requested'}">Change Status</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-            });
-        }
-
-        // ---------------------------
-        // Delegated table actions
-        // ---------------------------
-        const tbody = document.querySelector(tbodySelector);
-        if(tbody){
-            tbody.addEventListener('click', async (e)=>{
-            const viewBtn = e.target.closest('.btn-view-loan');
-            const editBtn = e.target.closest('.btn-edit-loan');
-            const delBtn  = e.target.closest('.btn-delete-loan');
-            const stBtn   = e.target.closest('.btn-status-loan');
-
-            if(viewBtn){
-                const id = viewBtn.dataset.id;
-                await openLoanView(id);
-            }
-
-            if(editBtn){
-                const id = editBtn.dataset.id;
-                await openLoanEdit(id);
-            }
-
-            if(delBtn){
-                const id = delBtn.dataset.id;
-                if(!confirm('Urashaka gusiba iyi nguzanyo?')) return;
-                const fd = new FormData();
-                fd.append('action','delete');
-                fd.append('id', id);
-                const res = await fetch(api, {method:'POST', body: fd, credentials:'include'});
-                const json = await res.json();
-                if(json.success) fetchLoans();
-                else alert(json.message||'Error');
-            }
-
-            if(stBtn){
-                statusLoanId.value = stBtn.dataset.id;
-                statusCurrent.textContent = stBtn.dataset.status || 'requested';
-                statusSelect.value = stBtn.dataset.status || 'requested';
-                openStatus();
-            }
-            });
-        }
-
-        async function openLoanView(id){
-            viewBody.innerHTML = 'Loading...';
-            const res = await fetch(api + '?id=' + encodeURIComponent(id), {credentials:'include'});
-            const json = await res.json();
-            if(!json.success){ viewBody.innerHTML = 'Not found'; openView(); return; }
-            const d = json.data;
-
-            const gHtml = (d.guarantors||[]).map(g=>`
-            <tr>
-                <td>${globalEscapeHtml(g.guarantor_name||'')}</td>
-                <td>${globalEscapeHtml(g.guarantor_phone||'')}</td>
-                <td>${money(g.guarantee_amount||0)}</td>
-                <td>
-                    <div>${money(g.guarantor_net||0)}</div>
-                    ${g.guarantor_breakdown ? `
-                        <div class="text-[11px] text-slate-500">
-                        C:${money(g.guarantor_breakdown.contrib)} I:${money(g.guarantor_breakdown.interest)}
-                        L:${money(g.guarantor_breakdown.loans_principal)}
-                        </div>
-                    ` : ''}
-                </td>
-                <td>${globalEscapeHtml(g.status||'')}</td>
-            </tr>
-            `).join('');
-            const bn = d.borrower_net_breakdown || null;
-
-            const borrowerBreakdownHtml = bn ? `
-            <div class="mt-1 text-xs text-slate-600 space-y-1">
-                <div>Contrib: <b>${money(bn.contrib)}</b> | Interest: <b>${money(bn.interest)}</b></div>
-                <div>Withdrawals: <b>${money(bn.withdrawals)}</b> | Loans: <b>${money(bn.loans_principal)}</b></div>
-                <div>Guaranteed: <b>${money(bn.guaranteed_to_others)}</b> | Reserve: <b>${money(bn.reserve)}</b></div>
-                <div class="text-[11px] text-slate-500">Net raw: ${money(bn.net_raw)} → Net shown: <b>${money(bn.net)}</b></div>
-            </div>
-            ` : '';
-
-            viewBody.innerHTML = `
-            <div class="space-y-2">
-                <div><b>Loan:</b> #LN-${d.loan_id}</div>
-                <div><b>Borrower:</b> ${globalEscapeHtml(d.borrower_name||'')} · ${globalEscapeHtml(d.borrower_phone||'')}</div>
-                <div><b>Amount:</b> ${money(d.principal_amount||0)}</div>
-                <div><b>Status:</b> ${globalEscapeHtml(d.status||'requested')}</div>
-                <div><b>Start date:</b> ${globalEscapeHtml(d.start_date||'')}</div>
-                <div><b>Borrower Net:</b> ${money(d.borrower_net_value||0)}</div>
-                ${borrowerBreakdownHtml}
-                <div><b>Borrower Unpaid loans:</b> ${money(d.borrower_unpaid_loans||0)}</div>
-
-                <div class="mt-3">
-                <b>Guarantors</b>
-                <div class="mt-2 table-wrapper">
-                    <table class="table">
-                    <thead>
-                        <tr>
-                        <th>Name</th><th>Phone</th><th>Amount</th><th>Guarantor Net</th><th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>${gHtml || `<tr><td colspan="5" class="text-sm text-slate-600">Nta bamwishingizi</td></tr>`}</tbody>
-                    </table>
-                </div>
-                </div>
-
-                <div class="mt-2"><b>Notes:</b><br/>${globalEscapeHtml(d.notes||'')}</div>
-            </div>
-            `;
-            openView();
-        }
-
-        async function openLoanEdit(id){
-            const res = await fetch(api + '?id=' + encodeURIComponent(id), {credentials:'include'});
-            const json = await res.json();
-            if(!json.success){ alert(json.message||'Not found'); return; }
-
-            const d = json.data;
-
-            form.reset();
-            document.getElementById('loan-id').value = d.loan_id;
-
-            accountSelect.value = d.account_id || '';
-            borrowerHidden.value = d.borrower_user_id || '';
-            borrowerSelected.textContent = `${d.borrower_name||''} ${d.borrower_phone ? ' · '+d.borrower_phone : ''}`;
-
-            principalInput.value = d.principal_amount || '';
-            document.getElementById('loan-rate').value = d.monthly_rate || '';
-            document.getElementById('loan-term').value = d.term_months || '';
-            document.getElementById('loan-notes').value = d.notes || '';
-
-            loanStatusBadge.textContent = d.status || 'requested';
-
-            // borrower summary
-            await loadBorrowerSummary(d.borrower_user_id);
-
-            // guarantors
-            guarantorsListEl.innerHTML = '';
-            guarantorCounter = 0;
-            if(d.guarantors && d.guarantors.length){
-            for(const g of d.guarantors){
-                await addGuarantorRow({
-                user_id: g.guarantor_user_id,
-                amount: g.guarantee_amount,
-                display: `${g.guarantor_name||''}${g.guarantor_phone ? ' · '+g.guarantor_phone : ''}`,
-                net_value: g.guarantor_net || 0
-                });
-            }
-            } else {
-            await addGuarantorRow();
-            }
-
-            validateFormRules();
-            openModal();
-        }
-
-        // ---------------------------
-        // Buttons / modal close
-        // ---------------------------
-        if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
-        if(modalClose) modalClose.addEventListener('click', closeModal);
-        if(modal) modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
-
-        if(viewClose) viewClose.addEventListener('click', closeView);
-        if(viewModal) viewModal.addEventListener('click', (e)=>{ if(e.target===viewModal) closeView(); });
-
-        if(statusClose) statusClose.addEventListener('click', closeStatus);
-        if(statusCancel) statusCancel.addEventListener('click', closeStatus);
-        if(statusModal) statusModal.addEventListener('click', (e)=>{ if(e.target===statusModal) closeStatus(); });
-
-        if(statusSave) statusSave.addEventListener('click', async ()=>{
-            const id = statusLoanId.value;
-            const st = statusSelect.value;
-
-            const fd = new FormData();
-            fd.append('action','change_status');
-            fd.append('id', id);
-            fd.append('status', st);
-
-            const res = await fetch(api, {method:'POST', body: fd, credentials:'include'});
-            const json = await res.json();
-            if(json.success){
-            closeStatus();
-            fetchLoans();
-            } else {
-            alert(json.message || 'Error changing status');
-            }
-        });
-
-        if(btnNewLoan) btnNewLoan.addEventListener('click', async ()=>{
-            form.reset();
-            document.getElementById('loan-id').value = '';
-
-            borrowerHidden.value = '';
-            borrowerSelected.textContent = 'Ntawe';
-            borrowerSummary = null;
-            borrowerNetEl.textContent = '-';
-            borrowerUnpaidEl.textContent = '-';
-            borrowerMemberEl.textContent = '-';
-
-            loanStatusBadge.textContent = 'requested';
-
-            guarantorsListEl.innerHTML = '';
-            guarantorCounter = 0;
-            await addGuarantorRow(); // optional row (will matter only if needed)
-
-            validateFormRules();
-            openModal();
-        });
-
-        if(btnRefreshLoans) btnRefreshLoans.addEventListener('click', ()=> fetchLoans());
-
-        if(btnAddGuarantor) btnAddGuarantor.addEventListener('click', async (e)=>{
-            e.preventDefault();
-            await addGuarantorRow();
-            validateFormRules();
-        });
-
-        if(saveBtn) saveBtn.addEventListener('click', async ()=>{
-            if(saveBtn.disabled) return;
-
-            const id = document.getElementById('loan-id').value;
-            const fd = new FormData(form);
-            fd.append('action', id ? 'update' : 'create');
-            if(id) fd.append('id', id);
-
-            // borrower from hidden
-            fd.set('borrower_user_id', borrowerHidden.value);
-
-            // guarantors array
-            const guarantorsArray = [];
-            document.querySelectorAll('.guarantor-row').forEach(row=>{
-            const gid = row.querySelector('.guarantor-id')?.value || '';
-            const amt = row.querySelector('.guarantee-amount')?.value || '';
-            if(gid && amt) guarantorsArray.push({user_id: gid, amount: amt});
-            });
-            fd.append('guarantors', JSON.stringify(guarantorsArray));
-
-            const res = await fetch(api, {method:'POST', body: fd, credentials:'include'});
-            const text = await res.text();
-            let json;
-            try { json = JSON.parse(text); } catch(e){ console.error('Non-JSON:', text); alert('Server returned non-JSON. Check console.'); return; }
-
-            if(!res.ok){
-            alert(json.message || ('HTTP Error '+res.status));
-            return;
-            }
-
-            if(json.success){
-            closeModal();
-            fetchLoans();
-            } else {
-            alert(json.message || 'Error saving');
-            }
-        });
-
-        // Watch any changes to revalidate
-        ['change','input'].forEach(evt=>{
-            form.addEventListener(evt, ()=> validateFormRules());
-        });
-
-        // init
-        loadAccountsLocal();
-        fetchLoans();
-        })();
-
-    // Transactions management JS
-    (function(){
-    const api = 'transactions_api.php';
-    const tbodySelector = '#section-transactions table tbody';
-    const modal = document.getElementById('transaction-modal');
-    const form = document.getElementById('transaction-form');
-    const saveBtn = document.getElementById('transaction-save');
-    const cancelBtn = document.getElementById('transaction-cancel');
-    const modalClose = document.getElementById('transaction-modal-close');
-    const userSelect = document.getElementById('transaction-user');
-    const accountSelect = document.getElementById('transaction-account');
-    const btnNewTransaction = document.getElementById('btn-new-transaction');
-    const btnRefreshTransactions = document.getElementById('btn-refresh-transactions');
-
-    function openModal(){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
-    function closeModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
-
-    async function loadTransactionUsers(selectEl){
-        try{
-        const res = await fetch('users_api.php?per_page=500', {credentials: 'include'});
-        const json = await res.json();
         if(json.success){
-            selectEl.innerHTML = '<option value="">-- Hitamo --</option>';
-            json.data.forEach(u => { const opt = document.createElement('option'); opt.value = u.id; opt.textContent = u.names; selectEl.appendChild(opt); });
-        } else console.error('loadUsers error', json);
-        }catch(err){ console.error('loadUsers fetch error', err); }
-    }
+          closeModal();
+          fetchExpenses();
+        } else {
+          alert(json.message || 'Error saving');
+        }
 
-    async function loadTransactionAccounts(){
-        try{
-        const res = await fetch('accounts_api.php', {credentials: 'include'});
-        const text = await res.text();
-        let json = null;
-        try{ json = JSON.parse(text); } catch(e){ console.error('accounts not json', text); return; }
-        if(json.success){ accountSelect.innerHTML = '<option value="">-- Hitamo Konto --</option>'; json.data.forEach(acc=>{ const opt=document.createElement('option'); opt.value=acc.account_id; opt.textContent=acc.name; accountSelect.appendChild(opt); }); }
-        }catch(err){ console.error(err); }
-    }
+      }catch(err){
+        console.error(err);
+        alert('Network error: ' + err.message);
+      }
 
-    async function fetchTransactions(q=''){
-        try{
-        const res = await fetch(api + '?per_page=200' + (q?('&q='+encodeURIComponent(q)):''), {credentials: 'include'});
-        if(!res.ok){ console.error('fetchTransactions http', res.status); return; }
-        const json = await res.json();
-        if(json.success) renderTransactions(json.data||[]);
-        }catch(err){ console.error('fetchTransactions', err); }
-    }
+    });
+  }
 
-    function renderTransactions(rows){
-        const tbody = document.querySelector(tbodySelector);
-        if(!tbody) return;
-        tbody.innerHTML = '';
-        rows.forEach(r=>{
-        const tr = document.createElement('tr');
-        const typeLabel = r.type === 'contribution' ? 'Contribution' : r.type === 'withdrawal_deduction' ? 'Withdrawal' : 'Loan Payment';
-        tr.innerHTML = `
-            <td>#TX-${r.trans_id}</td>
-            <td>${r.tx_date||''}</td>
-            <td>${globalEscapeHtml(r.user_name||'')}</td>
-            <td>${globalEscapeHtml(r.account_name||'')}</td>
-            <td>${typeLabel}</td>
-            <td>${Number(r.amount||0).toLocaleString('rw-RW')} Frw</td>
-            <td>
-            <button class="btn-ghost btn-edit-transaction" data-id="${r.trans_id}">Hindura</button>
-            <button class="btn-ghost-danger btn-delete-transaction" data-id="${r.trans_id}">Siba</button>
-            </td>
-        `;
-        tbody.appendChild(tr);
+  // INIT
+  loadAccounts();
+  fetchExpenses();
+
+})();
+
+/// SCRIPTS: loans.js (UPDATED)
+// ✅ Changes:
+// - includes account_id + loads accounts from loans_api.php?action=accounts
+// - removed disbursed
+// - sends: account_id, borrower_user_id, principal, monthly_interest_rate, interest_method, term_months, notes
+
+(function(){
+  const api = 'loans_api.php';
+  const tbodySelector = '#section-loans table tbody';
+
+  const modal = document.getElementById('loan-modal');
+  const form = document.getElementById('loan-form');
+  const saveBtn = document.getElementById('loan-save');
+  const cancelBtn = document.getElementById('loan-cancel');
+  const modalClose = document.getElementById('loan-modal-close');
+
+  const btnNewLoan = document.getElementById('btn-new-loan');
+  const btnRefreshLoans = document.getElementById('btn-refresh-loans');
+
+  // NEW: account select
+  const accountSelect = document.getElementById('loan-account');
+
+  // Borrower search UI
+  const borrowerSearch = document.getElementById('borrower-search');
+  const borrowerResults = document.getElementById('borrower-results');
+  const borrowerHidden = document.getElementById('loan-borrower-id');
+  const borrowerSelected = document.getElementById('borrower-selected');
+
+  const borrowerNetEl = document.getElementById('borrower-net');
+  const borrowerUnpaidEl = document.getElementById('borrower-unpaid');
+  const borrowerMemberEl = document.getElementById('borrower-member');
+
+  const loanStatusBadge = document.getElementById('loan-current-status');
+
+  const principalInput = document.getElementById('loan-principal');
+  const rateInput = document.getElementById('loan-rate');
+  const termInput = document.getElementById('loan-term');
+  const methodSelect = document.getElementById('loan-method'); // must exist in HTML
+
+  const guarantorsListEl = document.getElementById('loan-guarantors-list');
+  const btnAddGuarantor = document.getElementById('btn-add-guarantor');
+
+  const requiredGuaranteeEl = document.getElementById('required-guarantee');
+  const guarantorsTotalEl = document.getElementById('guarantors-total');
+  const validationMsgEl = document.getElementById('loan-validation-msg');
+
+  // View modal
+  const viewModal = document.getElementById('loan-view-modal');
+  const viewClose = document.getElementById('loan-view-close');
+  const viewBody = document.getElementById('loan-view-body');
+
+  // Status modal
+  const statusModal = document.getElementById('loan-status-modal');
+  const statusClose = document.getElementById('loan-status-close');
+  const statusCancel = document.getElementById('loan-status-cancel');
+  const statusSave = document.getElementById('loan-status-save');
+  const statusSelect = document.getElementById('loan-status-select');
+  const statusLoanId = document.getElementById('loan-status-loan-id');
+  const statusCurrent = document.getElementById('loan-status-current');
+
+  let guarantorCounter = 0;
+  let borrowerSummary = null;
+
+  function openModal(){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
+  function closeModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
+  function openView(){ viewModal.classList.remove('hidden'); viewModal.classList.add('flex'); }
+  function closeView(){ viewModal.classList.add('hidden'); viewModal.classList.remove('flex'); }
+  function openStatus(){ statusModal.classList.remove('hidden'); statusModal.classList.add('flex'); }
+  function closeStatus(){ statusModal.classList.add('hidden'); statusModal.classList.remove('flex'); }
+
+  function money(n){
+    const x = Number(n || 0);
+    return x.toLocaleString('rw-RW') + ' Frw';
+  }
+
+  // ---------------------------
+  // Accounts dropdown
+  // ---------------------------
+  async function loadAccounts(){
+    try{
+      const res = await fetch('accounts_api.php');
+      const text = await res.text();
+
+      let json = null;
+      try{
+        json = JSON.parse(text);
+      }catch{
+        console.error('loadAccounts not JSON', text);
+        alert('Failed to load accounts');
+        return;
+      }
+
+      if(!res.ok){
+        alert(json.message || ('HTTP '+res.status));
+        return;
+      }
+
+      if(json.success){
+        accountSelect.innerHTML = '<option value="">-- Hitamo Konto --</option>';
+        (json.data || []).forEach(acc => {
+          const opt = document.createElement('option');
+          opt.value = acc.account_id;
+          opt.textContent = acc.name;
+          accountSelect.appendChild(opt);
         });
+      } else {
+        alert(json.message || 'Failed to load accounts');
+      }
+
+    }catch(err){
+      console.error(err);
+      alert('Failed to load accounts: ' + err.message);
+    }
+  }
+
+  // ---------------------------
+  // Borrower Search
+  // ---------------------------
+  let borrowerTimer = null;
+
+  borrowerSearch.addEventListener('input', ()=>{
+    clearTimeout(borrowerTimer);
+    const q = borrowerSearch.value.trim();
+    borrowerTimer = setTimeout(()=> searchBorrowers(q), 250);
+  });
+
+  async function searchBorrowers(q){
+    borrowerResults.innerHTML = '';
+    borrowerResults.classList.add('hidden');
+    if(q.length < 2) return;
+
+    const res = await fetch(`${api}?action=search_users&q=${encodeURIComponent(q)}`, {credentials:'include'});
+    const json = await res.json();
+    if(!json.success) return;
+
+    borrowerResults.classList.remove('hidden');
+    (json.data||[]).forEach(u=>{
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'w-full text-left px-3 py-2 hover:bg-slate-50 text-sm';
+      item.textContent = `${u.names} ${u.phone ? ' · '+u.phone : ''} ${Number(u.is_member)===1 ? ' · member' : ' · non-member'}`;
+      item.addEventListener('click', ()=> selectBorrower(u));
+      borrowerResults.appendChild(item);
+    });
+  }
+
+  async function selectBorrower(u){
+    borrowerHidden.value = u.id;
+    borrowerSelected.textContent = `${u.names} ${u.phone ? ' · '+u.phone : ''}`;
+    borrowerResults.innerHTML = '';
+    borrowerResults.classList.add('hidden');
+    borrowerSearch.value = '';
+
+    await loadBorrowerSummary(u.id);
+    validateFormRules();
+  }
+
+  async function loadBorrowerSummary(userId){
+    borrowerSummary = null;
+    borrowerNetEl.textContent = '...';
+    borrowerUnpaidEl.textContent = '...';
+    borrowerMemberEl.textContent = '...';
+
+    const detailsEl = document.getElementById('borrower-net-details');
+
+    const res = await fetch(`${api}?action=borrower_summary&user_id=${encodeURIComponent(userId)}`, {credentials:'include'});
+    const json = await res.json();
+    if(!json.success) return;
+
+    borrowerSummary = json.data;
+    borrowerNetEl.textContent = money(borrowerSummary.net_value);
+    borrowerUnpaidEl.textContent = money(borrowerSummary.unpaid_loans);
+    borrowerMemberEl.textContent = (Number(borrowerSummary.is_member)===1) ? 'Member' : 'Non-member';
+
+    const b = borrowerSummary.net_breakdown || null;
+    if(detailsEl){
+      detailsEl.innerHTML = !b ? '' : `
+        <div class="text-xs text-slate-600 mt-1 space-y-1">
+          <div>Contrib: <b>${money(b.contrib)}</b></div>
+          <div>Withdrawals: <b>${money(b.withdrawals)}</b></div>
+          <div>Loans (unpaid): <b>${money(b.loans_principal)}</b></div>
+          <div>Guaranteed: <b>${money(b.guaranteed_to_others)}</b></div>
+          <div>Reserve: <b>${money(b.reserve)}</b></div>
+          <div class="text-[11px] text-slate-500">Net raw: ${money(b.net_raw)} → Net: <b>${money(b.net)}</b></div>
+        </div>
+      `;
     }
 
-    // Delegated event handlers for dynamically created buttons
-    const tbody = document.querySelector(tbodySelector);
-    if(tbody){
-        tbody.addEventListener('click', async (e)=>{
-        const editBtn = e.target.closest('.btn-edit-transaction');
-        const deleteBtn = e.target.closest('.btn-delete-transaction');
-        
-        if (editBtn) {
-            const id = editBtn.getAttribute('data-id');
-            try {
-                const res = await fetch(`${api}?id=${encodeURIComponent(id)}`, { credentials: 'include' });
+    validateFormRules();
+  }
 
-                // If server returns 404 or 500
-                if (!res.ok) {
-                    throw new Error(`Server responded with status ${res.status}`);
-                }
+  document.addEventListener('click', (e)=>{
+    if(!borrowerResults.contains(e.target) && e.target !== borrowerSearch){
+      borrowerResults.classList.add('hidden');
+    }
+  });
 
-                // Check if response is actually JSON
-                const contentType = res.headers.get("content-type");
-                if (!contentType || !contentType.includes("application/json")) {
-                    const rawText = await res.text();
-                    console.error("Expected JSON but got:", rawText);
-                    throw new Error("Server returned non-JSON response. Check console.");
-                }
+  // ---------------------------
+  // Guarantors rows
+  // ---------------------------
+  function getRequiredGuarantee(principal){
+    const p = Number(principal||0);
+    if(!borrowerSummary || !borrowerSummary.id) return 0;
 
-                const json = await res.json();
+    const isMember = Number(borrowerSummary.is_member)===1;
+    const net = Math.max(0, Number(borrowerSummary.net_value||0));
 
-                if (json.success && json.data) {
-                    const d = json.data;
-                    document.getElementById('transaction-id').value = d.trans_id;
-                    document.getElementById('transaction-date').value = d.tx_date || '';
-                    // ... rest of your mapping ...
-                    openModal();
-                } else {
-                    alert(json.message || 'Transaction not found');
-                }
-            } catch (err) {
-                console.error('Edit transaction error:', err);
-                alert(err.message);
+    return isMember ? Math.max(0, p - net) : p;
+  }
+
+  function sumGuarantors(){
+    let sum = 0;
+    document.querySelectorAll('.guarantor-row').forEach(row=>{
+      const amt = parseFloat(row.querySelector('.guarantee-amount')?.value || 0) || 0;
+      sum += amt;
+    });
+    return sum;
+  }
+
+  function getGuarantorRowData(row){
+    const select = row.querySelector('.guarantor-search');
+    const hidden = row.querySelector('.guarantor-id');
+    const amtInput = row.querySelector('.guarantee-amount');
+    const netEl = row.querySelector('.guarantor-net');
+    const nameEl = row.querySelector('.guarantor-selected');
+    return {select, hidden, amtInput, netEl, nameEl};
+  }
+
+  async function addGuarantorRow(pref = null){
+    guarantorCounter++;
+
+    const row = document.createElement('div');
+    row.className = 'guarantor-row rounded-lg border p-3 space-y-2';
+
+    row.innerHTML = `
+      <div class="flex gap-2 items-start">
+        <div class="flex-1">
+          <label class="block text-xs font-medium text-slate-700">Shakisha Umwishingizi</label>
+          <input type="text" class="guarantor-search mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Andika izina cyangwa phone..." />
+          <div class="guarantor-results mt-1 rounded-lg border bg-white shadow-sm hidden max-h-48 overflow-auto"></div>
+
+          <input type="hidden" class="guarantor-id" />
+          <div class="mt-1 text-xs text-slate-600">
+            Watoranyije: <span class="guarantor-selected font-semibold">Ntawe</span>
+          </div>
+          <div class="mt-1 text-xs">
+            Net y'umwishingizi: <span class="guarantor-net font-semibold">-</span>
+          </div>
+        </div>
+
+        <div class="w-40">
+          <label class="block text-xs font-medium text-slate-700">Amount</label>
+          <input type="number" step="0.01" min="0" class="guarantee-amount mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Frw" />
+        </div>
+
+        <div class="pt-6">
+          <button type="button" class="btn-ghost-danger text-xs btn-remove-guarantor">Siba</button>
+        </div>
+      </div>
+    `;
+
+    guarantorsListEl.appendChild(row);
+
+    const {select, hidden, amtInput} = getGuarantorRowData(row);
+    const resultsBox = row.querySelector('.guarantor-results');
+    const removeBtn = row.querySelector('.btn-remove-guarantor');
+
+    removeBtn.addEventListener('click', ()=>{
+      row.remove();
+      validateFormRules();
+    });
+
+    let timer = null;
+    select.addEventListener('input', ()=>{
+      clearTimeout(timer);
+      const q = select.value.trim();
+      timer = setTimeout(()=> searchGuarantorsForRow(row, q), 250);
+    });
+
+    amtInput.addEventListener('input', ()=> validateFormRules());
+
+    if(pref && pref.user_id){
+      await setGuarantorForRow(row, pref.user_id, pref.display || '', pref.net_value || 0);
+      amtInput.value = pref.amount || '';
+    }
+
+    validateFormRules();
+
+    async function searchGuarantorsForRow(row, q){
+      resultsBox.innerHTML = '';
+      resultsBox.classList.add('hidden');
+
+      const borrowerId = borrowerHidden.value;
+      if(!borrowerId || q.length < 2) return;
+
+      const res = await fetch(`${api}?action=eligible_guarantors&borrower_id=${encodeURIComponent(borrowerId)}&q=${encodeURIComponent(q)}`, {credentials:'include'});
+      const json = await res.json();
+      if(!json.success) return;
+
+      resultsBox.classList.remove('hidden');
+
+      (json.data||[]).forEach(g=>{
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'w-full text-left px-3 py-2 hover:bg-slate-50 text-sm';
+        item.textContent = `${g.names} ${g.phone ? ' · '+g.phone : ''} · net: ${money(g.net_value)}`;
+        item.addEventListener('click', async ()=>{
+          await setGuarantorForRow(row, g.id, `${g.names}${g.phone ? ' · '+g.phone : ''}`, g.net_value);
+          resultsBox.innerHTML = '';
+          resultsBox.classList.add('hidden');
+        });
+        resultsBox.appendChild(item);
+      });
+    }
+
+    async function setGuarantorForRow(row, id, display, net){
+      const {select, hidden, netEl, nameEl} = getGuarantorRowData(row);
+      hidden.value = id;
+      nameEl.textContent = display || ('#'+id);
+      netEl.textContent = money(net);
+      select.value = '';
+      validateFormRules();
+    }
+  }
+
+  // ---------------------------
+  // Form validation rules
+  // ---------------------------
+  function validateFormRules(){
+    const borrowerId = borrowerHidden.value;
+    const principal = parseFloat(principalInput.value || 0) || 0;
+
+    let ok = true;
+    let msg = '';
+
+    if(!accountSelect || !accountSelect.value){
+      ok = false; msg = 'Hitamo konti (aho amafaranga aturuka).';
+    } else if(!borrowerId){
+      ok = false; msg = 'Hitamo uwasabye inguzanyo (borrower).';
+    } else if(principal <= 0){
+      ok = false; msg = 'Shyiramo umubare w’inguzanyo (loan amount).';
+    } else if(!borrowerSummary){
+      ok = false; msg = 'Tegereza borrower info (net/unpaid)...';
+    } else {
+      const required = getRequiredGuarantee(principal);
+      const totalG = sumGuarantors();
+
+      requiredGuaranteeEl.textContent = money(required);
+      guarantorsTotalEl.textContent = money(totalG);
+
+      if(required > 0){
+        if(totalG + 0.00001 < required){
+          ok = false;
+          msg = `Abamwishingizi ntibahagije. Bisabwa: ${money(required)}. Batanze: ${money(totalG)}.`;
+        }
+
+        const used = new Set();
+        document.querySelectorAll('.guarantor-row').forEach(row=>{
+          const gid = row.querySelector('.guarantor-id')?.value || '';
+          const amt = parseFloat(row.querySelector('.guarantee-amount')?.value || 0) || 0;
+
+          if(!gid || amt <= 0){
+            ok = false;
+            if(!msg) msg = 'Hitamo umwishingizi kandi ushyireho amount.';
+          } else {
+            if(used.has(gid)){
+              ok = false; msg = 'Hari umwishingizi washyizwemo kabiri.';
             }
-        }
-        
-        if(deleteBtn){
-            const id = deleteBtn.getAttribute('data-id');
-            if(!confirm('Urashaka gusiba iyi transaction?')) return;
-            const fd = new FormData(); 
-            fd.append('action','delete'); 
-            fd.append('id', id);
-            try{ 
-            const res = await fetch(api, {method:'POST', body: fd, credentials: 'include'}); 
-            const json = await res.json(); 
-            if(json.success) fetchTransactions(); 
-            else alert(json.message||'Error'); 
-            }catch(err){ console.error(err); alert('Network error'); }
-        }
+            used.add(gid);
+
+            if(gid === borrowerId){
+              ok = false; msg = 'Borrower ntashobora kwiyishingira.';
+            }
+          }
         });
+      } else {
+        requiredGuaranteeEl.textContent = money(0);
+        guarantorsTotalEl.textContent = money(sumGuarantors());
+      }
     }
 
-    if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
-    if(modalClose) modalClose.addEventListener('click', closeModal);
-    if(modal) modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+    validationMsgEl.textContent = msg;
+    validationMsgEl.classList.toggle('hidden', !msg);
 
-    if(btnNewTransaction) btnNewTransaction.addEventListener('click', ()=>{ 
-        form.reset(); 
-        document.getElementById('transaction-id').value = ''; 
-        openModal(); 
-        document.getElementById('transaction-date').focus(); 
+    saveBtn.disabled = !ok;
+    saveBtn.classList.toggle('opacity-50', !ok);
+    saveBtn.classList.toggle('cursor-not-allowed', !ok);
+  }
+
+  principalInput.addEventListener('input', validateFormRules);
+
+  // ---------------------------
+  // Loans list
+  // ---------------------------
+  async function fetchLoans(q=''){
+    const res = await fetch(api + '?per_page=200' + (q ? ('&q='+encodeURIComponent(q)) : ''), { credentials:'include', cache:'no-store' });
+    const text = await res.text();
+    if(!text || text.trim()===''){ alert('Loans API returned empty response.'); return; }
+    let json;
+    try{ json = JSON.parse(text); }catch(e){ console.error('Non-JSON:', text); alert('Loans API returned non-JSON output.'); return; }
+    if(!res.ok){ alert(json.message || ('HTTP '+res.status)); return; }
+    if(json.success) renderLoans(json.data||[]);
+    else alert(json.message || 'Error loading loans');
+  }
+
+  function statusBadge(status){
+    if(status === 'approved') return '<span class="badge badge-success">approved</span>';
+    if(status === 'closed') return '<span class="badge badge-gray">closed</span>';
+    if(status === 'defaulted') return '<span class="badge badge-danger">defaulted</span>';
+    if(status === 'rejected') return '<span class="badge badge-danger">rejected</span>';
+    return '<span class="badge badge-warning">requested</span>';
+  }
+
+  function renderLoans(rows){
+    const tbody = document.querySelector(tbodySelector);
+    if(!tbody) return;
+
+    tbody.innerHTML = '';
+    rows.forEach((r, index) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${index + 1}</td>
+        <td>
+          <div class="font-semibold">${globalEscapeHtml(r.borrower_name||'')}</div>
+          <div class="text-xs text-slate-600">${globalEscapeHtml(r.borrower_phone||'')}</div>
+        </td>
+        <td>${globalEscapeHtml(r.account_name||'')}</td>
+        <td>${money(r.principal||0)}</td>
+        <td>${money(r.unpaid_principal||0)}</td>
+        <td>${globalEscapeHtml(r.start_date || '')}</td>
+        <td>${statusBadge(r.status||'requested')}</td>
+        <td>${globalEscapeHtml(r.end_date || 'Not Yet')}</td>
+        <td class="space-x-1">
+          <button class="btn-ghost text-xs btn-view-loan" data-id="${r.loan_id}">Reba</button>
+          <button class="btn-ghost text-xs btn-edit-loan" data-id="${r.loan_id}">Hindura</button>
+          <button class="btn-ghost-danger text-xs btn-delete-loan" data-id="${r.loan_id}">Siba</button>
+          <button class="btn-secondary text-xs btn-status-loan" data-id="${r.loan_id}" data-status="${r.status||'requested'}">Change Status</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
     });
-    if(btnRefreshTransactions) btnRefreshTransactions.addEventListener('click', ()=>{ fetchTransactions(); });
+  }
 
-    if(saveBtn) saveBtn.addEventListener('click', async ()=>{
-        const id = document.getElementById('transaction-id').value;
-        const fd = new FormData(form);
-        fd.append('action', id ? 'update' : 'create');
-        if(id) fd.append('id', id);
+  // Delegated table actions
+  const tbody = document.querySelector(tbodySelector);
+  if(tbody){
+    tbody.addEventListener('click', async (e)=>{
+      const viewBtn = e.target.closest('.btn-view-loan');
+      const editBtn = e.target.closest('.btn-edit-loan');
+      const delBtn  = e.target.closest('.btn-delete-loan');
+      const stBtn   = e.target.closest('.btn-status-loan');
+
+      if(viewBtn) await openLoanView(viewBtn.dataset.id);
+
+      if(editBtn) await openLoanEdit(editBtn.dataset.id);
+
+      if(delBtn){
+        const id = delBtn.dataset.id;
+        if(!confirm('Urashaka gusiba iyi nguzanyo?')) return;
+        const fd = new FormData();
+        fd.append('action','delete');
+        fd.append('id', id);
+        const res = await fetch(api, {method:'POST', body: fd, credentials:'include'});
+        const json = await res.json();
+        if(json.success) fetchLoans();
+        else alert(json.message||'Error');
+      }
+
+      if(stBtn){
+        statusLoanId.value = stBtn.dataset.id;
+        statusCurrent.textContent = stBtn.dataset.status || 'requested';
+        statusSelect.value = stBtn.dataset.status || 'requested';
+        openStatus();
+      }
+    });
+  }
+
+  async function openLoanView(id){
+    viewBody.innerHTML = 'Loading...';
+    const res = await fetch(api + '?id=' + encodeURIComponent(id), {credentials:'include'});
+    const json = await res.json();
+    if(!json.success){ viewBody.innerHTML = 'Not found'; openView(); return; }
+    const d = json.data;
+
+    const gHtml = (d.guarantors||[]).map(g=>`
+      <tr>
+        <td>${globalEscapeHtml(g.guarantor_name||'')}</td>
+        <td>${globalEscapeHtml(g.guarantor_phone||'')}</td>
+        <td>${money(g.guarantee_amount||0)}</td>
+        <td>${money(g.guarantor_net||0)}</td>
+        <td>${globalEscapeHtml(g.status||'')}</td>
+      </tr>
+    `).join('');
+
+    viewBody.innerHTML = `
+      <div class="space-y-2">
+        <div><b>Loan:</b> #LN-${d.loan_id}</div>
+        <div><b>Borrower:</b> ${globalEscapeHtml(d.borrower_name||'')} · ${globalEscapeHtml(d.borrower_phone||'')}</div>
+        <div><b>Account (source):</b> ${globalEscapeHtml(d.account_name||'')}</div>
+        <div><b>Amount:</b> ${money(d.principal||0)}</div>
+        <div><b>Monthly rate:</b> ${globalEscapeHtml(d.monthly_interest_rate||'')}</div>
+        <div><b>Interest method:</b> ${globalEscapeHtml(d.interest_method||'')}</div>
+        <div><b>Term:</b> ${globalEscapeHtml(d.term_months||'')}</div>
+        <div><b>Status:</b> ${globalEscapeHtml(d.status||'requested')}</div>
+        <div><b>Start date:</b> ${globalEscapeHtml(d.start_date||'')}</div>
+        <div><b>End date:</b> ${globalEscapeHtml(d.end_date||'')}</div>
+        <div><b>Unpaid principal:</b> ${money(d.unpaid_principal||0)}</div>
+
+        <div class="mt-3">
+          <b>Guarantors</b>
+          <div class="mt-2 table-wrapper">
+            <table class="table">
+              <thead><tr><th>Name</th><th>Phone</th><th>Amount</th><th>Guarantor Net</th><th>Status</th></tr></thead>
+              <tbody>${gHtml || `<tr><td colspan="5" class="text-sm text-slate-600">Nta bamwishingizi</td></tr>`}</tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mt-2"><b>Notes:</b><br/>${globalEscapeHtml(d.notes||'')}</div>
+      </div>
+    `;
+    openView();
+  }
+
+  async function openLoanEdit(id){
+    const res = await fetch(api + '?id=' + encodeURIComponent(id), {credentials:'include'});
+    const json = await res.json();
+    if(!json.success){ alert(json.message||'Not found'); return; }
+
+    const d = json.data;
+
+    form.reset();
+    document.getElementById('loan-id').value = d.loan_id;
+
+    accountSelect.value = d.account_id || '';
+
+    borrowerHidden.value = d.borrower_user_id || '';
+    borrowerSelected.textContent = `${d.borrower_name||''} ${d.borrower_phone ? ' · '+d.borrower_phone : ''}`;
+
+    principalInput.value = d.principal || '';
+    rateInput.value = d.monthly_interest_rate || '';
+    termInput.value = d.term_months || '';
+    methodSelect.value = d.interest_method || 'flat';
+    document.getElementById('loan-notes').value = d.notes || '';
+
+    loanStatusBadge.textContent = d.status || 'requested';
+
+    await loadBorrowerSummary(d.borrower_user_id);
+
+    guarantorsListEl.innerHTML = '';
+    guarantorCounter = 0;
+
+    if(d.guarantors && d.guarantors.length){
+      for(const g of d.guarantors){
+        await addGuarantorRow({
+          user_id: g.guarantor_user_id,
+          amount: g.guarantee_amount,
+          display: `${g.guarantor_name||''}${g.guarantor_phone ? ' · '+g.guarantor_phone : ''}`,
+          net_value: g.guarantor_net || 0
+        });
+      }
+    } else {
+      await addGuarantorRow();
+    }
+
+    validateFormRules();
+    openModal();
+  }
+
+  // Buttons / modal close
+  if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
+  if(modalClose) modalClose.addEventListener('click', closeModal);
+  if(modal) modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+
+  if(viewClose) viewClose.addEventListener('click', closeView);
+  if(viewModal) viewModal.addEventListener('click', (e)=>{ if(e.target===viewModal) closeView(); });
+
+  if(statusClose) statusClose.addEventListener('click', closeStatus);
+  if(statusCancel) statusCancel.addEventListener('click', closeStatus);
+  if(statusModal) statusModal.addEventListener('click', (e)=>{ if(e.target===statusModal) closeStatus(); });
+
+  if(statusSave) statusSave.addEventListener('click', async ()=>{
+    const id = statusLoanId.value;
+    const st = statusSelect.value;
+
+    const fd = new FormData();
+    fd.append('action','change_status');
+    fd.append('id', id);
+    fd.append('status', st);
+
+    const res = await fetch(api, {method:'POST', body: fd, credentials:'include'});
+    const json = await res.json();
+    if(json.success){ closeStatus(); fetchLoans(); }
+    else alert(json.message || 'Error changing status');
+  });
+
+  if(btnNewLoan) btnNewLoan.addEventListener('click', async ()=>{
+    form.reset();
+    document.getElementById('loan-id').value = '';
+
+    if(accountSelect) accountSelect.value = '';
+
+    borrowerHidden.value = '';
+    borrowerSelected.textContent = 'Ntawe';
+    borrowerSummary = null;
+    borrowerNetEl.textContent = '-';
+    borrowerUnpaidEl.textContent = '-';
+    borrowerMemberEl.textContent = '-';
+
+    loanStatusBadge.textContent = 'requested';
+
+    guarantorsListEl.innerHTML = '';
+    guarantorCounter = 0;
+    await addGuarantorRow();
+
+    validateFormRules();
+    openModal();
+  });
+
+  if(btnRefreshLoans) btnRefreshLoans.addEventListener('click', ()=> fetchLoans());
+
+  if(btnAddGuarantor) btnAddGuarantor.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    await addGuarantorRow();
+    validateFormRules();
+  });
+
+  if(saveBtn) saveBtn.addEventListener('click', async ()=>{
+    if(saveBtn.disabled) return;
+
+    const id = document.getElementById('loan-id').value;
+
+    const fd = new FormData();
+    fd.append('action', id ? 'update' : 'create');
+    if(id) fd.append('id', id);
+
+    fd.append('account_id', accountSelect.value);
+    fd.append('borrower_user_id', borrowerHidden.value);
+    fd.append('principal', principalInput.value);
+    fd.append('monthly_interest_rate', rateInput.value);
+    fd.append('interest_method', methodSelect.value);
+    fd.append('term_months', termInput.value);
+    fd.append('notes', document.getElementById('loan-notes').value || '');
+
+    const guarantorsArray = [];
+    document.querySelectorAll('.guarantor-row').forEach(row=>{
+      const gid = row.querySelector('.guarantor-id')?.value || '';
+      const amt = row.querySelector('.guarantee-amount')?.value || '';
+      if(gid && amt) guarantorsArray.push({user_id: gid, amount: amt});
+    });
+    fd.append('guarantors', JSON.stringify(guarantorsArray));
+
+    const res = await fetch(api, {method:'POST', body: fd, credentials:'include'});
+    const text = await res.text();
+    let json;
+    try{ json = JSON.parse(text); }
+    catch(e){ console.error('Non-JSON:', text); alert('Server returned non-JSON.'); return; }
+
+    if(!res.ok){ alert(json.message || ('HTTP Error '+res.status)); return; }
+
+    if(json.success){ closeModal(); fetchLoans(); }
+    else alert(json.message || 'Error saving');
+  });
+
+  ['change','input'].forEach(evt=>{
+    form.addEventListener(evt, ()=> validateFormRules());
+  });
+
+  // init
+  loadAccounts();
+  fetchLoans();
+})();
+
+/**
+ * Transaction Management Module
+ * Architecture: Module Pattern with State-Management
+ */
+(function () {
+  // --- 1. Configuration & Constants ---
+  const CONFIG = {
+    api: "expenses_api.php", 
+    currency: "Frw",
+    locale: "rw-RW",
+    reserveMin: 120000,
+    debounceTime: 250
+  };
+
+  // --- 2. Application State ---
+  const STATE = {
+    accounts: [],          // [{account_id, name, balance}]
+    selectedUser: null,    // User object
+    userSummary: null,     // From user_summary endpoint
+    userLoans: [],         // Active loans for selected user
+    loanSummary: null,     // Specific loan breakdown
+    lastUserQuery: "",
+    saving: false
+  };
+
+  // --- 3. DOM Cache ---
+  const DOM = {
+    tbody: document.getElementById("transactions-tbody"),
+    modal: document.getElementById("transaction-modal"),
+    form: document.getElementById("transaction-form"),
+
+    // Inputs
+    id: document.getElementById("transaction-id"),
+    date: document.getElementById("transaction-date"),
+    user: document.getElementById("transaction-user"),
+    userSearch: null, // Initialized in ensureExtraUI()
+
+    account: document.getElementById("transaction-account"),
+    typeWrap: document.getElementById("transaction-type-wrapper"),
+    type: document.getElementById("transaction-type"),
+    direction: document.getElementById("transaction-direction"),
+
+    loanWrap: document.getElementById("loan-id-wrapper"),
+    loanId: document.getElementById("transaction-loan-id"),
+
+    amount: document.getElementById("transaction-amount"),
+    desc: document.getElementById("transaction-description"),
+    proof: document.getElementById("transaction-proof"),
+    hint: document.getElementById("transaction-proof-hint"),
+    infoBox: null, // Initialized in ensureExtraUI()
+
+    // Buttons
+    btnNew: document.getElementById("btn-new-transaction"),
+    btnRefresh: document.getElementById("btn-refresh-transactions"),
+    btnSave: document.getElementById("transaction-save"),
+    btnCancel: document.getElementById("transaction-cancel"),
+    btnClose: document.getElementById("transaction-modal-close")
+  };
+
+  // --- 4. Utilities & Formatters ---
+  const Format = {
+    money: (n) => `${Number(n || 0).toLocaleString(CONFIG.locale)} ${CONFIG.currency}`,
+
+    typeLabel: (t) => {
+      const labels = {
+        contribution: "Contribution",
+        withdrawal: "Withdrawal",
+        loan_principal: "Loan Payment (Total)",
+        loan_interest: "Loan Interest (Receipt)",
+        expense: "Expense"
+      };
+      return labels[(t || "").toLowerCase()] || t;
+    },
+
+    toDTL: (mysqlDt) => (mysqlDt ? mysqlDt.replace(" ", "T").slice(0, 16) : ""),
+    fromDTL: (dtl) => (dtl ? dtl.replace("T", " ") + ":00" : ""),
+    
+    escape: (s) => String(s ?? "").replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    }[m]))
+  };
+
+  const Utils = {
+    debounce: (fn, wait = CONFIG.debounceTime) => {
+      let t;
+      return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn(...args), wait);
+      };
+    }
+  };
+
+  // --- 5. API Layer ---
+  async function apiRequest(url, options = {}) {
+    const res = await fetch(url, { credentials: "include", ...options });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || `HTTP Error ${res.status}`);
+    }
+    return json;
+  }
+
+  // --- 6. UI Logic Controllers ---
+  const UI = {
+    setSaveState: (enabled, reason = "") => {
+      const isDisabled = !enabled || STATE.saving;
+      DOM.btnSave.disabled = isDisabled;
+      DOM.btnSave.classList.toggle("opacity-50", isDisabled);
+      DOM.btnSave.classList.toggle("cursor-not-allowed", isDisabled);
+      
+      if (DOM.hint) {
+        const base = DOM.hint.dataset.baseHint || DOM.hint.textContent || "";
+        DOM.hint.dataset.baseHint = base;
+        DOM.hint.textContent = reason ? `${base} | ${reason}` : base;
+      }
+    },
+
+    toggleModal: (show = true) => {
+      DOM.modal.classList.toggle("hidden", !show);
+      DOM.modal.classList.toggle("flex", show);
+      if (!show) {
+        DOM.form.reset();
+        STATE.selectedUser = STATE.userSummary = STATE.loanSummary = null;
+        STATE.userLoans = [];
+        UI.updateInfoBox("");
+        UI.syncLogic();
+      }
+    },
+
+    updateInfoBox: (html) => { if (DOM.infoBox) DOM.infoBox.innerHTML = html; },
+
+    renderRows: (rows) => {
+      if (!DOM.tbody) return;
+      DOM.tbody.innerHTML = rows.map((r, i) => `
+        <tr class="border-b hover:bg-gray-50 text-sm">
+          <td class="p-3">${i + 1}</td>
+          <td class="p-3 whitespace-nowrap">${Format.escape(Format.toDTL(r.tx_date).replace("T", " "))}</td>
+          <td class="p-3">
+            <div class="font-bold text-slate-700">${Format.escape(r.user_name || "System")}</div>
+            ${r.loan_id ? `<span class="text-[10px] bg-blue-100 text-blue-700 px-1 rounded">#LN-${r.loan_id}</span>` : ""}
+          </td>
+          <td class="p-3 text-slate-600">${Format.escape(r.account_name || "N/A")}</td>
+          <td class="p-3">${Format.escape(Format.typeLabel(r.type))}</td>
+          <td class="p-3">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              r.direction === "IN" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+            }">${Format.escape(r.direction)}</span>
+          </td>
+          <td class="p-3 font-mono font-bold">${Format.escape(Format.money(r.amount))}</td>
+          <td class="p-3 space-x-1">
+            <button class="text-emerald-600 hover:underline btn-edit" data-id="${r.transaction_id}">Edit</button>
+            <button class="text-red-600 hover:underline btn-delete" data-id="${r.transaction_id}">Siba</button>
+          </td>
+        </tr>
+      `).join("");
+    },
+
+    syncLogic: async () => {
+      const type = (DOM.type.value || "").toLowerCase();
+      const userSelected = !!DOM.user.value;
+
+      UI.renderTypeOptions();
+
+      // Show Type dropdown based on context
+      if (DOM.typeWrap) DOM.typeWrap.classList.toggle("hidden", !userSelected && type !== "expense");
+
+      // Visibility of loan fields
+      const isLoan = ["loan_principal", "loan_interest"].includes(type);
+      DOM.loanWrap?.classList.toggle("hidden", !isLoan);
+
+      // Auto-set Direction
+      DOM.direction.value = ["contribution", "loan_principal", "loan_interest"].includes(type) ? "IN" : "OUT";
+
+      if (isLoan && userSelected) await UI.loadUserLoans();
+      await UI.validateAll();
+    },
+
+    renderTypeOptions: () => {
+      const types = [
+        { v: "", t: "-- Ubwoko --" },
+        { v: "contribution", t: "Contribution" },
+        { v: "withdrawal", t: "Withdrawal" },
+        { v: "loan_principal", t: "Loan Payment (Total)" },
+        { v: "loan_interest", t: "Loan Interest (Receipt)" },
+        { v: "expense", t: "Expense" }
+      ];
+
+      const userSelected = !!DOM.user.value;
+      const current = DOM.type.value;
+
+      let allowed = userSelected ? types : types.filter(x => x.v === "" || x.v === "expense");
+      
+      DOM.type.innerHTML = allowed.map(x => `<option value="${x.v}">${Format.escape(x.t)}</option>`).join("");
+      DOM.type.value = [...DOM.type.options].some(o => o.value === current) ? current : "";
+    },
+
+    validateAll: async () => {
+      const type = (DOM.type.value || "").toLowerCase();
+      const amount = Number(DOM.amount.value || 0);
+      const accId = Number(DOM.account.value || 0);
+      
+      let valid = true;
+      let reason = "";
+
+      // Standard validations
+      if (!accId) { valid = false; reason = "Select account."; }
+      else if (!type) { valid = false; reason = "Select type."; }
+      else if (amount <= 0) { valid = false; reason = "Amount > 0."; }
+      else if (type !== "expense" && !DOM.user.value) { valid = false; reason = "Select member."; }
+
+      // Logic: Balance Checks
+      if (valid && ["withdrawal", "expense"].includes(type)) {
+        const acc = STATE.accounts.find(a => Number(a.account_id) === accId);
+        if (amount > (acc?.balance || 0)) { valid = false; reason = "Insufficient account balance."; }
+      }
+
+      // Logic: Withdrawal Limit
+      if (valid && type === "withdrawal") {
+        const max = STATE.userSummary?.withdrawable_max || 0;
+        if (amount > max) { valid = false; reason = `Exceeds limit (${Format.money(max)})`; }
+      }
+
+      // Logic: Loan Previews
+      if (type === "loan_principal" && STATE.loanSummary) {
+        const dueI = Number(STATE.loanSummary.interest_due || 0);
+        const remP = Number(STATE.loanSummary.principal_remaining || 0);
+        const payI = Math.min(amount, dueI);
+        const payP = Math.min(amount - payI, remP);
+
+        UI.updateInfoBox((DOM.infoBox.innerHTML.split('Loan Preview')[0]) + `
+          <div class="mt-2 text-xs rounded border border-blue-200 bg-blue-50 p-2">
+            <p class="font-bold border-b mb-1">Loan Preview</p>
+            <p>Interest: ${Format.money(payI)} | Principal: ${Format.money(payP)}</p>
+          </div>
+        `);
         
-        try{
-        const res = await fetch(api, {method:'POST', body: fd, credentials: 'include'});
-        const text = await res.text();
-        let json = null;
-        try{ json = JSON.parse(text); } catch(e){ console.error('Transactions response not JSON', text); alert('Server returned non-JSON response. See console.'); return; }
-        if(!res.ok){ alert(`HTTP Error ${res.status}: ${json.message || text}`); return; }
-        if(json.success){ closeModal(); fetchTransactions(); } else alert(json.message || 'Error saving');
-        }catch(err){ console.error(err); alert('Network error'); }
+        if (amount > (dueI + remP)) { valid = false; reason = "Amount exceeds loan total."; }
+      }
+
+      UI.setSaveState(valid, reason);
+      return valid;
+    },
+
+    loadUserLoans: async () => {
+      const json = await apiRequest(`${CONFIG.api}?user_loans=1&user_id=${DOM.user.value}`);
+      STATE.userLoans = json.data || [];
+      DOM.loanId.innerHTML = '<option value="">-- Select Loan --</option>' + 
+        STATE.userLoans.map(l => `<option value="${l.loan_id}">#LN-${l.loan_id} (Rem: ${Format.money(l.principal_remaining)})</option>`).join("");
+    }
+  };
+
+  // --- 7. Event Wiring ---
+  function bindEvents() {
+    DOM.btnNew.onclick = () => { UI.toggleModal(true); DOM.date.value = new Date().toISOString().slice(0, 16); UI.syncLogic(); };
+    DOM.btnClose.onclick = DOM.btnCancel.onclick = () => UI.toggleModal(false);
+    DOM.btnRefresh.onclick = () => apiRequest(`${CONFIG.api}?per_page=200`).then(j => UI.renderRows(j.data));
+
+    // User Search
+    DOM.userSearch.oninput = Utils.debounce(async (e) => {
+      const q = e.target.value.trim();
+      if (q.length < 2) return;
+      const json = await apiRequest(`${CONFIG.api}?users=1&q=${encodeURIComponent(q)}`);
+      DOM.user.innerHTML = '<option value="">-- Select Member --</option>' + 
+        json.data.map(u => `<option value="${u.id}">${Format.escape(u.names)} | ${u.phone1}</option>`).join("");
     });
 
-    // initial load for transactions dropdowns and list
-    loadTransactionUsers(userSelect);
-    loadTransactionAccounts();
-    fetchTransactions();
-    })();
+    DOM.user.onchange = async () => {
+      if (!DOM.user.value) return;
+      const json = await apiRequest(`${CONFIG.api}?user_summary=1&user_id=${DOM.user.value}`);
+      STATE.userSummary = json.data;
+      UI.updateInfoBox(`
+        <div class="mt-2 text-xs rounded border bg-slate-50 p-2">
+          <p><b>Max Withdrawable:</b> <span class="text-emerald-700 font-bold">${Format.money(STATE.userSummary.withdrawable_max)}</span></p>
+        </div>
+      `);
+      UI.syncLogic();
+    };
+
+    DOM.loanId.onchange = async () => {
+      const asOf = DOM.date.value.slice(0, 10);
+      const json = await apiRequest(`${CONFIG.api}?loan_summary=1&loan_id=${DOM.loanId.value}&as_of=${asOf}`);
+      STATE.loanSummary = json.data;
+      UI.validateAll();
+    };
+
+    [DOM.type, DOM.amount, DOM.account, DOM.date].forEach(el => el.onchange = UI.syncLogic);
+
+    DOM.btnSave.onclick = async () => {
+      if (!(await UI.validateAll())) return;
+      STATE.saving = true;
+      UI.setSaveState(false, "Saving...");
+
+      try {
+        const fd = new FormData(DOM.form);
+        const type = DOM.type.value;
+        
+        if (type === "loan_principal") {
+          fd.set("action", "loan_payment_split");
+          fd.set("total_amount", DOM.amount.value);
+        } else {
+          fd.set("action", "create");
+        }
+
+        const res = await apiRequest(CONFIG.api, { method: "POST", body: fd });
+        if (res.split) alert(`Paid: Int ${Format.money(res.split.interest_paid_now)} | Prin ${Format.money(res.split.principal_paid_now)}`);
+        
+        UI.toggleModal(false);
+        DOM.btnRefresh.click();
+      } catch (e) {
+        alert(e.message);
+      } finally {
+        STATE.saving = false;
+      }
+    };
+  }
+
+  // --- 8. Initialization ---
+  (async function init() {
+    // Dynamic UI Elements
+    const searchInput = document.createElement("input");
+    searchInput.placeholder = "Shakisha Member (Name/Phone)...";
+    searchInput.className = "w-full mb-2 rounded border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-300 outline-none";
+    DOM.user.parentElement.insertBefore(searchInput, DOM.user);
+    DOM.userSearch = searchInput;
+
+    const infoBox = document.createElement("div");
+    DOM.amount.parentElement.appendChild(infoBox);
+    DOM.infoBox = infoBox;
+
+    // Load Initial Data
+    const accJson = await apiRequest(`${CONFIG.api}?accounts=1`);
+    STATE.accounts = accJson.data;
+    DOM.account.innerHTML = '<option value="">-- Account --</option>' + 
+      STATE.accounts.map(a => `<option value="${a.account_id}">${Format.escape(a.name)} (${Format.money(a.balance)})</option>`).join("");
+
+    bindEvents();
+    DOM.btnRefresh.click();
+  })();
+})();
