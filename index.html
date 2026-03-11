@@ -1,149 +1,809 @@
 <!doctype html>
 <html lang="rw">
-  <head>
-    <meta charset="utf-8" />
-    <title>NIG - Ikimina Management</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              primary: "#2F6B4F",
-              "primary-dark": "#1F4D3A",
-              accent: "#E89C2C",
-              brown: "#6B4A2D",
-              "bg-soft": "#F8FAF9",
-            },
-          },
-        },
-      };
-    </script>
-    <link rel="stylesheet" href="./css/styles.css" />
-  </head>
-  <body class="min-h-screen bg-white text-slate-900">
-    <!-- Navbar -->
-    <header class="border-b border-gray-200 bg-white">
-      <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <div class="flex items-center gap-2">
-          <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white font-bold">
-            N
-          </div>
-          <div>
-            <p class="text-sm font-semibold text-primary-dark">NIG Ikimina</p>
-            <p class="text-xs text-slate-500">Ikoranabuhanga ryo gucunga Ikimina</p>
-          </div>
-        </div>
-        <nav class="hidden items-center gap-6 text-sm font-medium text-slate-700 md:flex">
-          <a href="#about" class="hover:text-primary">Ibyerekeye Sisitemu</a>
-          <a href="#users" class="hover:text-primary">Abayikoresha</a>
-          <a href="#features" class="hover:text-primary">Ibikora</a>
-        </nav>
-        <div class="flex items-center gap-2">
-          <a href="pages/login.php" class="btn-primary text-sm">Injira</a>
-          <a href="pages/signup.html" class="btn-secondary text-sm hidden sm:inline-flex">Iyandikishe</a>
-        </div>
-      </div>
-    </header>
+<head>
+  <meta charset="utf-8" />
+  <title>NIG Ikimina — Ikoranabuhanga ryo Gucunga</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <!-- Hero -->
-    <section class="hero">
-      <div class="container">
-        <h1>NIG Management System</h1>
-        <p>Ikoranabuhanga rigezweho ryo gucunga Ikimina (NIG), rigena imigabane, inguzanyo n'inyungu mu buryo bwizewe.</p>
-        <div class="flex flex-wrap gap-3 justify-center">
-          <a href="pages/signup.html" class="btn-secondary">Fungura Konti</a>
-          <a href="pages/login.php" class="btn-primary">Injira</a>
+    :root {
+      --green:       #2F6B4F;
+      --green-dark:  #1F4D3A;
+      --green-light: #EBF4EF;
+      --green-mid:   #4A8C6A;
+      --gold:        #C9841A;
+      --gold-light:  #FDF3E3;
+      --brown:       #6B4A2D;
+      --ink:         #111C17;
+      --muted:       #6B7E75;
+      --border:      #D6E5DC;
+      --bg:          #F7FAF8;
+      --white:       #FFFFFF;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NAV ─────────────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: rgba(247,250,248,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 2rem;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .logo-mark {
+      width: 36px; height: 36px;
+      background: var(--green);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      color: white;
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.1rem;
+    }
+    .logo-text { line-height: 1.2; }
+    .logo-text strong {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--green-dark);
+    }
+    .logo-text span {
+      font-size: 0.7rem;
+      color: var(--muted);
+      font-weight: 400;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      list-style: none;
+    }
+    .nav-links a {
+      text-decoration: none;
+      font-size: 0.875rem;
+      color: var(--muted);
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--green); }
+    .nav-actions { display: flex; gap: 0.75rem; align-items: center; }
+    .btn-ghost {
+      padding: 0.5rem 1.1rem;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--green-dark);
+      background: transparent;
+      text-decoration: none;
+      transition: border-color 0.2s, background 0.2s;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .btn-ghost:hover { border-color: var(--green); background: var(--green-light); }
+    .btn-solid {
+      padding: 0.5rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: white;
+      background: var(--green);
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .btn-solid:hover { background: var(--green-dark); transform: translateY(-1px); }
+
+    /* ── HERO ────────────────────────────────────────────── */
+    .hero {
+      padding: 10rem 2rem 7rem;
+      max-width: 1120px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: center;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--green-light);
+      color: var(--green);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 0.3rem 0.85rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      margin-bottom: 1.5rem;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+    .hero h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2.4rem, 4vw, 3.4rem);
+      line-height: 1.15;
+      color: var(--ink);
+      margin-bottom: 1.25rem;
+    }
+    .hero h1 em {
+      font-style: italic;
+      color: var(--green);
+    }
+    .hero p {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 440px;
+      margin-bottom: 2.25rem;
+      font-weight: 400;
+    }
+    .hero-actions { display: flex; gap: 0.875rem; flex-wrap: wrap; }
+    .btn-hero {
+      padding: 0.8rem 1.75rem;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .btn-hero-primary {
+      background: var(--green);
+      color: white;
+      border: 2px solid var(--green);
+    }
+    .btn-hero-primary:hover { background: var(--green-dark); border-color: var(--green-dark); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(47,107,79,0.25); }
+    .btn-hero-secondary {
+      background: white;
+      color: var(--green-dark);
+      border: 2px solid var(--border);
+    }
+    .btn-hero-secondary:hover { border-color: var(--green); transform: translateY(-2px); }
+
+    /* Hero visual */
+    .hero-visual {
+      position: relative;
+    }
+    .hero-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: 0 4px 40px rgba(47,107,79,0.08);
+    }
+    .hero-card-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 1.25rem;
+    }
+    .stat-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.875rem;
+    }
+    .stat-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.875rem 1rem;
+      border-radius: 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+    }
+    .stat-item-left { display: flex; align-items: center; gap: 0.75rem; }
+    .stat-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .stat-name { font-size: 0.85rem; font-weight: 500; color: var(--ink); }
+    .stat-sub  { font-size: 0.72rem; color: var(--muted); }
+    .stat-val  { font-size: 0.9rem; font-weight: 600; color: var(--green-dark); font-variant-numeric: tabular-nums; }
+    .hero-card-footer {
+      margin-top: 1.25rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .hero-card-footer p { font-size: 0.75rem; color: var(--muted); }
+    .hero-card-footer strong { color: var(--green-dark); }
+
+    /* floating accent cards */
+    .float-card {
+      position: absolute;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 0.875rem 1.1rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
+    .float-card-top {
+      top: -1.5rem;
+      right: -1.5rem;
+    }
+    .float-card-bottom {
+      bottom: -1.5rem;
+      left: -1.5rem;
+    }
+    .float-icon { font-size: 1.2rem; display: block; margin-bottom: 2px; }
+    .float-label { color: var(--muted); font-size: 0.7rem; }
+    .float-val   { font-weight: 700; color: var(--green-dark); }
+
+    /* ── DIVIDER ─────────────────────────────────────────── */
+    .section-divider {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── FEATURES ────────────────────────────────────────── */
+    .section {
+      padding: 6rem 2rem;
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+    .section-tag {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 0.75rem;
+    }
+    .section-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(1.8rem, 3vw, 2.5rem);
+      line-height: 1.2;
+      color: var(--ink);
+      margin-bottom: 1rem;
+    }
+    .section-sub {
+      font-size: 1rem;
+      color: var(--muted);
+      max-width: 520px;
+      margin-bottom: 3.5rem;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+    .feature-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .feature-card:hover {
+      box-shadow: 0 8px 32px rgba(47,107,79,0.1);
+      transform: translateY(-3px);
+    }
+    .feature-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: var(--green-light);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      margin-bottom: 1.1rem;
+    }
+    .feature-card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 0.5rem;
+    }
+    .feature-card p {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    /* ── ROLES ───────────────────────────────────────────── */
+    .roles-section {
+      background: var(--green-dark);
+      padding: 6rem 2rem;
+    }
+    .roles-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+    .roles-section .section-tag { color: #86C9A3; }
+    .roles-section .section-title { color: white; }
+    .roles-section .section-sub { color: rgba(255,255,255,0.6); }
+
+    .roles-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+    .role-card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 1.75rem;
+      transition: background 0.2s;
+    }
+    .role-card:hover { background: rgba(255,255,255,0.11); }
+    .role-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.12);
+      color: #A8E0C0;
+      border-radius: 100px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 1.1rem;
+    }
+    .role-card h3 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.3rem;
+      color: white;
+      margin-bottom: 1rem;
+    }
+    .role-list { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+    .role-list li {
+      font-size: 0.875rem;
+      color: rgba(255,255,255,0.65);
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .role-list li::before {
+      content: '→';
+      color: #86C9A3;
+      font-weight: 600;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── HOW IT WORKS ────────────────────────────────────── */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      position: relative;
+    }
+    .steps-grid::before {
+      content: '';
+      position: absolute;
+      top: 22px;
+      left: calc(12.5% + 1rem);
+      right: calc(12.5% + 1rem);
+      height: 1px;
+      background: var(--border);
+    }
+    .step {
+      text-align: center;
+      position: relative;
+    }
+    .step-num {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--green);
+      color: white;
+      font-weight: 700;
+      font-size: 0.95rem;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.25rem;
+      position: relative;
+      z-index: 1;
+    }
+    .step h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 0.4rem;
+    }
+    .step p { font-size: 0.82rem; color: var(--muted); }
+
+    /* ── STATS BAND ──────────────────────────────────────── */
+    .stats-band {
+      background: var(--green-light);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 3.5rem 2rem;
+    }
+    .stats-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2rem;
+      text-align: center;
+    }
+    .stat-band-num {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2.4rem;
+      color: var(--green-dark);
+      display: block;
+      line-height: 1;
+      margin-bottom: 0.4rem;
+    }
+    .stat-band-label { font-size: 0.85rem; color: var(--muted); font-weight: 500; }
+
+    /* ── CTA ─────────────────────────────────────────────── */
+    .cta-section {
+      padding: 6rem 2rem;
+      text-align: center;
+    }
+    .cta-inner {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .cta-inner .section-title { margin-bottom: 1rem; }
+    .cta-inner p { color: var(--muted); margin-bottom: 2.5rem; }
+    .cta-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+    /* ── FOOTER ──────────────────────────────────────────── */
+    footer {
+      background: var(--ink);
+      padding: 3rem 2rem;
+    }
+    .footer-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+    }
+    .footer-logo strong { color: white; font-size: 0.9rem; }
+    .footer-logo span   { color: rgba(255,255,255,0.4); font-size: 0.8rem; display: block; }
+    .footer-links { display: flex; gap: 1.5rem; }
+    .footer-links a {
+      color: rgba(255,255,255,0.45);
+      font-size: 0.82rem;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: rgba(255,255,255,0.8); }
+    .footer-copy { color: rgba(255,255,255,0.3); font-size: 0.78rem; }
+
+    /* ── ANIMATIONS ──────────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .hero-content > * {
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards;
+    }
+    .hero-content > *:nth-child(1) { animation-delay: 0.1s; }
+    .hero-content > *:nth-child(2) { animation-delay: 0.2s; }
+    .hero-content > *:nth-child(3) { animation-delay: 0.3s; }
+    .hero-content > *:nth-child(4) { animation-delay: 0.4s; }
+    .hero-visual {
+      opacity: 0;
+      animation: fadeUp 0.7s ease 0.35s forwards;
+    }
+
+    /* ── RESPONSIVE ──────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; gap: 3rem; padding-top: 8rem; }
+      .hero-visual { display: none; }
+      .features-grid { grid-template-columns: 1fr 1fr; }
+      .roles-grid { grid-template-columns: 1fr; }
+      .steps-grid { grid-template-columns: 1fr 1fr; }
+      .steps-grid::before { display: none; }
+      .stats-inner { grid-template-columns: 1fr 1fr; }
+      .nav-links { display: none; }
+    }
+    @media (max-width: 600px) {
+      .features-grid { grid-template-columns: 1fr; }
+      .steps-grid { grid-template-columns: 1fr; }
+      .stats-inner { grid-template-columns: 1fr 1fr; }
+      .footer-inner { flex-direction: column; text-align: center; }
+      .footer-links { flex-wrap: wrap; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-inner">
+      <a href="#" class="logo">
+        <div class="logo-mark">N</div>
+        <div class="logo-text">
+          <strong>NIG Ikimina</strong>
+          <span>Management System</span>
+        </div>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features">Ibikora</a></li>
+        <li><a href="#roles">Abakoresha</a></li>
+        <li><a href="#how">Uburyo</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="pages/signup.html" class="btn-ghost">Iyandikishe</a>
+        <a href="pages/login.php"   class="btn-solid">Injira</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section style="background: var(--bg);">
+    <div class="hero">
+      <div class="hero-content">
+        <div class="hero-badge">Ikoranabuhanga rishya · 2024</div>
+        <h1>Gucunga Ikimina<br/>mu buryo <em>bwizewe</em></h1>
+        <p>Sisitemu igezweho yo gucunga imigabane, inguzanyo, inyungu, expenses n'amafaranga y'ikimina yawe — byose ahantu hamwe.</p>
+        <div class="hero-actions">
+          <a href="pages/signup.html" class="btn-hero btn-hero-primary">Tangira Ubuntu</a>
+          <a href="pages/login.php"   class="btn-hero btn-hero-secondary">Injira mu Konti</a>
         </div>
       </div>
-    </section>
 
-    <!-- About -->
-    <section id="about" class="section bg-gray-50">
-      <div class="container">
-        <h2 class="text-2xl font-bold text-center mb-8">Ibyerekeye Sisitemu</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div>
-            <h3 class="text-xl font-semibold mb-4">Intangiriro</h3>
-            <p class="text-gray-600">NIG Management System ni software igenewe gucunga imirimo y'ikimina/ikoperative irimo imigabane, inguzanyo, inyungu, expenses, assets n'amakuru y'abanyamuryango.</p>
+      <div class="hero-visual">
+        <div style="position: relative; padding: 1.5rem 1.5rem 1.5rem 1rem;">
+          <div class="float-card float-card-top">
+            <span class="float-icon">📈</span>
+            <span class="float-label">Inyungu</span><br/>
+            <span class="float-val">Reducing Balance</span>
           </div>
-          <div>
-            <h3 class="text-xl font-semibold mb-4">Uburyo bwo Kubara Inyungu</h3>
-            <p class="text-gray-600">Iyi system ikoresha uburyo bwa Reducing Balance mu kubara inyungu z'inguzanyo. Inyungu ibarwa buri kwezi hashingiwe ku mwenda usigaye.</p>
+          <div class="hero-card">
+            <p class="hero-card-label">Imiterere y'Ikimina · Dashboard</p>
+            <div class="stat-row">
+              <div class="stat-item">
+                <div class="stat-item-left">
+                  <div class="stat-dot" style="background:#2F6B4F;"></div>
+                  <div>
+                    <div class="stat-name">Imigabane yose</div>
+                    <div class="stat-sub">Contributions</div>
+                  </div>
+                </div>
+                <div style="font-size:0.78rem; color:var(--muted); font-style:italic;">Ibanga 🔒</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-item-left">
+                  <div class="stat-dot" style="background:#C9841A;"></div>
+                  <div>
+                    <div class="stat-name">Inguzanyo ziriho</div>
+                    <div class="stat-sub">Active loans</div>
+                  </div>
+                </div>
+                <div style="font-size:0.78rem; color:var(--muted); font-style:italic;">Ibanga 🔒</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-item-left">
+                  <div class="stat-dot" style="background:#6B4A2D;"></div>
+                  <div>
+                    <div class="stat-name">Assets z'Ikimina</div>
+                    <div class="stat-sub">Total assets</div>
+                  </div>
+                </div>
+                <div style="font-size:0.78rem; color:var(--muted); font-style:italic;">Ibanga 🔒</div>
+              </div>
+            </div>
+            <div class="hero-card-footer">
+              <p>Injira kureba amakuru <strong>yawe</strong></p>
+              <span style="font-size:0.75rem; color:var(--green); font-weight:600;">● Bikorwa</span>
+            </div>
+          </div>
+          <div class="float-card float-card-bottom">
+            <span class="float-icon">🔒</span>
+            <span class="float-label">Amakuru yawe</span><br/>
+            <span class="float-val">Arindwa neza</span>
           </div>
         </div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- Users -->
-    <section id="users" class="section">
-      <div class="container">
-        <h2 class="text-2xl font-bold text-center mb-8">Ibyiciro by'Abakoresha</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div class="card">
-            <h3 class="text-xl font-semibold mb-4 text-primary">Utari Umunyamuryango</h3>
-            <ul class="space-y-2 text-sm text-gray-600">
-              <li>• Ashobora gusaba inguzanyo</li>
-              <li>• Agomba kugira abamwishingira 2</li>
-              <li>• Ashobora kureba inguzanyo ye</li>
-              <li>• Yishyura inyungu mbere y'umwenda</li>
-            </ul>
-          </div>
-          <div class="card">
-            <h3 class="text-xl font-semibold mb-4 text-primary">Umunyamuryango</h3>
-            <ul class="space-y-2 text-sm text-gray-600">
-              <li>• Atanga umusanzu wa buri kwezi</li>
-              <li>• Ashobora kureba imigabane ye</li>
-              <li>• Ashobora kugurizwa amafaranga</li>
-              <li>• Yishyura inyungu mbere y'umwenda</li>
-            </ul>
-          </div>
-          <div class="card">
-            <h3 class="text-xl font-semibold mb-4 text-primary">Umuyobozi (Admin)</h3>
-            <ul class="space-y-2 text-sm text-gray-600">
-              <li>• Yandika abanyamuryango</li>
-              <li>• Yinjiza imigabane n'inguzanyo</li>
-              <li>• Ashyira inyungu zemewe</li>
-              <li>• Areba raporo z'abantu</li>
-            </ul>
-          </div>
+  <!-- STATS BAND -->
+  <div class="stats-band">
+    <div class="stats-inner">
+      <div>
+        <span class="stat-band-num">🔒</span>
+        <span class="stat-band-label">Amakuru arindwa</span>
+      </div>
+      <div>
+        <span class="stat-band-num">3</span>
+        <span class="stat-band-label">Ibyiciro by'abakoresha</span>
+      </div>
+      <div>
+        <span class="stat-band-num">24/7</span>
+        <span class="stat-band-label">Ibikora igihe cyose</span>
+      </div>
+      <div>
+        <span class="stat-band-num">✓</span>
+        <span class="stat-band-label">Imibare yizewe</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <section class="section" id="features">
+    <p class="section-tag">Ibikora</p>
+    <h2 class="section-title">Byose mu buryo bumwe</h2>
+    <p class="section-sub">Sisitemu igenewe gufasha abayobozi b'amakimina gucunga imirimo yose nta makosa.</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">💰</div>
+        <h3>Imigabane</h3>
+        <p>Injiza no gukurikirana imigabane ya buri munyamuryango buri kwezi mu buryo bwizewe.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏦</div>
+        <h3>Inguzanyo</h3>
+        <p>Gucunga inguzanyo kuva igihe isabwa kugeza iyo yishyuriwe, harimo na abishingira.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>Inyungu (Reducing Balance)</h3>
+        <p>Kubara inyungu z'inguzanyo hashingiwe ku mwenda usigaye buri kwezi nta makosa.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📋</div>
+        <h3>Transactions</h3>
+        <p>Kuzenguruka amasoko yose — contribution, withdrawal, loan payment, expense — hamwe.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏠</div>
+        <h3>Assets</h3>
+        <p>Gukurikirana imutungo y'ikimina — impamyabuzima, itangazo n'igiciro cyayo.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📈</div>
+        <h3>Raporo &amp; Dashboard</h3>
+        <p>Raporo z'ingenzi zikubiyemo imibare yose y'ikimina mu buryo bworoshye gusobanukirwa.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROLES -->
+  <div class="roles-section" id="roles">
+    <div class="roles-inner">
+      <p class="section-tag">Abakoresha</p>
+      <h2 class="section-title">Ibyiciro by'abakoresha</h2>
+      <p class="section-sub" style="margin-bottom:3rem;">Buri wese afite inshingano ze zihariye mu gucunga ikimina.</p>
+
+      <div class="roles-grid">
+        <div class="role-card">
+          <span class="role-badge">Umuyobozi</span>
+          <h3>Admin</h3>
+          <ul class="role-list">
+            <li>Yandika abanyamuryango bashya</li>
+            <li>Yinjiza imigabane n'inguzanyo</li>
+            <li>Yemeza inguzanyo zisabwa</li>
+            <li>Areba raporo zose z'ikimina</li>
+            <li>Agenzura igenamiterere</li>
+          </ul>
+        </div>
+        <div class="role-card">
+          <span class="role-badge">Umunyamuryango</span>
+          <h3>Member</h3>
+          <ul class="role-list">
+            <li>Atanga umusanzu wa buri kwezi</li>
+            <li>Asaba inguzanyo</li>
+            <li>Areba imigabane ye</li>
+            <li>Yishyura inguzanyo ze</li>
+            <li>Ashobora kuba umushingira</li>
+          </ul>
+        </div>
+        <div class="role-card">
+          <span class="role-badge">Utari umunyamuryango</span>
+          <h3>Non-Member</h3>
+          <ul class="role-list">
+            <li>Asaba inguzanyo gusa</li>
+            <li>Agomba abishingira 2</li>
+            <li>Yishyura inyungu mbere</li>
+            <li>Areba inguzanyo ze</li>
+          </ul>
         </div>
       </div>
-    </section>
+    </div>
+  </div>
 
-    <!-- Features -->
-    <section id="features" class="section bg-gray-50">
-      <div class="container">
-        <h2 class="text-2xl font-bold text-center mb-8">Ibikora</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div class="card">
-            <h3 class="text-lg font-semibold mb-2">Gukuramo Amafaranga</h3>
-            <p class="text-sm text-gray-600">Iyo umunyamuryango ashaka kuvana amafaranga, system ireba inguzanyo, igabanya % yo gukata.</p>
-          </div>
-          <div class="card">
-            <h3 class="text-lg font-semibold mb-2">Raporo</h3>
-            <p class="text-sm text-gray-600">Raporo ya buri muntu n'iz rusange, z'ukwezi, igice cy'umwaka n'umwaka.</p>
-          </div>
-          <div class="card">
-            <h3 class="text-lg font-semibold mb-2">Umutekano</h3>
-            <p class="text-sm text-gray-600">Login system n'roles, audit trail, backup na restore.</p>
-          </div>
-          <div class="card">
-            <h3 class="text-lg font-semibold mb-2">Abishingira</h3>
-            <p class="text-sm text-gray-600">System igenzura imigabane yabo n'inguzanyo zishingira.</p>
-          </div>
+  <!-- HOW IT WORKS -->
+  <section class="section" id="how">
+    <p class="section-tag">Uburyo</p>
+    <h2 class="section-title">Gutangira biraryoshye</h2>
+    <p class="section-sub">Intambwe enye gusa kugira ngo utangire gucunga ikimina yawe.</p>
+
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h4>Fungura Konti</h4>
+        <p>Iyandikishe na email kandi ushyire amakuru y'ikimina yawe.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h4>Ongera Abanyamuryango</h4>
+        <p>Injiza abanyamuryango bose n'amakuru yabo mu sisitemu.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h4>Injiza Transactions</h4>
+        <p>Tandika kuzinjiza imigabane, inguzanyo n'amasoko yose.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <h4>Reba Raporo</h4>
+        <p>Kureba imiterere y'ikimina kuri dashboard igenwa n'amakuru.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <div style="background: var(--green-light); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+    <div class="cta-section">
+      <div class="cta-inner">
+        <p class="section-tag">Tangira ubu</p>
+        <h2 class="section-title">Gutegura ikimina yawe?</h2>
+        <p>Injira mu sisitemu cyangwa fungura konti nshya. Ikoranabuhanga riragufasha gucunga byose nta ngorane.</p>
+        <div class="cta-actions">
+          <a href="pages/signup.html" class="btn-hero btn-hero-primary">Fungura Konti Ubuntu</a>
+          <a href="pages/login.php"   class="btn-hero btn-hero-secondary">Injira mu Konti</a>
         </div>
       </div>
-    </section>
+    </div>
+  </div>
 
-    <!-- Footer -->
-    <footer class="bg-gray-900 text-white py-8">
-      <div class="container text-center">
-        <p>&copy; 2024 NIG Management System. All rights reserved.</p>
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-logo">
+        <strong>NIG Ikimina</strong>
+        <span>© 2024 Management System. Uburenganzira bwose bwihariwe.</span>
       </div>
-    </footer>
-  </body>
+      <div class="footer-links">
+        <a href="#features">Ibikora</a>
+        <a href="#roles">Abakoresha</a>
+        <a href="#how">Uburyo</a>
+        <a href="pages/login.php">Injira</a>
+      </div>
+      <span class="footer-copy">Made with ♥ for Ikimina</span>
+    </div>
+  </footer>
+
+</body>
 </html>
-
-

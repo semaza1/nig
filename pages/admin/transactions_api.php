@@ -2,28 +2,26 @@
 /**
  * pages/admin/transactions_api.php
  *
- * Transactions API (Admin)
- * - CRUD (create/retrieve/update/delete)
- * - Proof download
- * - Loan payment splitting:
- *    When creating type=loan_principal, user enters TOTAL paid.
- *    System calculates interest due (full month rule) and splits:
- *      interest first, remaining to principal
- *    Saves up to 2 rows: loan_interest and loan_principal (same proof).
+ * Updated:
+ * - CRUD
+ * - proof download
+ * - borrower-wide loan payment allocation
+ * - payment preview endpoint
  *
- * DB schema expected (your current):
- * transactions:
- *  - transaction_id BIGINT PK AUTO_INCREMENT
- *  - tx_date DATETIME
- *  - user_id INT NULL
- *  - loan_id BIGINT NULL
- *  - account_id INT/BIGINT NULL
- *  - type ENUM('contribution','withdrawal','loan_principal','loan_interest','expense','other_income','other_out')
- *  - direction ENUM('IN','OUT')
- *  - amount DECIMAL
- *  - description VARCHAR(255)
- *  - proof_name, proof_type, proof_size, proof_hash, proof_data (LONGBLOB)
- *  - created_by, created_at
+ * Loan repayment rule:
+ *   - entered amount is TOTAL borrower payment
+ *   - pay all unpaid interest first across borrower's approved/defaulted loans
+ *   - then pay principal
+ *   - continue to next loan if money remains
+ *   - oldest loans first (start_date ASC, loan_id ASC)
+ *
+ * Interest rule:
+ *   - first month interest is due immediately on approval
+ *   - unpaid interest = initial_interest_due - paid_interest
+ *
+ * Transactions created:
+ *   - loan_interest (IN)
+ *   - loan_principal (IN)
  */
 
 ini_set('display_errors', '0');
@@ -81,43 +79,12 @@ function is_valid_date_ymd(string $d): bool {
 }
 
 function is_valid_datetime(string $dt): bool {
-    // Accept: YYYY-MM-DD HH:MM(:SS) or YYYY-MM-DDTHH:MM(:SS)
     if (preg_match('/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/', $dt) !== 1) return false;
     $dt = str_replace('T', ' ', $dt);
     return is_valid_date_ymd(explode(' ', $dt)[0] ?? '');
 }
 
 /* ---------------- Domain helpers ---------------- */
-
-function month_index(string $ymd): int {
-    $y = (int)substr($ymd, 0, 4);
-    $m = (int)substr($ymd, 5, 2);
-    return $y * 12 + $m;
-}
-
-function normalize_monthly_rate($rate): float {
-    $r = (float)$rate;
-    // if stored as "18" meaning 18%, convert to 0.18
-    if ($r > 1.0) $r = $r / 100.0;
-    return max(0.0, $r);
-}
-
-/**
- * FULL MONTH interest once month begins:
- * months_due = asOfMonthIndex - startMonthIndex
- */
-function calendar_months_due_from_start(string $startYmd, string $asOfYmd): int {
-    return max(0, month_index($asOfYmd) - month_index($startYmd));
-}
-
-/**
- * Reducing: months due since last interest payment month (or start month).
- */
-function calendar_months_due_since_last_interest(string $startYmd, ?string $lastInterestDatetime, string $asOfYmd): int {
-    $from = $startYmd;
-    if ($lastInterestDatetime) $from = substr($lastInterestDatetime, 0, 10);
-    return max(0, month_index($asOfYmd) - month_index($from));
-}
 
 function require_user(mysqli $mysqli, int $user_id): array {
     $st = $mysqli->prepare("SELECT id, names, is_member FROM users WHERE id=? LIMIT 1");
@@ -140,7 +107,8 @@ function require_account(mysqli $mysqli, int $account_id): array {
 function require_loan(mysqli $mysqli, int $loan_id): array {
     $st = $mysqli->prepare("
         SELECT loan_id, borrower_user_id, status, principal, monthly_interest_rate, interest_method, start_date, approved_at
-        FROM loans WHERE loan_id=? LIMIT 1
+        FROM loans
+        WHERE loan_id=? LIMIT 1
     ");
     $st->bind_param('i', $loan_id);
     $st->execute();
@@ -156,12 +124,10 @@ function normalize_type_direction(string $type, string $direction): array {
     $allowed = ['contribution','withdrawal','loan_principal','loan_interest','expense','other_income','other_out'];
     if (!in_array($type, $allowed, true)) return [false, null, null, 'Invalid type'];
 
-    // default if not provided
     if ($direction !== 'IN' && $direction !== 'OUT') {
         $direction = in_array($type, ['withdrawal','expense','other_out'], true) ? 'OUT' : 'IN';
     }
 
-    // enforce direction
     if ($type === 'contribution' && $direction !== 'IN') return [false, null, null, 'Contribution must be IN'];
     if ($type === 'withdrawal' && $direction !== 'OUT') return [false, null, null, 'Withdrawal must be OUT'];
     if ($type === 'expense' && $direction !== 'OUT') return [false, null, null, 'Expense must be OUT'];
@@ -208,71 +174,210 @@ function update_proof(mysqli $mysqli, int $tx_id, string $blob, string $name, st
     $st->close();
 }
 
+/* ---------------- Loan calculation helpers ---------------- */
+
+function get_loan_row(mysqli $mysqli, int $loan_id): ?array {
+    $st = $mysqli->prepare("
+        SELECT loan_id, borrower_user_id, account_id, principal, monthly_interest_rate, interest_method,
+               term_months, status, start_date, approved_at, end_date
+        FROM loans
+        WHERE loan_id=?
+        LIMIT 1
+    ");
+    if (!$st) return null;
+    $st->bind_param('i', $loan_id);
+    $st->execute();
+    $row = $st->get_result()->fetch_assoc();
+    $st->close();
+    return $row ?: null;
+}
+
+function get_loan_paid_principal(mysqli $mysqli, int $loan_id): float {
+    $st = $mysqli->prepare("
+        SELECT COALESCE(SUM(amount), 0) AS total_paid
+        FROM transactions
+        WHERE loan_id=?
+          AND type='loan_principal'
+          AND direction='IN'
+    ");
+    if (!$st) return 0.0;
+    $st->bind_param('i', $loan_id);
+    $st->execute();
+    $row = $st->get_result()->fetch_assoc();
+    $st->close();
+    return (float)($row['total_paid'] ?? 0);
+}
+
+function get_loan_paid_interest(mysqli $mysqli, int $loan_id): float {
+    $st = $mysqli->prepare("
+        SELECT COALESCE(SUM(amount), 0) AS total_paid
+        FROM transactions
+        WHERE loan_id=?
+          AND type='loan_interest'
+          AND direction='IN'
+    ");
+    if (!$st) return 0.0;
+    $st->bind_param('i', $loan_id);
+    $st->execute();
+    $row = $st->get_result()->fetch_assoc();
+    $st->close();
+    return (float)($row['total_paid'] ?? 0);
+}
+
+function get_loan_initial_interest_due(mysqli $mysqli, int $loan_id): float {
+    $loan = get_loan_row($mysqli, $loan_id);
+    if (!$loan) return 0.0;
+
+    $status = (string)($loan['status'] ?? 'requested');
+    if (!in_array($status, ['approved', 'defaulted', 'closed'], true)) {
+        return 0.0;
+    }
+
+    $principal = (float)($loan['principal'] ?? 0);
+    $rate      = (float)($loan['monthly_interest_rate'] ?? 0);
+
+    if ($principal <= 0 || $rate <= 0) return 0.0;
+
+    return round(($principal * $rate) / 100, 2);
+}
+
+function get_loan_unpaid_interest(mysqli $mysqli, int $loan_id): float {
+    $due  = get_loan_initial_interest_due($mysqli, $loan_id);
+    $paid = get_loan_paid_interest($mysqli, $loan_id);
+    return (float)max(0, $due - $paid);
+}
+
+function get_loan_unpaid_principal(mysqli $mysqli, int $loan_id): float {
+    $loan = get_loan_row($mysqli, $loan_id);
+    if (!$loan) return 0.0;
+
+    $status = (string)($loan['status'] ?? 'requested');
+    if (!in_array($status, ['approved', 'defaulted', 'closed'], true)) {
+        return 0.0;
+    }
+
+    $principal = (float)($loan['principal'] ?? 0);
+    $paidPrincipal = get_loan_paid_principal($mysqli, $loan_id);
+
+    return (float)max(0, $principal - $paidPrincipal);
+}
+
+function get_borrower_active_loans(mysqli $mysqli, int $user_id): array {
+    $uid = (int)$user_id;
+
+    $st = $mysqli->prepare("
+        SELECT loan_id, borrower_user_id, account_id, principal, monthly_interest_rate, interest_method,
+               term_months, status, start_date, approved_at, end_date
+        FROM loans
+        WHERE borrower_user_id=?
+          AND status IN ('approved','defaulted','closed')
+        ORDER BY
+          CASE WHEN start_date IS NULL OR start_date='0000-00-00' THEN 1 ELSE 0 END ASC,
+          start_date ASC,
+          loan_id ASC
+    ");
+    if (!$st) return [];
+
+    $st->bind_param('i', $uid);
+    $st->execute();
+    $res = $st->get_result();
+
+    $rows = [];
+    while ($r = $res->fetch_assoc()) {
+        $loanId = (int)$r['loan_id'];
+        $r['paid_interest'] = get_loan_paid_interest($mysqli, $loanId);
+        $r['paid_principal'] = get_loan_paid_principal($mysqli, $loanId);
+        $r['unpaid_interest'] = get_loan_unpaid_interest($mysqli, $loanId);
+        $r['unpaid_principal'] = get_loan_unpaid_principal($mysqli, $loanId);
+        $rows[] = $r;
+    }
+
+    $st->close();
+    return $rows;
+}
+
 /**
- * Interest due as of tx_date using FULL MONTH rule:
- * Flat:
- *   accrued = principal * rate * months_due_from_start
- *   due = accrued - paid_interest
- * Reducing:
- *   due = outstanding_principal * rate * months_due_since_last_interest_payment_month
+ * Borrower-wide payment allocation:
+ * 1. pay all unpaid interest first across all eligible loans
+ * 2. then pay principal
+ * 3. oldest loans first
  */
-function compute_interest_due_calendar(mysqli $mysqli, array $loanRow, int $loan_id, int $user_id, string $tx_datetime): float {
-    $asOfDate = substr(str_replace('T', ' ', $tx_datetime), 0, 10);
+function allocate_borrower_payment(mysqli $mysqli, int $user_id, float $amount): array {
+    $remaining = round(max(0.0, $amount), 2);
+    $loans = get_borrower_active_loans($mysqli, $user_id);
 
-    if ((int)($loanRow['borrower_user_id'] ?? 0) !== (int)$user_id) {
-        throw new RuntimeException("Loan ownership mismatch");
-    }
-    if (($loanRow['status'] ?? '') !== 'approved') {
-        throw new RuntimeException("Loan must be approved to accept payments");
-    }
+    $allocations = [];
+    $loanSummaries = [];
 
-    $principal = (float)($loanRow['principal'] ?? 0);
-    $rate = normalize_monthly_rate($loanRow['monthly_interest_rate'] ?? 0);
-    $method = (string)($loanRow['interest_method'] ?? 'flat');
-
-    // start_date is core for your rule
-    $start = (string)($loanRow['start_date'] ?? '');
-    if ($start === '' || $start === '0000-00-00') {
-        $approved_at = (string)($loanRow['approved_at'] ?? '');
-        $start = $approved_at ? substr($approved_at, 0, 10) : $asOfDate;
-    }
-
-    // paid interest
-    $st = $mysqli->prepare("SELECT COALESCE(SUM(amount),0) AS paid_interest
-                            FROM transactions WHERE loan_id=? AND type='loan_interest'");
-    $st->bind_param('i', $loan_id);
-    $st->execute();
-    $paid_interest = (float)($st->get_result()->fetch_assoc()['paid_interest'] ?? 0);
-    $st->close();
-
-    // paid principal
-    $st = $mysqli->prepare("SELECT COALESCE(SUM(amount),0) AS paid_principal
-                            FROM transactions WHERE loan_id=? AND type='loan_principal'");
-    $st->bind_param('i', $loan_id);
-    $st->execute();
-    $paid_principal = (float)($st->get_result()->fetch_assoc()['paid_principal'] ?? 0);
-    $st->close();
-
-    $outstanding = max(0.0, $principal - $paid_principal);
-    if ($rate <= 0.0) return 0.0;
-
-    if ($method === 'flat') {
-        $months_due = calendar_months_due_from_start($start, $asOfDate);
-        $accrued = $principal * $rate * $months_due;
-        return round(max(0.0, $accrued - $paid_interest), 2);
+    foreach ($loans as $loan) {
+        $loanId = (int)$loan['loan_id'];
+        $loanSummaries[$loanId] = [
+            'loan_id' => $loanId,
+            'interest_before' => (float)$loan['unpaid_interest'],
+            'principal_before' => (float)$loan['unpaid_principal'],
+            'interest_paid' => 0.0,
+            'principal_paid' => 0.0,
+            'interest_after' => (float)$loan['unpaid_interest'],
+            'principal_after' => (float)$loan['unpaid_principal'],
+        ];
     }
 
-    // reducing: months since last interest payment month
-    $st = $mysqli->prepare("SELECT MAX(tx_date) AS last_interest_date
-                            FROM transactions WHERE loan_id=? AND type='loan_interest'");
-    $st->bind_param('i', $loan_id);
-    $st->execute();
-    $last_interest_date = (string)($st->get_result()->fetch_assoc()['last_interest_date'] ?? '');
-    $st->close();
+    // pass 1: interest first
+    foreach ($loans as $loan) {
+        if ($remaining <= 0) break;
 
-    $months_due = calendar_months_due_since_last_interest($start, $last_interest_date ?: null, $asOfDate);
-    $due = $outstanding * $rate * $months_due;
-    return round(max(0.0, $due), 2);
+        $loanId = (int)$loan['loan_id'];
+        $unpaidInterest = (float)$loanSummaries[$loanId]['interest_after'];
+
+        if ($unpaidInterest <= 0) continue;
+
+        $pay = min($remaining, $unpaidInterest);
+        if ($pay <= 0) continue;
+
+        $allocations[] = [
+            'loan_id' => $loanId,
+            'type' => 'loan_interest',
+            'amount' => round($pay, 2),
+            'description' => 'Loan interest (auto-allocated)',
+        ];
+
+        $loanSummaries[$loanId]['interest_paid'] += round($pay, 2);
+        $loanSummaries[$loanId]['interest_after'] = round(max(0.0, $loanSummaries[$loanId]['interest_after'] - $pay), 2);
+
+        $remaining = round($remaining - $pay, 2);
+    }
+
+    // pass 2: principal
+    foreach ($loans as $loan) {
+        if ($remaining <= 0) break;
+
+        $loanId = (int)$loan['loan_id'];
+        $unpaidPrincipal = (float)$loanSummaries[$loanId]['principal_after'];
+
+        if ($unpaidPrincipal <= 0) continue;
+
+        $pay = min($remaining, $unpaidPrincipal);
+        if ($pay <= 0) continue;
+
+        $allocations[] = [
+            'loan_id' => $loanId,
+            'type' => 'loan_principal',
+            'amount' => round($pay, 2),
+            'description' => 'Loan principal (auto-allocated)',
+        ];
+
+        $loanSummaries[$loanId]['principal_paid'] += round($pay, 2);
+        $loanSummaries[$loanId]['principal_after'] = round(max(0.0, $loanSummaries[$loanId]['principal_after'] - $pay), 2);
+
+        $remaining = round($remaining - $pay, 2);
+    }
+
+    return [
+        'total_entered' => round($amount, 2),
+        'allocations' => $allocations,
+        'remaining_unallocated' => round(max(0.0, $remaining), 2),
+        'loan_summaries' => array_values($loanSummaries),
+    ];
 }
 
 /* =======================================================================
@@ -303,12 +408,33 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_proof') {
 }
 
 /* =======================================================================
-   GET: LIST + SINGLE
+   GET: LIST + SINGLE + PAYMENT PREVIEW
    ======================================================================= */
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
-    // Single record
+    if (isset($_GET['action']) && $_GET['action'] === 'payment_preview') {
+        $user_id = (int)($_GET['user_id'] ?? 0);
+        $amount = (float)($_GET['amount'] ?? 0);
+
+        if ($user_id <= 0) send_json(['success' => false, 'message' => 'user_id is required'], 400);
+        if ($amount <= 0) send_json(['success' => false, 'message' => 'amount must be greater than zero'], 400);
+
+        [$okU, $u, $msgU] = require_user($mysqli, $user_id);
+        if (!$okU) send_json(['success' => false, 'message' => $msgU], 400);
+
+        $preview = allocate_borrower_payment($mysqli, $user_id, $amount);
+
+        send_json([
+            'success' => true,
+            'data' => [
+                'user_id' => $user_id,
+                'user_name' => $u['names'] ?? '',
+                'preview' => $preview
+            ]
+        ]);
+    }
+
     if (isset($_GET['id'])) {
         $id = (int)$_GET['id'];
         if ($id <= 0) send_json(['success' => false, 'message' => 'Invalid id'], 400);
@@ -340,7 +466,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     $whereSql = count($where) ? ('WHERE ' . implode(' AND ', $where)) : '';
 
-    // Total count
     $countSql = "SELECT COUNT(*) AS cnt
                  FROM transactions t
                  LEFT JOIN users u ON t.user_id=u.id
@@ -352,7 +477,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $total = (int)($st->get_result()->fetch_assoc()['cnt'] ?? 0);
     $st->close();
 
-    // Rows
     $dataSql = "SELECT
                   t.transaction_id, t.tx_date, t.type, t.direction, t.amount,
                   t.user_id, u.names AS user_name,
@@ -448,7 +572,6 @@ if (!$okA) send_json(['success' => false, 'message' => $msgA], 400);
 [$okTD, $typeN, $dirN, $msgTD] = normalize_type_direction($type, $direction);
 if (!$okTD) send_json(['success' => false, 'message' => $msgTD], 400);
 
-/* user rules */
 $needsUser = in_array($typeN, ['contribution','withdrawal','loan_principal','loan_interest'], true);
 $u = null;
 
@@ -464,11 +587,10 @@ if ($needsUser) {
     $user_id = null;
 }
 
-/* loan rules */
 $loan_id_final = null;
 $loanRow = null;
 
-if (in_array($typeN, ['loan_principal','loan_interest'], true)) {
+if ($typeN === 'loan_interest') {
     if (!$loan_id || $loan_id <= 0) send_json(['success' => false, 'message' => 'loan_id required'], 400);
 
     [$okL, $loanRow, $msgL] = require_loan($mysqli, (int)$loan_id);
@@ -477,14 +599,14 @@ if (in_array($typeN, ['loan_principal','loan_interest'], true)) {
     if ((int)($loanRow['borrower_user_id'] ?? 0) !== (int)$user_id) {
         send_json(['success' => false, 'message' => 'Loan ownership mismatch'], 400);
     }
-    if (($loanRow['status'] ?? '') !== 'approved') {
-        send_json(['success' => false, 'message' => 'Loan must be approved to accept payments'], 400);
+
+    if (!in_array((string)($loanRow['status'] ?? ''), ['approved','defaulted','closed'], true)) {
+        send_json(['success' => false, 'message' => 'Loan is not eligible for payment'], 400);
     }
 
     $loan_id_final = (int)$loan_id;
 }
 
-/* proof rules */
 $has_file = (!empty($_FILES['proof_file']) && is_uploaded_file($_FILES['proof_file']['tmp_name']));
 if ($action === 'create' && !$has_file) {
     send_json(['success' => false, 'message' => 'Proof file is required'], 400);
@@ -494,7 +616,6 @@ if ($action === 'create' && !$has_file) {
 
 if ($action === 'create') {
 
-    // Read proof once (used for 1 or 2 rows)
     $proof_name = (string)($_FILES['proof_file']['name'] ?? 'proof');
     $proof_type = (string)($_FILES['proof_file']['type'] ?? 'application/octet-stream');
     $proof_size = (int)($_FILES['proof_file']['size'] ?? 0);
@@ -505,53 +626,59 @@ if ($action === 'create') {
     $mysqli->begin_transaction();
     try {
 
-        // SPECIAL: loan_principal => TOTAL paid; split interest first then principal
+        /**
+         * SPECIAL:
+         * type=loan_principal means entered amount is TOTAL borrower payment.
+         * Ignore selected loan_id for allocation logic.
+         */
         if ($typeN === 'loan_principal') {
 
-            $interest_due = compute_interest_due_calendar($mysqli, $loanRow, (int)$loan_id_final, (int)$user_id, $tx_date);
-
-            $total_paid = (float)$amount;
-            $interest_paid  = min($total_paid, max(0.0, $interest_due));
-            $principal_paid = max(0.0, $total_paid - $interest_paid);
-
-            $tx_interest_id = null;
-            $tx_principal_id = null;
-
-            // 1) interest transaction if > 0
-            if ($interest_paid > 0) {
-                $sql = "INSERT INTO transactions
-                        (tx_date, user_id, loan_id, account_id, type, direction, amount, description, created_by)
-                        VALUES (?, ?, ?, ?, 'loan_interest', 'IN', ?, 'Loan interest (auto-split)', ?)";
-                $st = $mysqli->prepare($sql);
-                $uid = (int)$user_id;
-                $lid = (int)$loan_id_final;
-                $st->bind_param('siiidi', $tx_date, $uid, $lid, $account_id, $interest_paid, $admin_user_id);
-                $st->execute();
-                $tx_interest_id = (int)$mysqli->insert_id;
-                $st->close();
-
-                update_proof($mysqli, $tx_interest_id, $proof_blob, $proof_name, $proof_type, $proof_size, $proof_hash);
+            if (!$user_id || $user_id <= 0) {
+                throw new RuntimeException('user_id is required for borrower-wide loan payment');
             }
 
-            // 2) principal transaction if > 0
-            if ($principal_paid > 0) {
-                $sql = "INSERT INTO transactions
-                        (tx_date, user_id, loan_id, account_id, type, direction, amount, description, created_by)
-                        VALUES (?, ?, ?, ?, 'loan_principal', 'IN', ?, ?, ?)";
-                $st = $mysqli->prepare($sql);
-                $uid = (int)$user_id;
-                $lid = (int)$loan_id_final;
-                $descP = ($description !== '') ? $description : 'Loan principal (auto-split)';
-                $st->bind_param('siiidsi', $tx_date, $uid, $lid, $account_id, $principal_paid, $descP, $admin_user_id);
-                $st->execute();
-                $tx_principal_id = (int)$mysqli->insert_id;
-                $st->close();
+            $preview = allocate_borrower_payment($mysqli, (int)$user_id, (float)$amount);
+            $allocations = $preview['allocations'];
 
-                update_proof($mysqli, $tx_principal_id, $proof_blob, $proof_name, $proof_type, $proof_size, $proof_hash);
+            if (empty($allocations)) {
+                throw new RuntimeException('Nothing to save. No unpaid interest or principal found for this borrower.');
             }
 
-            if (!$tx_interest_id && !$tx_principal_id) {
-                throw new RuntimeException("Nothing to save (interest/principal both zero).");
+            $savedRows = [];
+
+            foreach ($allocations as $alloc) {
+                $loanId = (int)$alloc['loan_id'];
+                $allocType = (string)$alloc['type'];
+                $allocAmount = (float)$alloc['amount'];
+                $allocDesc = (string)$alloc['description'];
+
+                if ($allocAmount <= 0) continue;
+
+                $sql = "INSERT INTO transactions
+                        (tx_date, user_id, loan_id, account_id, type, direction, amount, description, created_by)
+                        VALUES (?, ?, ?, ?, ?, 'IN', ?, ?, ?)";
+                $st = $mysqli->prepare($sql);
+                if (!$st) {
+                    throw new RuntimeException('Prepare failed: ' . $mysqli->error);
+                }
+
+                $uid = (int)$user_id;
+                $lid = $loanId;
+                $descFinal = ($description !== '') ? ($description . ' | ' . $allocDesc) : $allocDesc;
+
+                $st->bind_param('siiisdsi', $tx_date, $uid, $lid, $account_id, $allocType, $allocAmount, $descFinal, $admin_user_id);
+                if (!$st->execute()) {
+                    $err = $st->error ?: $mysqli->error;
+                    $st->close();
+                    throw new RuntimeException('Insert failed: ' . $err);
+                }
+
+                $txId = (int)$mysqli->insert_id;
+                $st->close();
+
+                update_proof($mysqli, $txId, $proof_blob, $proof_name, $proof_type, $proof_size, $proof_hash);
+
+                $savedRows[] = fetch_tx($mysqli, $txId);
             }
 
             $mysqli->commit();
@@ -559,25 +686,32 @@ if ($action === 'create') {
             send_json([
                 'success' => true,
                 'data' => [
-                    'interest_due'   => $interest_due,
-                    'total_paid'     => $total_paid,
-                    'interest_paid'  => $interest_paid,
-                    'principal_paid' => $principal_paid,
-                    'interest'       => $tx_interest_id ? fetch_tx($mysqli, $tx_interest_id) : null,
-                    'principal'      => $tx_principal_id ? fetch_tx($mysqli, $tx_principal_id) : null,
+                    'total_entered' => $preview['total_entered'],
+                    'remaining_unallocated' => $preview['remaining_unallocated'],
+                    'loan_summaries' => $preview['loan_summaries'],
+                    'saved_rows' => $savedRows,
                 ]
             ]);
         }
 
-        // NORMAL: single transaction create
+        // NORMAL single transaction create
         $sql = "INSERT INTO transactions
                 (tx_date, user_id, loan_id, account_id, type, direction, amount, description, created_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $st = $mysqli->prepare($sql);
+        if (!$st) {
+            throw new RuntimeException('Prepare failed: ' . $mysqli->error);
+        }
+
         $uid = $user_id;
         $lid = $loan_id_final;
         $st->bind_param('siiissdsi', $tx_date, $uid, $lid, $account_id, $typeN, $dirN, $amount, $description, $admin_user_id);
-        $st->execute();
+        if (!$st->execute()) {
+            $err = $st->error ?: $mysqli->error;
+            $st->close();
+            throw new RuntimeException('Insert failed: ' . $err);
+        }
+
         $tx_id = (int)$mysqli->insert_id;
         $st->close();
 
@@ -600,19 +734,24 @@ if ($action === 'update') {
     $existing = fetch_tx($mysqli, $id);
     if (!$existing) send_json(['success' => false, 'message' => 'Not found'], 404);
 
-    // NOTE: Update does not auto-split or create extra rows.
-    // It updates only THIS row safely.
-
     $mysqli->begin_transaction();
     try {
         $sql = "UPDATE transactions
                 SET tx_date=?, user_id=?, loan_id=?, account_id=?, type=?, direction=?, amount=?, description=?
                 WHERE transaction_id=?";
         $st = $mysqli->prepare($sql);
+        if (!$st) {
+            throw new RuntimeException('Prepare failed: ' . $mysqli->error);
+        }
+
         $uid = $user_id;
         $lid = $loan_id_final;
         $st->bind_param('siiissdsi', $tx_date, $uid, $lid, $account_id, $typeN, $dirN, $amount, $description, $id);
-        $st->execute();
+        if (!$st->execute()) {
+            $err = $st->error ?: $mysqli->error;
+            $st->close();
+            throw new RuntimeException('Update failed: ' . $err);
+        }
         $st->close();
 
         if ($has_file) {

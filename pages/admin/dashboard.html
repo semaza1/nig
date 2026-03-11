@@ -480,7 +480,9 @@
             <div class="grid gap-4 lg:grid-cols-3">
               <div class="card lg:col-span-5">
                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <p class="text-xs text-slate-600">Urutonde rw'inguzanyo ziriho, zemejwe n'izitegereje icyemezo.</p>
+                  <p class="text-xs text-slate-600">
+                    Urutonde rw'inguzanyo ziriho, izemejwe, n'izitegereje icyemezo.
+                  </p>
                   <div class="flex gap-2">
                     <button id="btn-new-loan" class="btn-secondary text-xs">Inguzanyo Nshya</button>
                     <button id="btn-refresh-loans" class="btn-primary text-xs">Kugarura Urutonde</button>
@@ -493,8 +495,9 @@
                       <tr>
                         <th>#</th>
                         <th>Borrower</th>
+                        <th>Account</th>
                         <th>Loan amount</th>
-                        <th>Unpayable amount</th>
+                        <th>Due Amount</th>
                         <th>Start date</th>
                         <th>Status</th>
                         <th>End Date</th>
@@ -508,178 +511,6 @@
             </div>
           </div>
 
-          <!-- SHARES -->
-          <div id="section-shares" class="hidden space-y-4">
-            <p class="text-sm font-semibold text-primary-dark">Imigabane</p>
-            <div class="card">
-              <p class="text-xs text-slate-600">
-                Kurikirana uko imigabane y'abanyamuryango yinjira, uko ikwirakwizwa n'uko inyungu igenwa.
-              </p>
-              <div class="mt-3 table-wrapper">
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th>Ukwezi</th>
-                      <th>Imigabane yinjijwe (Frw)</th>
-                      <th>Inyungu zakorewe (Frw)</th>
-                      <th>Abanyamuryango bakora neza</th>
-                      <th>Ibikorwa</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Mutarama 2026</td>
-                      <td>1,200,000</td>
-                      <td>150,000</td>
-                        <td>110</td>
-                        <td>
-                          <button class="btn-ghost">Hindura</button>
-                          <button class="btn-ghost-danger">Siba</button>
-                        </td>
-                    </tr>
-                    <tr>
-                      <td>Gashyantare 2026</td>
-                      <td>1,450,000</td>
-                      <td>180,000</td>
-                        <td>118</td>
-                        <td>
-                          <button class="btn-ghost">Hindura</button>
-                          <button class="btn-ghost-danger">Siba</button>
-                        </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- PAYMENTS -->
-          <div id="section-payments" class="hidden space-y-4">
-            <p class="text-sm font-semibold text-primary-dark">Kwishyura</p>
-            <div class="card">
-              <p class="text-xs text-slate-600">
-                Kwakira ubwishyu bw'inguzanyo, kubona aho buva n'aho bugana.
-              </p>
-              <div class="mt-3 table-wrapper">
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th>Uwishyuye</th>
-                      <th>Itariki</th>
-                      <th>Umubare (Frw)</th>
-                      <th>Uburyo</th>
-                      <th>Ibikorwa</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Uwimana Claire</td>
-                      <td>2026-02-12</td>
-                      <td>60,000</td>
-                        <td>Mobile Money</td>
-                        <td>
-                          <button class="btn-ghost">Hindura</button>
-                          <button class="btn-ghost-danger">Siba</button>
-                        </td>
-                    </tr>
-                    <tr>
-                      <td>Mugisha David</td>
-                      <td>2026-02-10</td>
-                      <td>80,000</td>
-                        <td>Banki</td>
-                        <td>
-                          <button class="btn-ghost">Hindura</button>
-                          <button class="btn-ghost-danger">Siba</button>
-                        </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- FRONTEND: EXPENSES (transactions.type='expense') --> 
-          <div id="section-expenses" class="hidden space-y-4"> 
-            <p class="text-sm font-semibold text-primary-dark">Expenses z'Ikimina</p> 
-            <div class="card"> 
-              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"> 
-                <p class="text-xs text-slate-600"> Ibikorwa byose byishyuwe n'Ikimina: ibikoresho, inyubako, inama n'ibindi. </p> 
-                <div class="flex gap-2"> 
-                  <button id="btn-new-expense" class="btn-secondary text-xs">Ongeza Expense</button> 
-                  <button id="btn-refresh-expenses" class="btn-primary text-xs">Sobanura</button> 
-                </div> 
-              </div> 
-              <div class="mt-4"> <div class="flex items-center justify-between mb-3"> 
-                  <div class="flex items-center gap-2"> 
-                    <input id="expenses-search" type="search" placeholder="Shakisha category / description" class="rounded-lg border px-3 py-2 text-sm" /> 
-                    <button id="expenses-search-btn" class="btn-secondary text-xs">Shakisha</button> 
-                  </div> 
-                </div> 
-                <div class="table-wrapper"> 
-                  <table class="table"> 
-                    <thead> 
-                      <tr> 
-                        <th>#</th> 
-                        <th>Konti</th> 
-                        <th>Itariki</th> 
-                        <th>Icyiciro</th> 
-                        <th>Igipimo (Frw)</th> 
-                        <th>Ibisobanuro</th> 
-                        <th>Ibikorwa</th> 
-                      </tr> 
-                    </thead> 
-                    <tbody id="expenses-tbody">
-
-                    </tbody> 
-                  </table> 
-                </div> 
-              </div> 
-            </div> 
-          </div> 
-          
-          <!-- Expense Modal --> 
-           <div id="expense-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4"> 
-            <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl"> 
-              <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4"> 
-                <h2 id="expense-modal-title" class="text-lg font-semibold text-primary-dark">Ongeza Expense</h2> 
-                <button id="expense-modal-close" class="text-gray-500 hover:text-gray-700">✕</button> 
-              </div> 
-              <div class="px-6 py-4"> 
-                <form id="expense-form" class="space-y-4"> 
-                  <input type="hidden" id="expense-id" name="id" /> 
-                  <div> 
-                    <label for="expense-account" class="block text-xs font-medium text-slate-700">Konto *</label> 
-                    <select id="expense-account" name="account_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required> 
-                      <option value="">-- Hitamo Konto --</option> 
-                    </select> 
-                  </div> 
-                  <div class="grid grid-cols-2 gap-3"> 
-                    <div> 
-                      <label for="expense-date" class="block text-xs font-medium text-slate-700">Itariki *</label> 
-                      <input id="expense-date" name="expense_date" type="date" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required /> 
-                    </div> 
-                    <div> 
-                      <label for="expense-category" class="block text-xs font-medium text-slate-700">Icyiciro *</label> 
-                      <input id="expense-category" name="category" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="e.g., Office Supplies" required /> 
-                    </div> 
-                  </div> 
-                  <div> 
-                    <label for="expense-amount" class="block text-xs font-medium text-slate-700">Igipimo (Frw) *</label> 
-                    <input id="expense-amount" name="amount" type="number" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" step="0.01" required /> 
-                  </div> 
-                  <div> 
-                    <label for="expense-description" class="block text-xs font-medium text-slate-700">Ibisobanuro</label> 
-                    <textarea id="expense-description" name="description" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows="2" placeholder="Additional notes..."></textarea> 
-                  </div> 
-                </form> 
-              </div> 
-              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4"> 
-                <button id="expense-cancel" class="btn-ghost">Siba</button> 
-                <button id="expense-save" class="btn-primary">Bika</button> 
-              </div> 
-            </div> 
-          </div>
-
           <!-- CREATE / UPDATE MODAL -->
           <div id="loan-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4">
             <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
@@ -689,7 +520,9 @@
                     Ongeza / Hindura Inguzanyo
                     <span class="ml-2 text-xs text-slate-600">Status: <b id="loan-current-status">requested</b></span>
                   </h2>
-                  <p class="text-xs text-slate-600 mt-1">“Bika” izafungurwa gusa igihe conditions zose zuzuye.</p>
+                  <p class="mt-1 text-xs text-slate-600">
+                    “Bika” izafungurwa gusa igihe conditions zose zuzuye.
+                  </p>
                 </div>
                 <button id="loan-modal-close" class="text-gray-500 hover:text-gray-700">✕</button>
               </div>
@@ -699,7 +532,9 @@
                   <input type="hidden" id="loan-id" name="id" />
 
                   <div>
-                    <label for="loan-account" class="block text-xs font-medium text-slate-700">Konti (aho amafaranga aturuka) *</label>
+                    <label for="loan-account" class="block text-xs font-medium text-slate-700">
+                      Konti (aho amafaranga aturuka) *
+                    </label>
                     <select id="loan-account" name="account_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
                       <option value="">-- Hitamo Konti --</option>
                     </select>
@@ -715,7 +550,7 @@
                       placeholder="Andika izina cyangwa phone..."
                       autocomplete="off"
                     />
-                    <div id="borrower-results" class="absolute z-10 mt-1 w-full rounded-lg border bg-white shadow-sm hidden max-h-56 overflow-auto"></div>
+                    <div id="borrower-results" class="absolute z-10 mt-1 hidden max-h-56 w-full overflow-auto rounded-lg border bg-white shadow-sm"></div>
 
                     <input type="hidden" id="loan-borrower-id" name="borrower_user_id" />
 
@@ -724,14 +559,14 @@
                     </div>
 
                     <!-- Borrower Summary -->
-                    <div class="mt-2 grid grid-cols-3 gap-2 text-xs">
+                    <div class="mt-2 grid grid-cols-1 gap-2 text-xs md:grid-cols-3">
                       <div class="rounded bg-slate-50 p-2">
                         <div class="text-slate-500">Borrower Net</div>
                         <div id="borrower-net" class="font-semibold">-</div>
                         <div id="borrower-net-details"></div>
                       </div>
                       <div class="rounded bg-slate-50 p-2">
-                        <div class="text-slate-500">Unpaid loans</div>
+                        <div class="text-slate-500">Unpaid Loans</div>
                         <div id="borrower-unpaid" class="font-semibold">-</div>
                       </div>
                       <div class="rounded bg-slate-50 p-2">
@@ -741,12 +576,12 @@
                     </div>
                   </div>
 
-                  <div class="grid grid-cols-2 gap-3">
+                  <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <div>
                       <label for="loan-principal" class="block text-xs font-medium text-slate-700">Umubare (Frw) *</label>
                       <input
                         id="loan-principal"
-                        name="principal_amount"
+                        name="principal"
                         type="number"
                         class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
                         step="0.01"
@@ -754,10 +589,10 @@
                       />
                     </div>
                     <div>
-                      <label for="loan-rate" class="block text-xs font-medium text-slate-700">Inyungu y'ukwezi (rate) *</label>
+                      <label for="loan-rate" class="block text-xs font-medium text-slate-700">Inyungu y'ukwezi (%) *</label>
                       <input
                         id="loan-rate"
-                        name="monthly_rate"
+                        name="monthly_interest_rate"
                         type="number"
                         class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
                         step="0.0001"
@@ -766,7 +601,7 @@
                     </div>
                   </div>
 
-                  <div class="grid grid-cols-2 gap-3">
+                  <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <div>
                       <label for="loan-term" class="block text-xs font-medium text-slate-700">Igihe izamara (amezi) *</label>
                       <input
@@ -779,9 +614,11 @@
                     </div>
 
                     <div class="rounded bg-blue-50 p-3 text-xs">
-                      <div class="text-slate-600">Required guarantee</div>
+                      <div class="text-slate-600">Interest Method</div>
+                      <div class="font-bold text-blue-700">Reducing Balance</div>
+                      <div class="mt-2 text-slate-600">Required guarantee</div>
                       <div class="font-bold text-blue-700" id="required-guarantee">0 Frw</div>
-                      <div class="text-slate-600 mt-1">Guarantors total</div>
+                      <div class="mt-1 text-slate-600">Guarantors total</div>
                       <div class="font-bold" id="guarantors-total">0 Frw</div>
                     </div>
                   </div>
@@ -790,7 +627,7 @@
                   <div>
                     <label class="block text-xs font-medium text-slate-700">Abamwishingizi (Guarantors)</label>
                     <div id="loan-guarantors-list" class="mt-2 space-y-2"></div>
-                    <button type="button" id="btn-add-guarantor" class="btn-secondary text-xs mt-2">+ Ongeza Umwishingizi</button>
+                    <button type="button" id="btn-add-guarantor" class="btn-secondary mt-2 text-xs">+ Ongeza Umwishingizi</button>
 
                     <div id="loan-validation-msg" class="mt-2 hidden text-xs text-red-600"></div>
                   </div>
@@ -809,7 +646,134 @@
 
               <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
                 <button id="loan-cancel" class="btn-ghost">Funga</button>
-                <button id="loan-save" class="btn-primary opacity-50 cursor-not-allowed" disabled>Bika</button>
+                <button id="loan-save" class="btn-primary cursor-not-allowed opacity-50" disabled>Bika</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- FRONTEND: EXPENSES (transactions.type='expense' only) -->
+          <div id="section-expenses" class="hidden space-y-4">
+            <p class="text-sm font-semibold text-primary-dark">Expenses z'Ikimina</p>
+
+            <div class="card">
+              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <p class="text-xs text-slate-600">
+                  Ibikorwa byose byishyuwe n'Ikimina: ibikoresho, inyubako, inama n'ibindi.
+                </p>
+                <div class="flex gap-2">
+                  <button id="btn-new-expense" class="btn-secondary text-xs">Ongeza Expense</button>
+                  <button id="btn-refresh-expenses" class="btn-primary text-xs">Kugarura Urutonde</button>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <div class="mb-3 flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <input
+                      id="expenses-search"
+                      type="search"
+                      placeholder="Shakisha category / description"
+                      class="rounded-lg border px-3 py-2 text-sm"
+                    />
+                    <button id="expenses-search-btn" class="btn-secondary text-xs">Shakisha</button>
+                  </div>
+                </div>
+
+                <div class="table-wrapper">
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Konti</th>
+                        <th>Itariki</th>
+                        <th>Icyiciro</th>
+                        <th>Igipimo (Frw)</th>
+                        <th>Ibisobanuro</th>
+                        <th>Ibikorwa</th>
+                      </tr>
+                    </thead>
+                    <tbody id="expenses-tbody">
+                      <tr>
+                        <td colspan="7" class="py-8 text-center text-sm text-slate-400">
+                          Gutegura...
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Expense Modal -->
+          <div id="expense-modal" class="fixed inset-0 z-50 hidden h-full items-center justify-center bg-black/50 p-4">
+            <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
+              <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+                <h2 id="expense-modal-title" class="text-lg font-semibold text-primary-dark">Ongeza Expense</h2>
+                <button id="expense-modal-close" class="text-gray-500 hover:text-gray-700">✕</button>
+              </div>
+
+              <div class="px-6 py-4">
+                <form id="expense-form" class="space-y-4">
+                  <input type="hidden" id="expense-id" name="id" />
+
+                  <div>
+                    <label for="expense-account" class="block text-xs font-medium text-slate-700">Konto *</label>
+                    <select id="expense-account" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
+                      <option value="">-- Hitamo Konto --</option>
+                    </select>
+                  </div>
+
+                  <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div>
+                      <label for="expense-date" class="block text-xs font-medium text-slate-700">Itariki n'Igihe *</label>
+                      <input
+                        id="expense-date"
+                        type="datetime-local"
+                        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label for="expense-category" class="block text-xs font-medium text-slate-700">Icyiciro *</label>
+                      <input
+                        id="expense-category"
+                        type="text"
+                        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                        placeholder="e.g., Office Supplies"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label for="expense-amount" class="block text-xs font-medium text-slate-700">Igipimo (Frw) *</label>
+                    <input
+                      id="expense-amount"
+                      type="number"
+                      class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                      step="0.01"
+                      min="0"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label for="expense-description" class="block text-xs font-medium text-slate-700">Ibisobanuro</label>
+                    <textarea
+                      id="expense-description"
+                      class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                      rows="2"
+                      placeholder="Additional notes..."
+                    ></textarea>
+                  </div>
+                </form>
+              </div>
+
+              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
+                <button id="expense-cancel" class="btn-ghost">Funga</button>
+                <button id="expense-save" class="btn-primary">Bika</button>
               </div>
             </div>
           </div>
@@ -982,178 +946,294 @@
             </div>
           </div>
 
-          <!-- Transaction modal -->
-<div id="transaction-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-  <div class="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-2xl flex flex-col">
+          <!-- ═══════════════════════════════════════════════════════════
+              TRANSACTIONS SECTION
+          ═══════════════════════════════════════════════════════════ -->
+          <div id="section-transactions" class="hidden space-y-4">
+            <header>
+              <p class="text-sm font-semibold text-primary-dark uppercase tracking-wider">Transactions (Amasoko)</p>
+            </header>
 
-    <div class="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
-      <h2 id="transaction-modal-title" class="text-lg font-bold text-primary-dark">Ongeza Transaction</h2>
-      <button id="transaction-modal-close" class="text-gray-400 hover:text-gray-600 transition-colors">
-        <span class="text-2xl">&times;</span>
-      </button>
-    </div>
+            <div class="card shadow-sm border border-slate-200 rounded-xl">
+              <div class="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between bg-slate-50/50">
+                <p class="text-xs text-slate-600">
+                  Urutonde rw'amasoko yose (contribution, withdrawal, loan payments, expense, n'ibindi).
+                </p>
+                <div class="flex gap-2">
+                  <button id="btn-new-transaction" class="btn-secondary text-xs px-4 py-2">
+                    <i class="fas fa-plus mr-1"></i> Transaction Nshya
+                  </button>
+                  <button id="btn-refresh-transactions" class="btn-primary text-xs px-4 py-2">
+                    <i class="fas fa-sync-alt mr-1"></i> Kugarura Urutonde
+                  </button>
+                </div>
+              </div>
 
-    <div class="px-6 py-4 overflow-y-auto">
-      <form id="transaction-form" class="grid grid-cols-1 md:grid-cols-2 gap-4" enctype="multipart/form-data">
-        <input type="hidden" id="transaction-id" name="id" />
-
-        <div class="md:col-span-2">
-          <label for="transaction-date" class="block text-xs font-semibold text-slate-700 mb-1">Itariki & Igihe *</label>
-          <input id="transaction-date" name="tx_date" type="datetime-local" class="form-input-style" required />
-          <p class="text-[10px] text-slate-500 mt-1">* Igihe cyifashishwa mu kubara interest ku nguzanyo.</p>
-        </div>
-
-        <!-- USER SEARCH + SELECT -->
-        <div class="md:col-span-2">
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Shakisha User (Names / NID / Phone) *</label>
-          <input
-            id="transaction-user-search"
-            type="text"
-            class="form-input-style"
-            placeholder="Andika amazina cyangwa NID/Phone..."
-            autocomplete="off"
-          />
-
-          <div class="mt-2">
-            <label for="transaction-user" class="block text-xs font-semibold text-slate-700 mb-1">User</label>
-            <select id="transaction-user" name="user_id" class="form-input-style">
-              <option value="">-- Hitamo User --</option>
-            </select>
-            <p class="text-[10px] text-slate-400 mt-1">
-              Ubwoko (Type) buzagaragara nyuma yo guhitamo user. Expense ishobora kubikwa na "System".
-            </p>
+              <div class="table-wrapper overflow-x-auto">
+                <table class="table w-full text-left border-collapse">
+                  <thead class="bg-slate-100 text-slate-700 text-xs uppercase">
+                    <tr>
+                      <th class="p-3">#</th>
+                      <th class="p-3">Itariki</th>
+                      <th class="p-3">User</th>
+                      <th class="p-3">Konti</th>
+                      <th class="p-3">Ubwoko</th>
+                      <th class="p-3">Direction</th>
+                      <th class="p-3 text-right">Igipimo (Frw)</th>
+                      <th class="p-3 text-center">Ibikorwa</th>
+                    </tr>
+                  </thead>
+                  <tbody id="transactions-tbody" class="text-sm divide-y divide-slate-100">
+                    <tr>
+                      <td colspan="8" class="text-center py-8 text-slate-400 text-sm">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>Gutegura...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <!-- TYPE (JS will hide/show this wrapper) -->
-        <div id="transaction-type-wrapper" class="hidden">
-          <label for="transaction-type" class="block text-xs font-semibold text-slate-700 mb-1">Ubwoko (Type) *</label>
-          <select id="transaction-type" name="type" class="form-input-style" required>
-            <option value="">-- Hitamo Type --</option>
-            <optgroup label="Members">
-              <option value="contribution">contribution</option>
-              <option value="withdrawal">withdrawal</option>
-            </optgroup>
-            <optgroup label="Loans">
-              <option value="loan_principal">loan_principal (TOTAL paid)</option>
-              <option value="loan_interest">loan_interest (Interest receipt)</option>
-            </optgroup>
-            <optgroup label="System">
-              <option value="expense">expense</option>
-            </optgroup>
-          </select>
+          <!-- ═══════════════════════════════════════════════════════════
+              TRANSACTION MODAL
+          ═══════════════════════════════════════════════════════════ -->
+          <div id="transaction-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div class="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-2xl flex flex-col">
 
-          <p class="text-[10px] text-blue-600 mt-1 leading-tight">
-            <b>loan_principal:</b> system ibanza kwishyura interest (ibaruye kugeza kuri iyo tariki), hanyuma asigaye akajya kuri principal.
-            <br />
-            <b>loan_interest:</b> interest yakiriwe ihita igabanywa ku banyamuryango hashingiwe kuri (contribution + previous interest - withdrawals) icyo gihe.
-          </p>
-        </div>
+              <!-- Modal Header -->
+              <div class="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+                <h2 id="transaction-modal-title" class="text-lg font-bold text-primary-dark">Ongeza Transaction</h2>
+                <button id="transaction-modal-close" class="text-gray-400 hover:text-gray-600 transition-colors">
+                  <span class="text-2xl leading-none">&times;</span>
+                </button>
+              </div>
 
-        <!-- ACCOUNT -->
-        <div>
-          <label for="transaction-account" class="block text-xs font-semibold text-slate-700 mb-1">Konto (Account) *</label>
-          <select id="transaction-account" name="account_id" class="form-input-style" required>
-            <option value="">-- Hitamo Konto --</option>
-          </select>
-          <p class="text-[10px] text-slate-400 mt-1">
-            * OUT (withdrawal/expense) ntirenza amafaranga ari kuri konti wahisemo.
-          </p>
-        </div>
+              <!-- Modal Body -->
+              <div class="px-6 py-4 overflow-y-auto flex-1">
+                <form id="transaction-form" class="grid grid-cols-1 md:grid-cols-2 gap-4" enctype="multipart/form-data">
 
-        <!-- AMOUNT -->
-        <div>
-          <label for="transaction-amount" class="block text-xs font-semibold text-slate-700 mb-1">Igipimo (Amount Frw) *</label>
-          <input id="transaction-amount" name="amount" type="number" step="0.01" class="form-input-style" required />
-          <p class="text-[10px] text-slate-500 mt-1">
-            * Withdrawal: nturenga Max Withdrawable (harimo guarantee lock + outstanding loan + reserve 120,000).
-          </p>
-        </div>
+                  <!-- Hidden fields -->
+                  <input type="hidden" id="transaction-id" name="id" />
+                  <input type="hidden" id="transaction-direction" name="direction" value="IN" />
 
-        <!-- LOAN SELECT -->
-        <div id="loan-id-wrapper" class="hidden md:col-span-2 bg-blue-50 p-3 rounded-lg border border-blue-100">
-          <label for="transaction-loan-id" class="block text-xs font-bold text-blue-800 mb-1">Loan *</label>
-          <select id="transaction-loan-id" name="loan_id" class="form-input-style border-blue-200">
-            <option value="">-- Hitamo Loan --</option>
-          </select>
-          <p class="text-[10px] text-blue-700 mt-1 italic">Loan igomba kuba "Approved" kandi ikaba iy'uwo user.</p>
-        </div>
+                  <!-- DATE -->
+                  <div class="md:col-span-2">
+                    <label for="transaction-date" class="block text-xs font-semibold text-slate-700 mb-1">
+                      Itariki &amp; Igihe <span class="text-red-500">*</span>
+                    </label>
+                    <input id="transaction-date" name="tx_date" type="datetime-local" class="form-input-style" required />
+                    <p class="text-[10px] text-slate-500 mt-1">
+                      Igihe cyifashishwa mu kubika transaction no mu mibare y'inguzanyo.
+                    </p>
+                  </div>
 
-        <!-- INFO BOX -->
-        <div class="md:col-span-2">
-          <div id="transaction-info-box"></div>
-        </div>
+                  <!-- USER SEARCH -->
+                  <div class="md:col-span-2">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">
+                      Shakisha User (Amazina / NID / Telefoni)
+                    </label>
+                    <input
+                      id="transaction-user-search"
+                      type="text"
+                      class="form-input-style"
+                      placeholder="Andika amazina cyangwa NID/Phone..."
+                      autocomplete="off"
+                    />
+                  </div>
 
-        <!-- DESCRIPTION -->
-        <div class="md:col-span-2">
-          <label for="transaction-description" class="block text-xs font-semibold text-slate-700 mb-1">Ibisobanuro</label>
-          <textarea id="transaction-description" name="description" rows="2" class="form-input-style" maxlength="255"
-            placeholder="Andika ibisobanuro hano..."></textarea>
-        </div>
+                  <!-- USER SELECT -->
+                  <div class="md:col-span-2">
+                    <label for="transaction-user" class="block text-xs font-semibold text-slate-700 mb-1">
+                      User <span class="text-red-500">*</span>
+                    </label>
+                    <select id="transaction-user" name="user_id" class="form-input-style">
+                      <option value="">-- Hitamo User --</option>
+                    </select>
+                    <p class="text-[10px] text-slate-400 mt-1">
+                      Expense ishobora kujya kuri system; andi moko asaba user.
+                    </p>
+                  </div>
 
-        <!-- PROOF -->
-        <div class="md:col-span-2">
-          <label for="transaction-proof" class="block text-xs font-semibold text-slate-700 mb-1">
-            Inyemezabwishyu (Proof) <span class="text-red-600">*</span>
-          </label>
-          <input
-            id="transaction-proof"
-            name="proof_file"
-            type="file"
-            class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            accept="image/*,application/pdf"
-          />
-          <p id="transaction-proof-hint" class="text-[10px] text-red-500 mt-1 italic">Itegeko kuri transaction nshya.</p>
-        </div>
+                  <!-- TYPE -->
+                  <div id="transaction-type-wrapper" class="md:col-span-2 hidden">
+                    <label for="transaction-type" class="block text-xs font-semibold text-slate-700 mb-1">
+                      Ubwoko (Type) <span class="text-red-500">*</span>
+                    </label>
+                    <select id="transaction-type" name="type" class="form-input-style" required>
+                      <option value="">-- Hitamo Type --</option>
+                      <optgroup label="Abanyamuryango">
+                        <option value="contribution">Contribution</option>
+                        <option value="withdrawal">Withdrawal</option>
+                      </optgroup>
+                      <optgroup label="Inguzanyo">
+                        <option value="loan_principal">Loan Payment</option>
+                        <option value="loan_interest">Loan Interest</option>
+                      </optgroup>
+                      <optgroup label="Ibindi">
+                        <option value="expense">Expense</option>
+                        <option value="other_income">Other Income</option>
+                        <option value="other_out">Other Out</option>
+                      </optgroup>
+                    </select>
+                    <p class="text-[10px] text-blue-600 mt-1 leading-tight">
+                      <b>Loan Payment:</b> system ibanza kwishyura interest yose ku nguzanyo z'uwo muntu, hanyuma amafaranga asigaye akajya kuri principal.
+                    </p>
+                  </div>
 
-        <input type="hidden" id="transaction-direction" name="direction" value="IN" />
-      </form>
-    </div>
+                  <!-- ACCOUNT -->
+                  <div>
+                    <label for="transaction-account" class="block text-xs font-semibold text-slate-700 mb-1">
+                      Konti (Account) <span class="text-red-500">*</span>
+                    </label>
+                    <select id="transaction-account" name="account_id" class="form-input-style" required>
+                      <option value="">-- Hitamo Konti --</option>
+                    </select>
+                    <p class="text-[10px] text-slate-400 mt-1">
+                      OUT (withdrawal/expense/other_out) ntirenza amafaranga ari kuri konti wahisemo.
+                    </p>
+                  </div>
 
-    <div class="flex justify-end gap-3 border-t border-gray-100 bg-slate-50 px-6 py-4">
-      <button id="transaction-cancel" class="btn-ghost text-sm px-5 py-2">Funga</button>
-      <button id="transaction-save" class="btn-primary text-sm px-8 py-2 font-bold shadow-md" disabled>
-        Bika Ibikorwa
-      </button>
-    </div>
-  </div>
-</div>
+                  <!-- AMOUNT -->
+                  <div>
+                    <label for="transaction-amount" class="block text-xs font-semibold text-slate-700 mb-1">
+                      Umubare (Frw) <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="transaction-amount"
+                      name="amount"
+                      type="number"
+                      step="0.01"
+                      min="1"
+                      class="form-input-style"
+                      required
+                    />
+                    <p class="text-[10px] text-slate-500 mt-1">
+                      Shyiramo amafaranga yose wishyuye cyangwa usohoye.
+                    </p>
+                  </div>
+
+                  <!-- LOAN SELECT -->
+                  <div id="loan-id-wrapper" class="hidden md:col-span-2 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                    <label for="transaction-loan-id" class="block text-xs font-bold text-blue-800 mb-1">
+                      Loan
+                    </label>
+                    <select id="transaction-loan-id" name="loan_id" class="form-input-style border-blue-200">
+                      <option value="">-- Hitamo Loan --</option>
+                    </select>
+                    <p class="text-[10px] text-blue-700 mt-1 italic">
+                      Kuri <b>Loan Payment</b>, ushobora kutahitamo loan imwe kuko system ishobora kugabanya amafaranga ku nguzanyo zose z'uwo muntu.
+                      Kuri <b>Loan Interest</b>, hitamo loan imwe ushaka kwishyuriraho interest gusa.
+                    </p>
+                  </div>
+
+                  <!-- INFO BOX -->
+                  <div class="md:col-span-2">
+                    <div id="transaction-info-box" class="text-xs"></div>
+                  </div>
+
+                  <!-- DESCRIPTION -->
+                  <div class="md:col-span-2">
+                    <label for="transaction-description" class="block text-xs font-semibold text-slate-700 mb-1">
+                      Ibisobanuro
+                    </label>
+                    <textarea
+                      id="transaction-description"
+                      name="description"
+                      rows="2"
+                      class="form-input-style"
+                      maxlength="255"
+                      placeholder="Andika ibisobanuro hano (si ngombwa)..."
+                    ></textarea>
+                  </div>
+
+                  <!-- PROOF FILE -->
+                  <div class="md:col-span-2">
+                    <label for="transaction-proof" class="block text-xs font-semibold text-slate-700 mb-1">
+                      Inyemezabwishyu (Proof) <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="transaction-proof"
+                      name="proof_file"
+                      type="file"
+                      accept="image/*,application/pdf"
+                      class="block w-full text-xs text-slate-500
+                            file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0
+                            file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700
+                            hover:file:bg-blue-100 cursor-pointer"
+                    />
+                    <p id="transaction-proof-hint" class="text-[10px] text-red-500 mt-1 italic">
+                      Itegeko kuri transaction nshya.
+                    </p>
+                  </div>
+
+                </form>
+              </div>
+
+              <!-- Modal Footer -->
+              <div class="flex justify-end gap-3 border-t border-gray-100 bg-slate-50 px-6 py-4 shrink-0">
+                <button id="transaction-cancel" class="btn-ghost text-sm px-5 py-2">
+                  Funga
+                </button>
+                <button id="transaction-save" class="btn-primary text-sm px-8 py-2 font-bold shadow-md" disabled>
+                  Bika Ibikorwa
+                </button>
+              </div>
+
+            </div>
+          </div>
+          <!-- /transaction-modal -->
 
           <!-- ASSETS (admin CRUD) -->
           <div id="section-assets" class="hidden space-y-4">
-            <p class="text-sm font-semibold text-primary-dark">Imutungo (Assets)</p>
+            <p class="text-sm font-semibold text-primary-dark">Imitungo (Assets)</p>
+
             <div class="card">
               <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <p class="text-xs text-slate-600">Imutungo udakoresha ako kanya ariko ufitiye agaciro Ikimina (inyubako, ibikoresho, imodoka n'ibindi).</p>
+                <p class="text-xs text-slate-600">
+                  Imitungo ifitiye Ikimina agaciro: inyubako, ibikoresho, imodoka n'ibindi.
+                </p>
                 <div class="flex gap-2">
-                  <button id="btn-new-asset" class="btn-secondary text-xs">Imutungo Ishya</button>
-                  <button id="btn-refresh-assets" class="btn-primary text-xs">Sobanura</button>
+                  <button id="btn-new-asset" class="btn-secondary text-xs">Umutungo Mushya</button>
+                  <button id="btn-refresh-assets" class="btn-primary text-xs">Kugarura Urutonde</button>
                 </div>
               </div>
 
               <div class="mt-4">
-                <div class="flex items-center justify-between mb-3">
+                <div class="mb-3 flex items-center justify-between">
                   <div class="flex items-center gap-2">
-                    <input id="assets-search" type="search" placeholder="Shakisha izina / aho bihagaze" class="rounded-lg border px-3 py-2 text-sm" />
+                    <input
+                      id="assets-search"
+                      type="search"
+                      placeholder="Shakisha izina / aho uherereye / notes"
+                      class="rounded-lg border px-3 py-2 text-sm"
+                    />
                     <button id="assets-search-btn" class="btn-secondary text-xs">Shakisha</button>
                   </div>
                 </div>
               </div>
+
               <div class="table-wrapper">
                 <table class="table">
                   <thead>
                     <tr>
                       <th>ID</th>
                       <th>Izina</th>
-                      <th>Itariki y'guha</th>
-                      <th>Agaciro (Frw)</th>
-                      <th>Aho bihagaze</th>
-                      <th>Iseta</th>
-                      <th>Ibiciro (Frw)</th>
+                      <th>Itariki yaguriweho</th>
+                      <th>Agaciro k'ibanze (Frw)</th>
+                      <th>Aho uherereye</th>
+                      <th>Certificate</th>
+                      <th>Holders</th>
+                      <th>Sold Value (Frw)</th>
                       <th>Ibikorwa</th>
                     </tr>
                   </thead>
                   <tbody id="assets-tbody">
+                    <tr>
+                      <td colspan="9" class="py-8 text-center text-sm text-slate-400">
+                        Gutegura...
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -1161,70 +1241,119 @@
           </div>
 
           <!-- Asset Modal -->
-          <div id="asset-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4">
-            <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
+          <div id="asset-modal" class="fixed inset-0 z-50 hidden h-full items-center justify-center bg-black/50 p-4">
+            <div class="max-h-screen w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-xl">
               <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
                 <h2 id="asset-modal-title" class="text-lg font-semibold text-primary-dark">Ongeza Asset</h2>
                 <button id="asset-modal-close" class="text-gray-500 hover:text-gray-700">✕</button>
               </div>
+
               <div class="px-6 py-4">
-                <form id="asset-form" class="space-y-4">
+                <form id="asset-form" class="space-y-4" enctype="multipart/form-data">
                   <input type="hidden" id="asset-id" name="id" />
+
                   <div>
                     <label for="asset-name" class="block text-xs font-medium text-slate-700">Izina ry'umutungo *</label>
                     <input id="asset-name" name="name" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required />
                   </div>
-                  <div class="grid grid-cols-2 gap-3">
+
+                  <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <div>
-                      <label for="asset-purchase-date" class="block text-xs font-medium text-slate-700">Itariki y'guha *</label>
+                      <label for="asset-purchase-date" class="block text-xs font-medium text-slate-700">Itariki yaguriweho *</label>
                       <input id="asset-purchase-date" name="purchase_date" type="date" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required />
                     </div>
                     <div>
-                      <label for="asset-purchase-value" class="block text-xs font-medium text-slate-700">Agaciro (Frw) *</label>
-                      <input id="asset-purchase-value" name="purchase_value" type="number" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required />
+                      <label for="asset-purchase-value" class="block text-xs font-medium text-slate-700">Agaciro k'ibanze (Frw) *</label>
+                      <input id="asset-purchase-value" name="purchase_value" type="number" step="0.01" min="0" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required />
                     </div>
                   </div>
+
                   <div>
-                    <label for="asset-location" class="block text-xs font-medium text-slate-700">Aho bihagaze</label>
+                    <label for="asset-location" class="block text-xs font-medium text-slate-700">Aho uherereye</label>
                     <input id="asset-location" name="location" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="e.g., Office, Warehouse" />
                   </div>
+
                   <div>
-                    <label for="asset-notes" class="block text-xs font-medium text-slate-700">Icyitonderezwa</label>
+                    <label for="asset-notes" class="block text-xs font-medium text-slate-700">Ibisobanuro / Notes</label>
                     <textarea id="asset-notes" name="notes" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows="2" placeholder="Additional notes..."></textarea>
                   </div>
+
                   <div>
-                    <label for="asset-certificate-name" class="block text-xs font-medium text-slate-700">Izina ry'iseta</label>
+                    <label for="asset-certificate-name" class="block text-xs font-medium text-slate-700">Izina rya certificate</label>
                     <input id="asset-certificate-name" name="certificate_name" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="e.g., Certificate of Ownership" />
                   </div>
+
                   <div>
-                    <label for="asset-certificate-file" class="block text-xs font-medium text-slate-700">Iseta (File)</label>
+                    <label for="asset-certificate-file" class="block text-xs font-medium text-slate-700">Certificate File</label>
                     <input id="asset-certificate-file" name="certificate_file" type="file" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
-                    <p class="mt-1 text-xs text-slate-500">PDF, Image, or Document file</p>
+                    <p class="mt-1 text-xs text-slate-500">PDF, image, or document file</p>
                   </div>
+
                   <div>
                     <label class="flex items-center gap-2 text-xs font-medium text-slate-700">
                       <input id="has-sold-date" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
-                      Ari igiciro cyabiciro?
+                      Uyu mutungo waragurishijwe?
                     </label>
                   </div>
-                  <div id="sold-section" class="hidden space-y-3 p-3 bg-slate-100 rounded">
-                    <div class="grid grid-cols-2 gap-3">
+
+                  <div id="sold-section" class="hidden rounded bg-slate-100 p-3 space-y-3">
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                       <div>
-                        <label for="asset-sold-date" class="block text-xs font-medium text-slate-700">Itariki y'ibiciro</label>
+                        <label for="asset-sold-date" class="block text-xs font-medium text-slate-700">Itariki yagurishijweho</label>
                         <input id="asset-sold-date" name="sold_date" type="date" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
                       </div>
                       <div>
-                        <label for="asset-sold-value" class="block text-xs font-medium text-slate-700">Agaciro (Frw)</label>
-                        <input id="asset-sold-value" name="sold_value" type="number" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
+                        <label for="asset-sold-value" class="block text-xs font-medium text-slate-700">Sold Value (Frw)</label>
+                        <input id="asset-sold-value" name="sold_value" type="number" step="0.01" min="0" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
                       </div>
                     </div>
                   </div>
+
+                  <!-- HOLDERS -->
+                  <div class="rounded-lg border p-4 bg-slate-50">
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <label class="block text-xs font-medium text-slate-700">Asset Holders</label>
+                        <p class="text-[11px] text-slate-500">
+                          Shakisha member, reba net ye, hanyuma ushyireho contribution. Total igomba kungana na purchase value.
+                        </p>
+                      </div>
+                      <button type="button" id="btn-add-holder" class="btn-secondary text-xs">+ Ongeraho Holder</button>
+                    </div>
+
+                    <div id="asset-holders-list" class="mt-3 space-y-2"></div>
+
+                    <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <div class="rounded bg-white p-3 text-xs">
+                        <div class="text-slate-600">Total contributions</div>
+                        <div class="font-bold text-primary-dark" id="asset-holders-total">0 Frw</div>
+                      </div>
+                      <div class="rounded bg-white p-3 text-xs">
+                        <div class="text-slate-600">Remaining</div>
+                        <div class="font-bold text-red-600" id="asset-holders-remaining">0 Frw</div>
+                      </div>
+                    </div>
+
+                    <div id="asset-holders-validation" class="mt-2 hidden text-xs text-red-600"></div>
+                  </div>
                 </form>
               </div>
+
               <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
-                <button id="asset-cancel" class="btn-ghost">Siba</button>
+                <button id="asset-cancel" class="btn-ghost">Funga</button>
                 <button id="asset-save" class="btn-primary">Bika</button>
               </div>
+            </div>
+          </div>
+
+          <!-- Holders View Modal -->
+          <div id="asset-holders-view-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+            <div class="w-full max-w-3xl rounded-lg bg-white shadow-xl">
+              <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                <h2 class="text-lg font-semibold text-primary-dark">Asset Holders</h2>
+                <button id="asset-holders-view-close" class="text-gray-500 hover:text-gray-700">✕</button>
+              </div>
+              <div id="asset-holders-view-body" class="px-6 py-4"></div>
             </div>
           </div>
 

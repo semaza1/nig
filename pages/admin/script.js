@@ -895,169 +895,622 @@
 
     })(); // end Overview module
 
-    // Assets management JS
-    (function(){
-    const api = 'assets_api.php';
-    const tbody = document.getElementById('assets-tbody');
-    const btnNew = document.getElementById('btn-new-asset');
-    const btnRefresh = document.getElementById('btn-refresh-assets');
-    const searchInput = document.getElementById('assets-search');
-    const searchBtn = document.getElementById('assets-search-btn');
-    const modal = document.getElementById('asset-modal');
-    const modalClose = document.getElementById('asset-modal-close');
-    const saveBtn = document.getElementById('asset-save');
-    const cancelBtn = document.getElementById('asset-cancel');
-    const form = document.getElementById('asset-form');
+  // Assets management JS with holders
+  (function () {
+      const api = 'assets_api.php';
 
-    if(!tbody) return; // nothing to do if section not present
+      const tbody = document.getElementById('assets-tbody');
+      const btnNew = document.getElementById('btn-new-asset');
+      const btnRefresh = document.getElementById('btn-refresh-assets');
+      const searchInput = document.getElementById('assets-search');
+      const searchBtn = document.getElementById('assets-search-btn');
+      const modal = document.getElementById('asset-modal');
+      const modalClose = document.getElementById('asset-modal-close');
+      const saveBtn = document.getElementById('asset-save');
+      const cancelBtn = document.getElementById('asset-cancel');
+      const form = document.getElementById('asset-form');
 
-    let currentQuery = '';
-    let searchTimer = null;
+      const idInput = document.getElementById('asset-id');
+      const nameInput = document.getElementById('asset-name');
+      const purchaseDateInput = document.getElementById('asset-purchase-date');
+      const purchaseValueInput = document.getElementById('asset-purchase-value');
+      const locationInput = document.getElementById('asset-location');
+      const notesInput = document.getElementById('asset-notes');
+      const certificateNameInput = document.getElementById('asset-certificate-name');
+      const certificateFileInput = document.getElementById('asset-certificate-file');
+      const hasSoldCheckbox = document.getElementById('has-sold-date');
+      const soldSection = document.getElementById('sold-section');
+      const soldDateInput = document.getElementById('asset-sold-date');
+      const soldValueInput = document.getElementById('asset-sold-value');
 
-    function openModal(){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
-    function closeModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
+      const holdersList = document.getElementById('asset-holders-list');
+      const btnAddHolder = document.getElementById('btn-add-holder');
+      const holdersTotalEl = document.getElementById('asset-holders-total');
+      const holdersRemainingEl = document.getElementById('asset-holders-remaining');
+      const holdersValidationEl = document.getElementById('asset-holders-validation');
 
-    async function fetchAssets(q = currentQuery){
-        try{
-        const url = `${api}?per_page=200` + (q ? `&q=${encodeURIComponent(q)}` : '');
-        const res = await fetch(url);
-        if(!res.ok){ console.error('fetchAssets', res.status); return; }
-        const json = await res.json();
-        if(json.success){ renderAssetsTable(json.data || []); }
-        else console.error('assets load', json);
-        }catch(err){ console.error('fetchAssets error', err); }
-    }
+      const holdersViewModal = document.getElementById('asset-holders-view-modal');
+      const holdersViewClose = document.getElementById('asset-holders-view-close');
+      const holdersViewBody = document.getElementById('asset-holders-view-body');
 
-    function renderAssetsTable(rows){
-        tbody.innerHTML = '';
-        rows.forEach(r => {
-        const tr = document.createElement('tr');
-        let certificateHtml = '';
-        if (r.certificate_file && r.certificate_mime && r.certificate_file !== null) {
-            const mimeType = r.certificate_mime;
-            if (mimeType && mimeType.startsWith('image/')) {
-            try {
-                const hexStr = r.certificate_file;
-                const bytes = [];
-                for (let i = 0; i < hexStr.length; i += 2) {
-                bytes.push(parseInt(hexStr.substr(i, 2), 16));
-                }
-                const binStr = String.fromCharCode(...bytes);
-                const b64 = btoa(binStr);
-                certificateHtml = `<img src="data:${mimeType};base64,${b64}" alt="Certificate" class="h-16 w-auto rounded" />`;
-            } catch(e) {
-                certificateHtml = `<span class="text-xs text-slate-500">📄 ${globalEscapeHtml(r.certificate_name || 'Document')}</span>`;
-            }
-            } else {
-            certificateHtml = `<span class="text-xs text-slate-500">📄 ${globalEscapeHtml(r.certificate_name || 'Document')}</span>`;
-            }
+      if (!tbody) return;
+
+      let currentQuery = '';
+      let searchTimer = null;
+
+      function esc(v) {
+        if (typeof globalEscapeHtml === 'function') return globalEscapeHtml(v ?? '');
+        return String(v ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function money(n) {
+        return `${Number(n || 0).toLocaleString('rw-RW', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
+        })} Frw`;
+      }
+
+      function openModal() {
+        modal?.classList.remove('hidden');
+        modal?.classList.add('flex');
+      }
+
+      function closeModal() {
+        modal?.classList.add('hidden');
+        modal?.classList.remove('flex');
+      }
+
+      function openHoldersView() {
+        holdersViewModal?.classList.remove('hidden');
+        holdersViewModal?.classList.add('flex');
+      }
+
+      function closeHoldersView() {
+        holdersViewModal?.classList.add('hidden');
+        holdersViewModal?.classList.remove('flex');
+      }
+
+      function resetForm() {
+        form?.reset();
+        if (idInput) idInput.value = '';
+        if (hasSoldCheckbox) hasSoldCheckbox.checked = false;
+        if (soldSection) soldSection.classList.add('hidden');
+        if (soldDateInput) soldDateInput.value = '';
+        if (soldValueInput) soldValueInput.value = '';
+        if (holdersList) holdersList.innerHTML = '';
+        addHolderRow();
+        updateHolderTotals();
+      }
+
+      function toggleSoldSection(force = null) {
+        if (!hasSoldCheckbox || !soldSection) return;
+        const show = force !== null ? !!force : !!hasSoldCheckbox.checked;
+        soldSection.classList.toggle('hidden', !show);
+
+        if (!show) {
+          if (soldDateInput) soldDateInput.value = '';
+          if (soldValueInput) soldValueInput.value = '';
         }
-        tr.innerHTML = `
+      }
+
+      async function readJsonResponse(res) {
+        const text = await res.text();
+        let json = null;
+        try {
+          json = text ? JSON.parse(text) : {};
+        } catch (e) {
+          console.error('Non-JSON response:', text);
+          throw new Error('Server returned non-JSON response.');
+        }
+        return json;
+      }
+
+      function hexToBase64(hexStr) {
+        if (!hexStr) return null;
+        const bytes = [];
+        for (let i = 0; i < hexStr.length; i += 2) {
+          bytes.push(parseInt(hexStr.substr(i, 2), 16));
+        }
+        const binStr = String.fromCharCode(...bytes);
+        return btoa(binStr);
+      }
+
+      function buildCertificateHtml(row) {
+        if (!row.certificate_file || !row.certificate_mime) {
+          return '<span class="text-xs text-slate-400">Nta certificate</span>';
+        }
+
+        const mimeType = row.certificate_mime;
+        const fileName = esc(row.certificate_name || 'Document');
+
+        if (mimeType.startsWith('image/')) {
+          try {
+            const b64 = hexToBase64(row.certificate_file);
+            return `<img src="data:${mimeType};base64,${b64}" alt="Certificate" class="h-16 w-auto rounded border" />`;
+          } catch (e) {
+            return `<span class="text-xs text-slate-500">📄 ${fileName}</span>`;
+          }
+        }
+
+        return `<span class="text-xs text-slate-500">📄 ${fileName}</span>`;
+      }
+
+      async function fetchAssets(q = currentQuery) {
+        try {
+          const url = `${api}?per_page=200` + (q ? `&q=${encodeURIComponent(q)}` : '');
+          const res = await fetch(url, { credentials: 'include' });
+          const json = await readJsonResponse(res);
+
+          if (!res.ok) return;
+          if (json.success) renderAssetsTable(json.data || []);
+        } catch (err) {
+          console.error('fetchAssets error', err);
+        }
+      }
+
+      function renderAssetsTable(rows) {
+        tbody.innerHTML = '';
+
+        if (!rows || rows.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="9" class="py-8 text-center text-sm text-slate-400">
+                Nta mitungo yabonetse
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        rows.forEach((r) => {
+          const tr = document.createElement('tr');
+          const certificateHtml = buildCertificateHtml(r);
+          const holdersCount = Number(r.holders_count || 0);
+
+          tr.innerHTML = `
             <td>${r.asset_id}</td>
-            <td>${globalEscapeHtml(r.name)}</td>
-            <td>${globalEscapeHtml(r.purchase_date)}</td>
-            <td>${Number(r.purchase_value).toLocaleString('rw-RW')} Frw</td>
-            <td>${globalEscapeHtml(r.location || '')}</td>
+            <td>${esc(r.name || '')}</td>
+            <td>${esc(r.purchase_date || '')}</td>
+            <td>${money(r.purchase_value || 0)}</td>
+            <td>${esc(r.location || '')}</td>
             <td>${certificateHtml}</td>
-            <td>${Number(r.sold_value||0).toLocaleString('rw-RW')} Frw</td>
             <td>
-            <button class="btn-ghost btn-edit-asset" data-id="${r.asset_id}">Hindura</button>
-            <button class="btn-ghost-danger btn-delete-asset" data-id="${r.asset_id}">Siba</button>
+              <button class="text-blue-600 hover:underline btn-view-holders" data-id="${r.asset_id}">
+                ${holdersCount}
+              </button>
             </td>
-        `;
-        tbody.appendChild(tr);
+            <td>${r.sold_value === null || r.sold_value === '' ? '-' : money(r.sold_value)}</td>
+            <td>
+              <button class="btn-ghost btn-edit-asset" data-id="${r.asset_id}">Hindura</button>
+              <button class="btn-ghost-danger btn-delete-asset" data-id="${r.asset_id}">Siba</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
         });
 
-        tbody.querySelectorAll('.btn-delete-asset').forEach(b => b.addEventListener('click', async ()=>{
-        const id = b.getAttribute('data-id');
-        if(!confirm('Urashaka gusiba iyi Imutungo?')) return;
-        const fd = new FormData(); fd.append('action','delete'); fd.append('id', id);
-        try{
-            const res = await fetch(api, {method:'POST', body: fd});
-            const json = await res.json();
-            if(json.success) fetchAssets(); else alert(json.message||'Error');
-        }catch(err){ console.error(err); alert('Network error'); }
-        }));
+        tbody.querySelectorAll('.btn-delete-asset').forEach((b) =>
+          b.addEventListener('click', async () => {
+            const id = b.getAttribute('data-id');
+            if (!confirm('Urashaka gusiba iyi Mutungo?')) return;
 
-        tbody.querySelectorAll('.btn-edit-asset').forEach(b => b.addEventListener('click', async ()=>{
-        const id = b.getAttribute('data-id');
-        try{
-            const res = await fetch(`${api}?id=${encodeURIComponent(id)}`);
-            const json = await res.json();
-            if(json.success && json.data){
-            const d = json.data;
-            document.getElementById('asset-id').value = d.asset_id;
-            document.getElementById('asset-name').value = d.name || '';
-            document.getElementById('asset-purchase-date').value = d.purchase_date || '';
-            document.getElementById('asset-purchase-value').value = d.purchase_value || '';
-            document.getElementById('asset-location').value = d.location || '';
-            document.getElementById('asset-notes').value = d.notes || '';
-            document.getElementById('asset-certificate-name').value = d.certificate_name || '';
-            const hasSold = d.sold_value && d.sold_value > 0;
-            document.getElementById('has-sold-date').checked = hasSold;
-            document.getElementById('sold-section').classList.toggle('hidden', !hasSold);
-            document.getElementById('asset-sold-date').value = d.sold_date || '';
-            document.getElementById('asset-sold-value').value = d.sold_value || '';
-            openModal();
-            } else alert(json.message||'Not found');
-        }catch(err){ console.error(err); }
-        }));
-    }
+            const fd = new FormData();
+            fd.append('action', 'delete');
+            fd.append('id', id);
 
-    if(btnNew) btnNew.addEventListener('click', ()=>{ form.reset(); document.getElementById('asset-id').value = ''; document.getElementById('has-sold-date').checked = false; document.getElementById('sold-section').classList.add('hidden'); openModal(); document.getElementById('asset-name').focus(); });
-    if(btnRefresh) btnRefresh.addEventListener('click', ()=>{ currentQuery = ''; searchInput.value = ''; fetchAssets(); });
+            try {
+              const res = await fetch(api, { method: 'POST', body: fd, credentials: 'include' });
+              const json = await readJsonResponse(res);
 
-    // Search functionality
-    if(searchInput){
-        searchInput.addEventListener('input', (e)=>{
-        clearTimeout(searchTimer);
-        searchTimer = setTimeout(()=>{
+              if (json.success) fetchAssets();
+              else alert(json.message || 'Error');
+            } catch (err) {
+              console.error(err);
+              alert('Network error');
+            }
+          })
+        );
+
+        tbody.querySelectorAll('.btn-edit-asset').forEach((b) =>
+          b.addEventListener('click', async () => {
+            const id = b.getAttribute('data-id');
+
+            try {
+              const res = await fetch(`${api}?id=${encodeURIComponent(id)}`, { credentials: 'include' });
+              const json = await readJsonResponse(res);
+
+              if (json.success && json.data) {
+                const d = json.data;
+
+                idInput.value = d.asset_id || '';
+                nameInput.value = d.name || '';
+                purchaseDateInput.value = d.purchase_date || '';
+                purchaseValueInput.value = d.purchase_value || '';
+                locationInput.value = d.location || '';
+                notesInput.value = d.notes || '';
+                certificateNameInput.value = d.certificate_name || '';
+
+                const hasSold = d.sold_value !== null && d.sold_value !== '';
+                hasSoldCheckbox.checked = hasSold;
+                toggleSoldSection(hasSold);
+
+                soldDateInput.value = d.sold_date || '';
+                soldValueInput.value = d.sold_value ?? '';
+
+                holdersList.innerHTML = '';
+                if (Array.isArray(d.holders) && d.holders.length) {
+                  d.holders.forEach(h => addHolderRow({
+                    user_id: h.user_id,
+                    display: `${h.names || ''}${h.phone1 ? ' · ' + h.phone1 : ''}`,
+                    net_value: h.net_value || 0,
+                    contribution: h.contribution_amount || '',
+                    notes: h.notes || ''
+                  }));
+                } else {
+                  addHolderRow();
+                }
+
+                updateHolderTotals();
+                openModal();
+              } else {
+                alert(json.message || 'Not found');
+              }
+            } catch (err) {
+              console.error(err);
+              alert('Failed to load asset');
+            }
+          })
+        );
+
+        tbody.querySelectorAll('.btn-view-holders').forEach((b) =>
+          b.addEventListener('click', async () => {
+            const id = b.getAttribute('data-id');
+            holdersViewBody.innerHTML = 'Loading...';
+
+            try {
+              const res = await fetch(`${api}?id=${encodeURIComponent(id)}`, { credentials: 'include' });
+              const json = await readJsonResponse(res);
+
+              if (!json.success || !json.data) {
+                holdersViewBody.innerHTML = 'Not found';
+                openHoldersView();
+                return;
+              }
+
+              const d = json.data;
+              const rows = (d.holders || []).map((h, idx) => `
+                <tr>
+                  <td>${idx + 1}</td>
+                  <td>${esc(h.names || '')}</td>
+                  <td>${esc(h.phone1 || h.phone2 || '')}</td>
+                  <td>${money(h.net_value || 0)}</td>
+                  <td>${money(h.contribution_amount || 0)}</td>
+                </tr>
+              `).join('');
+
+              holdersViewBody.innerHTML = `
+                <div class="space-y-3">
+                  <div><b>Asset:</b> ${esc(d.name || '')}</div>
+                  <div><b>Holders:</b> ${Number(d.holders_count || 0)}</div>
+                  <div class="table-wrapper">
+                    <table class="table">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Name</th>
+                          <th>Phone</th>
+                          <th>Net</th>
+                          <th>Contribution</th>
+                        </tr>
+                      </thead>
+                      <tbody>${rows || `<tr><td colspan="5" class="text-sm text-slate-500">Nta holders</td></tr>`}</tbody>
+                    </table>
+                  </div>
+                </div>
+              `;
+              openHoldersView();
+            } catch (err) {
+              console.error(err);
+              holdersViewBody.innerHTML = 'Failed to load holders';
+              openHoldersView();
+            }
+          })
+        );
+      }
+
+      function getHolderRows() {
+        return [...holdersList.querySelectorAll('.asset-holder-row')];
+      }
+
+      function updateHolderTotals() {
+        const price = Number(purchaseValueInput?.value || 0);
+        let total = 0;
+
+        getHolderRows().forEach(row => {
+          const v = Number(row.querySelector('.holder-contribution')?.value || 0);
+          total += v;
+        });
+
+        const remaining = price - total;
+
+        if (holdersTotalEl) holdersTotalEl.textContent = money(total);
+        if (holdersRemainingEl) holdersRemainingEl.textContent = money(remaining);
+
+        let msg = '';
+        if (price <= 0) {
+          msg = 'Shyiramo purchase value mbere.';
+        } else if (getHolderRows().length === 0) {
+          msg = 'Ongeramo nibura holder umwe.';
+        } else if (Math.abs(remaining) > 0.009) {
+          msg = 'Contributions za holders zigomba kungana n’agaciro k’umutungo.';
+        }
+
+        if (holdersValidationEl) {
+          holdersValidationEl.textContent = msg;
+          holdersValidationEl.classList.toggle('hidden', !msg);
+        }
+      }
+
+      function addHolderRow(pref = null) {
+        const row = document.createElement('div');
+        row.className = 'asset-holder-row rounded-lg border p-3 space-y-2';
+
+        row.innerHTML = `
+          <div class="flex gap-2 items-start">
+            <div class="flex-1">
+              <label class="block text-xs font-medium text-slate-700">Shakisha Holder</label>
+              <input type="text" class="holder-search mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Andika izina cyangwa phone..." />
+              <div class="holder-results mt-1 hidden max-h-48 overflow-auto rounded-lg border bg-white shadow-sm"></div>
+
+              <input type="hidden" class="holder-user-id" />
+              <div class="mt-1 text-xs text-slate-600">
+                Watoranyije: <span class="holder-selected font-semibold">Ntawe</span>
+              </div>
+              <div class="mt-1 text-xs">
+                Net: <span class="holder-net font-semibold">-</span>
+              </div>
+            </div>
+
+            <div class="w-40">
+              <label class="block text-xs font-medium text-slate-700">Contribution</label>
+              <input type="number" step="0.01" min="0" class="holder-contribution mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Frw" />
+            </div>
+
+            <div class="w-48">
+              <label class="block text-xs font-medium text-slate-700">Notes</label>
+              <input type="text" class="holder-notes mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Optional" />
+            </div>
+
+            <div class="pt-6">
+              <button type="button" class="btn-ghost-danger text-xs btn-remove-holder">Siba</button>
+            </div>
+          </div>
+        `;
+
+        holdersList.appendChild(row);
+
+        const holderSearchInput = row.querySelector('.holder-search');
+        const resultsBox = row.querySelector('.holder-results');
+        const hiddenInput = row.querySelector('.holder-user-id');
+        const selectedEl = row.querySelector('.holder-selected');
+        const netEl = row.querySelector('.holder-net');
+        const contributionInput = row.querySelector('.holder-contribution');
+        const notesField = row.querySelector('.holder-notes');
+        const removeBtn = row.querySelector('.btn-remove-holder');
+
+        let timer = null;
+
+        removeBtn.addEventListener('click', () => {
+          row.remove();
+          updateHolderTotals();
+        });
+
+        contributionInput.addEventListener('input', updateHolderTotals);
+
+        holderSearchInput.addEventListener('input', () => {
+          clearTimeout(timer);
+          const q = holderSearchInput.value.trim();
+
+          timer = setTimeout(async () => {
+            resultsBox.innerHTML = '';
+            resultsBox.classList.add('hidden');
+            if (q.length < 2) return;
+
+            try {
+              const res = await fetch(`${api}?action=search_members&q=${encodeURIComponent(q)}`, { credentials: 'include' });
+              const json = await readJsonResponse(res);
+              if (!json.success) return;
+
+              resultsBox.classList.remove('hidden');
+
+              (json.data || []).forEach(u => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'w-full px-3 py-2 text-left hover:bg-slate-50 text-sm';
+                btn.textContent = `${u.names}${u.phone1 ? ' · ' + u.phone1 : ''} · net: ${money(u.net_value || 0)}`;
+                btn.addEventListener('click', () => {
+                  hiddenInput.value = u.id;
+                  selectedEl.textContent = `${u.names}${u.phone1 ? ' · ' + u.phone1 : ''}`;
+                  netEl.textContent = money(u.net_value || 0);
+                  holderSearchInput.value = '';
+                  resultsBox.innerHTML = '';
+                  resultsBox.classList.add('hidden');
+                  updateHolderTotals();
+                });
+                resultsBox.appendChild(btn);
+              });
+            } catch (err) {
+              console.error(err);
+            }
+          }, 250);
+        });
+
+        if (pref) {
+          hiddenInput.value = pref.user_id || '';
+          selectedEl.textContent = pref.display || 'Ntawe';
+          netEl.textContent = money(pref.net_value || 0);
+          contributionInput.value = pref.contribution || '';
+          notesField.value = pref.notes || '';
+        }
+
+        updateHolderTotals();
+      }
+
+      if (btnAddHolder) {
+        btnAddHolder.addEventListener('click', (e) => {
+          e.preventDefault();
+          addHolderRow();
+        });
+      }
+
+      if (btnNew) {
+        btnNew.addEventListener('click', () => {
+          resetForm();
+          openModal();
+          nameInput?.focus();
+        });
+      }
+
+      if (btnRefresh) {
+        btnRefresh.addEventListener('click', () => {
+          currentQuery = '';
+          if (searchInput) searchInput.value = '';
+          fetchAssets();
+        });
+      }
+
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          clearTimeout(searchTimer);
+          searchTimer = setTimeout(() => {
             currentQuery = e.target.value.trim();
             fetchAssets(currentQuery);
-        }, 300);
+          }, 300);
         });
-    }
-    if(searchBtn){
-        searchBtn.addEventListener('click', ()=>{
-        currentQuery = searchInput.value.trim();
-        fetchAssets(currentQuery);
+      }
+
+      if (searchBtn) {
+        searchBtn.addEventListener('click', () => {
+          currentQuery = searchInput ? searchInput.value.trim() : '';
+          fetchAssets(currentQuery);
         });
-    }
+      }
 
-    if(modalClose) modalClose.addEventListener('click', closeModal);
-    if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
-    if(modal) modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+      modalClose?.addEventListener('click', closeModal);
+      cancelBtn?.addEventListener('click', closeModal);
+      modal?.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
-    // Handle sold checkbox toggle
-    if(document.getElementById('has-sold-date')) {
-        document.getElementById('has-sold-date').addEventListener('change', (e)=>{
-        document.getElementById('sold-section').classList.toggle('hidden', !e.target.checked);
+      holdersViewClose?.addEventListener('click', closeHoldersView);
+      holdersViewModal?.addEventListener('click', (e) => { if (e.target === holdersViewModal) closeHoldersView(); });
+
+      hasSoldCheckbox?.addEventListener('change', () => toggleSoldSection());
+      purchaseValueInput?.addEventListener('input', updateHolderTotals);
+
+      if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+          const id = idInput?.value || '';
+          const hasSold = hasSoldCheckbox?.checked || false;
+
+          if (!nameInput?.value.trim()) {
+            alert('Shyiramo izina ry’umutungo.');
+            return;
+          }
+          if (!purchaseDateInput?.value) {
+            alert('Shyiramo itariki yaguriweho.');
+            return;
+          }
+          if (!purchaseValueInput?.value || Number(purchaseValueInput.value) <= 0) {
+            alert('Shyiramo purchase value irenze zero.');
+            return;
+          }
+
+          if (hasSold && !soldDateInput?.value) {
+            alert('Shyiramo sold date.');
+            return;
+          }
+
+          if (!hasSold) {
+            soldDateInput.value = '';
+            soldValueInput.value = '';
+          }
+
+          const holders = [];
+          let total = 0;
+          const seen = new Set();
+
+          for (const row of getHolderRows()) {
+            const userId = row.querySelector('.holder-user-id')?.value || '';
+            const contribution = Number(row.querySelector('.holder-contribution')?.value || 0);
+            const notes = row.querySelector('.holder-notes')?.value || '';
+
+            if (!userId || contribution <= 0) continue;
+
+            if (seen.has(userId)) {
+              alert('Hari holder washyizwemo kabiri.');
+              return;
+            }
+            seen.add(userId);
+
+            holders.push({
+              user_id: userId,
+              contribution,
+              notes
+            });
+            total += contribution;
+          }
+
+          const price = Number(purchaseValueInput.value || 0);
+          if (!holders.length) {
+            alert('Ongeramo nibura holder umwe.');
+            return;
+          }
+          if (Math.abs(total - price) > 0.009) {
+            alert(`Contribution za holders zigomba kungana na ${money(price)}. Ubu ni ${money(total)}.`);
+            return;
+          }
+
+          const fd = new FormData();
+          fd.append('action', id ? 'update' : 'create');
+          if (id) fd.append('id', id);
+
+          fd.append('name', nameInput?.value || '');
+          fd.append('purchase_date', purchaseDateInput?.value || '');
+          fd.append('purchase_value', purchaseValueInput?.value || '');
+          fd.append('location', locationInput?.value || '');
+          fd.append('notes', notesInput?.value || '');
+          fd.append('certificate_name', certificateNameInput?.value || '');
+
+          if (certificateFileInput?.files?.[0]) {
+            fd.append('certificate_file', certificateFileInput.files[0]);
+          }
+
+          fd.append('sold_date', hasSold ? (soldDateInput?.value || '') : '');
+          fd.append('sold_value', hasSold ? (soldValueInput?.value || '') : '');
+          fd.append('holders', JSON.stringify(holders));
+
+          try {
+            const res = await fetch(api, { method: 'POST', body: fd, credentials: 'include' });
+            const json = await readJsonResponse(res);
+
+            if (json.success) {
+              closeModal();
+              fetchAssets();
+            } else {
+              alert(json.message || 'Error saving');
+            }
+          } catch (err) {
+            console.error(err);
+            alert('Network error: ' + err.message);
+          }
         });
-    }
+      }
 
-    if(saveBtn){ saveBtn.addEventListener('click', async ()=>{
-        const id = document.getElementById('asset-id').value;
-        const hasSold = document.getElementById('has-sold-date').checked;
-        
-        // If not sold, clear the sold date and value fields
-        if (!hasSold) {
-        document.getElementById('asset-sold-date').value = '';
-        document.getElementById('asset-sold-value').value = '';
-        }
-        
-        const fd = new FormData(form);
-        fd.append('action', id ? 'update' : 'create');
-        if(id) fd.append('id', id);
-        try{
-        console.log('Submitting asset form with data:', fd);
-        const res = await fetch(api, {method:'POST', body: fd});
-        const json = await res.json();
-        if(json.success){ closeModal(); fetchAssets(); } else { alert(json.message || 'Error saving'); }
-        }catch(err){ console.error(err); alert('Network error'); }
-    }); }
-
-    // initial load
-    fetchAssets();
+      resetForm();
+      fetchAssets();
     })();
 
     // Notifications management JS
@@ -1333,8 +1786,8 @@
     fetchNotifications(1);
     })();
     
-    // SCRIPTS: Expenses management (latest first, show # 1..n; no ID column)
-(function(){
+    // SCRIPTS: Expenses management (expense-only backend)
+(function () {
 
   const api = 'expenses_api.php';
   const tbody = document.getElementById('expenses-tbody');
@@ -1349,32 +1802,67 @@
   const form = document.getElementById('expense-form');
   const accountSelect = document.getElementById('expense-account');
 
-  if(!tbody) return;
+  const idInput = document.getElementById('expense-id');
+  const dateInput = document.getElementById('expense-date');
+  const categoryInput = document.getElementById('expense-category');
+  const amountInput = document.getElementById('expense-amount');
+  const descriptionInput = document.getElementById('expense-description');
+
+  if (!tbody) return;
 
   let currentQuery = '';
   let searchTimer = null;
 
-  function openModal(){
+  function esc(v) {
+    if (typeof globalEscapeHtml === 'function') return globalEscapeHtml(v ?? '');
+    return String(v ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function money(n) {
+    return `${Number(n || 0).toLocaleString('rw-RW', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Frw`;
+  }
+
+  function toDatetimeLocal(mysqlDt) {
+    if (!mysqlDt) return '';
+    return String(mysqlDt).replace(' ', 'T').slice(0, 16);
+  }
+
+  function openModal() {
+    if (!modal) return;
     modal.classList.remove('hidden');
     modal.classList.add('flex');
   }
 
-  function closeModal(){
+  function closeModal() {
+    if (!modal) return;
     modal.classList.add('hidden');
     modal.classList.remove('flex');
   }
 
-  // Store category + notes inside transactions.description as: "CATEGORY :: notes"
-  function packDesc(category, notes){
-    const c = (category || '').trim();
-    const n = (notes || '').trim();
+  function resetForm() {
+    if (form) form.reset();
+    if (idInput) idInput.value = '';
+    if (dateInput && !dateInput.value) {
+      dateInput.value = new Date().toISOString().slice(0, 16);
+    }
+  }
+
+  // Store category + notes inside description as: "CATEGORY :: notes"
+  function packDesc(category, notes) {
+    const c = String(category || '').trim();
+    const n = String(notes || '').trim();
     return n ? `${c} :: ${n}` : c;
   }
 
-  function unpackDesc(desc){
+  function unpackDesc(desc) {
     const s = String(desc || '');
     const parts = s.split('::');
-    if(parts.length >= 2){
+    if (parts.length >= 2) {
       return {
         category: parts[0].trim(),
         notes: parts.slice(1).join('::').trim()
@@ -1383,80 +1871,110 @@
     return { category: s.trim(), notes: '' };
   }
 
-  async function loadAccounts(){
-    try{
-      const res = await fetch('accounts_api.php');
-      const text = await res.text();
+  async function readJsonResponse(res) {
+    const text = await res.text();
+    let json = null;
+    try {
+      json = text ? JSON.parse(text) : {};
+    } catch (e) {
+      console.error('Non-JSON response:', text);
+      throw new Error('Server returned non-JSON response.');
+    }
+    return json;
+  }
 
-      let json = null;
-      try{
-        json = JSON.parse(text);
-      }catch{
-        console.error('loadAccounts not JSON', text);
-        alert('Failed to load accounts');
+  async function loadAccounts() {
+    if (!accountSelect) return;
+
+    try {
+      const res = await fetch(`${api}?accounts=1`, { credentials: 'include' });
+      const json = await readJsonResponse(res);
+
+      if (!res.ok) {
+        alert(json.message || ('HTTP ' + res.status));
         return;
       }
 
-      if(!res.ok){
-        alert(json.message || ('HTTP '+res.status));
-        return;
-      }
-
-      if(json.success){
+      if (json.success) {
         accountSelect.innerHTML = '<option value="">-- Hitamo Konto --</option>';
         (json.data || []).forEach(acc => {
           const opt = document.createElement('option');
           opt.value = acc.account_id;
-          opt.textContent = acc.name;
+          opt.textContent = `${acc.name}${acc.balance !== undefined ? ` (${money(acc.balance)})` : ''}`;
           accountSelect.appendChild(opt);
         });
       } else {
         alert(json.message || 'Failed to load accounts');
       }
 
-    }catch(err){
+    } catch (err) {
       console.error(err);
       alert('Failed to load accounts: ' + err.message);
     }
   }
 
-  async function fetchExpenses(q = currentQuery){
-    try{
+  async function fetchExpenses(q = currentQuery) {
+    try {
       const url = `${api}?per_page=200` + (q ? `&q=${encodeURIComponent(q)}` : '');
-      const res = await fetch(url);
-      if(!res.ok){
-        console.error('fetchExpenses', res.status);
+      const res = await fetch(url, { credentials: 'include' });
+      const json = await readJsonResponse(res);
+
+      if (!res.ok) {
+        console.error('fetchExpenses', res.status, json);
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center py-8 text-red-500 text-sm">
+              Error loading expenses
+            </td>
+          </tr>
+        `;
         return;
       }
 
-      const json = await res.json();
-      if(json.success){
+      if (json.success) {
         renderExpensesTable(json.data || []);
       } else {
         console.error('expenses load', json);
       }
 
-    }catch(err){
+    } catch (err) {
       console.error('fetchExpenses error', err);
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="text-center py-8 text-red-500 text-sm">
+            Network error while loading expenses
+          </td>
+        </tr>
+      `;
     }
   }
 
-  function renderExpensesTable(rows){
+  function renderExpensesTable(rows) {
     tbody.innerHTML = '';
 
-    rows.forEach((r, idx) => {
+    if (!rows || rows.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="text-center py-8 text-slate-400 text-sm">
+            Nta expenses zagaragaye
+          </td>
+        </tr>
+      `;
+      return;
+    }
 
+    rows.forEach((r, idx) => {
       const listNo = idx + 1; // newest first -> #1 is latest
       const { category, notes } = unpackDesc(r.description || '');
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${listNo}</td>
-        <td>${globalEscapeHtml(r.account_name || '')}</td>
-        <td>${globalEscapeHtml(r.expense_date || '')}</td>
-        <td>${globalEscapeHtml(category || '')}</td>
-        <td>${Number(r.amount || 0).toLocaleString('rw-RW')} Frw</td>
-        <td>${globalEscapeHtml(notes || '')}</td>
+        <td>${esc(r.account_name || '')}</td>
+        <td>${esc((r.tx_date || '').replace('T', ' ').replace(/:00$/, ''))}</td>
+        <td>${esc(category || '')}</td>
+        <td>${money(r.amount || 0)}</td>
+        <td>${esc(notes || '')}</td>
         <td>
           <button class="btn-ghost btn-edit-expense" data-id="${r.transaction_id}">Hindura</button>
           <button class="btn-ghost-danger btn-delete-expense" data-id="${r.transaction_id}">Siba</button>
@@ -1466,171 +1984,163 @@
       tbody.appendChild(tr);
     });
 
-    // DELETE
     tbody.querySelectorAll('.btn-delete-expense').forEach(b =>
-      b.addEventListener('click', async ()=>{
+      b.addEventListener('click', async () => {
         const id = b.getAttribute('data-id');
-        if(!confirm("Urashaka gusiba iyi Expense?")) return;
+        if (!confirm("Urashaka gusiba iyi Expense?")) return;
 
         const fd = new FormData();
-        fd.append('action','delete');
+        fd.append('action', 'delete');
         fd.append('id', id);
 
-        try{
-          const res = await fetch(api, {method:'POST', body: fd});
-          const json = await res.json();
-          if(json.success){
+        try {
+          const res = await fetch(api, { method: 'POST', body: fd, credentials: 'include' });
+          const json = await readJsonResponse(res);
+
+          if (json.success) {
             fetchExpenses();
           } else {
             alert(json.message || 'Error');
           }
-        }catch(err){
+        } catch (err) {
           console.error(err);
           alert('Network error');
         }
       })
     );
 
-    // EDIT
     tbody.querySelectorAll('.btn-edit-expense').forEach(b =>
-      b.addEventListener('click', async ()=>{
+      b.addEventListener('click', async () => {
         const id = b.getAttribute('data-id');
 
-        try{
-          const res = await fetch(`${api}?id=${encodeURIComponent(id)}`);
-          const json = await res.json();
+        try {
+          const res = await fetch(`${api}?id=${encodeURIComponent(id)}`, { credentials: 'include' });
+          const json = await readJsonResponse(res);
 
-          if(json.success && json.data){
+          if (json.success && json.data) {
             const d = json.data;
-            const {category, notes} = unpackDesc(d.description || '');
+            const { category, notes } = unpackDesc(d.description || '');
 
-            document.getElementById('expense-id').value = d.transaction_id;
-            document.getElementById('expense-account').value = d.account_id || '';
-            document.getElementById('expense-date').value = d.expense_date || '';
-            document.getElementById('expense-category').value = category || '';
-            document.getElementById('expense-amount').value = d.amount || '';
-            document.getElementById('expense-description').value = notes || '';
+            if (idInput) idInput.value = d.transaction_id || '';
+            if (accountSelect) accountSelect.value = d.account_id || '';
+            if (dateInput) dateInput.value = toDatetimeLocal(d.tx_date || '');
+            if (categoryInput) categoryInput.value = category || '';
+            if (amountInput) amountInput.value = d.amount || '';
+            if (descriptionInput) descriptionInput.value = notes || '';
 
             openModal();
           } else {
             alert(json.message || 'Not found');
           }
 
-        }catch(err){
+        } catch (err) {
           console.error(err);
+          alert('Failed to load expense');
         }
       })
     );
   }
 
-  // NEW
-  if(btnNew){
-    btnNew.addEventListener('click', ()=>{
-      form.reset();
-      document.getElementById('expense-id').value = '';
+  if (btnNew) {
+    btnNew.addEventListener('click', () => {
+      resetForm();
       openModal();
-      document.getElementById('expense-account').focus();
+      if (accountSelect) accountSelect.focus();
     });
   }
 
-  // REFRESH
-  if(btnRefresh){
-    btnRefresh.addEventListener('click', ()=>{
+  if (btnRefresh) {
+    btnRefresh.addEventListener('click', () => {
       currentQuery = '';
-      if(searchInput) searchInput.value = '';
+      if (searchInput) searchInput.value = '';
       fetchExpenses();
     });
   }
 
-  // SEARCH (live)
-  if(searchInput){
-    searchInput.addEventListener('input', (e)=>{
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
       clearTimeout(searchTimer);
-      searchTimer = setTimeout(()=>{
+      searchTimer = setTimeout(() => {
         currentQuery = e.target.value.trim();
         fetchExpenses(currentQuery);
       }, 300);
     });
   }
 
-  if(searchBtn){
-    searchBtn.addEventListener('click', ()=>{
-      currentQuery = (searchInput ? searchInput.value.trim() : '');
+  if (searchBtn) {
+    searchBtn.addEventListener('click', () => {
+      currentQuery = searchInput ? searchInput.value.trim() : '';
       fetchExpenses(currentQuery);
     });
   }
 
-  // MODAL controls
-  if(modalClose) modalClose.addEventListener('click', closeModal);
-  if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
-  if(modal) modal.addEventListener('click', (e)=>{
-    if(e.target === modal) closeModal();
-  });
+  if (modalClose) modalClose.addEventListener('click', closeModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+  }
 
-  // SAVE
-  if(saveBtn){
-    saveBtn.addEventListener('click', async ()=>{
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const id = idInput ? idInput.value : '';
+      const account_id = accountSelect ? accountSelect.value : '';
+      const tx_date = dateInput ? dateInput.value : '';
+      const category = categoryInput ? categoryInput.value : '';
+      const amount = amountInput ? amountInput.value : '';
+      const notes = descriptionInput ? descriptionInput.value : '';
 
-      const id = document.getElementById('expense-id').value;
-      const account_id = document.getElementById('expense-account').value;
-      const expense_date = document.getElementById('expense-date').value;
-      const category = document.getElementById('expense-category').value;
-      const amount = document.getElementById('expense-amount').value;
-      const notes = document.getElementById('expense-description').value;
+      if (!account_id) {
+        alert('Hitamo konto.');
+        return;
+      }
+      if (!tx_date) {
+        alert('Shyiramo itariki n’igihe.');
+        return;
+      }
+      if (!amount || Number(amount) <= 0) {
+        alert('Shyiramo amount irenze zero.');
+        return;
+      }
 
       const fd = new FormData();
       fd.append('action', id ? 'update' : 'create');
-      if(id) fd.append('id', id);
+      if (id) fd.append('id', id);
       fd.append('account_id', account_id);
-      fd.append('expense_date', expense_date);
+      fd.append('tx_date', tx_date);
       fd.append('amount', amount);
       fd.append('description', packDesc(category, notes));
 
-      try{
-        const res = await fetch(api, {method:'POST', body: fd});
-        const text = await res.text();
+      try {
+        const res = await fetch(api, { method: 'POST', body: fd, credentials: 'include' });
+        const json = await readJsonResponse(res);
 
-        let json = null;
-        try{
-          json = JSON.parse(text);
-        }catch{
-          console.error('Non-JSON response:', text);
-          alert('Server returned non-JSON response. See console.');
-          return;
-        }
-
-        if(!res.ok){
+        if (!res.ok) {
           alert(`HTTP ${res.status}: ${json.message || 'Error'}`);
           return;
         }
 
-        if(json.success){
+        if (json.success) {
           closeModal();
           fetchExpenses();
         } else {
           alert(json.message || 'Error saving');
         }
 
-      }catch(err){
+      } catch (err) {
         console.error(err);
         alert('Network error: ' + err.message);
       }
-
     });
   }
 
-  // INIT
   loadAccounts();
   fetchExpenses();
 
 })();
 
-/// SCRIPTS: loans.js (UPDATED)
-// ✅ Changes:
-// - includes account_id + loads accounts from loans_api.php?action=accounts
-// - removed disbursed
-// - sends: account_id, borrower_user_id, principal, monthly_interest_rate, interest_method, term_months, notes
-
+/// SCRIPTS: loans.js
 (function(){
   const api = 'loans_api.php';
   const tbodySelector = '#section-loans table tbody';
@@ -1644,10 +2154,8 @@
   const btnNewLoan = document.getElementById('btn-new-loan');
   const btnRefreshLoans = document.getElementById('btn-refresh-loans');
 
-  // NEW: account select
   const accountSelect = document.getElementById('loan-account');
 
-  // Borrower search UI
   const borrowerSearch = document.getElementById('borrower-search');
   const borrowerResults = document.getElementById('borrower-results');
   const borrowerHidden = document.getElementById('loan-borrower-id');
@@ -1662,7 +2170,8 @@
   const principalInput = document.getElementById('loan-principal');
   const rateInput = document.getElementById('loan-rate');
   const termInput = document.getElementById('loan-term');
-  const methodSelect = document.getElementById('loan-method'); // must exist in HTML
+
+  const INTEREST_METHOD = 'reducing';
 
   const guarantorsListEl = document.getElementById('loan-guarantors-list');
   const btnAddGuarantor = document.getElementById('btn-add-guarantor');
@@ -1671,12 +2180,10 @@
   const guarantorsTotalEl = document.getElementById('guarantors-total');
   const validationMsgEl = document.getElementById('loan-validation-msg');
 
-  // View modal
   const viewModal = document.getElementById('loan-view-modal');
   const viewClose = document.getElementById('loan-view-close');
   const viewBody = document.getElementById('loan-view-body');
 
-  // Status modal
   const statusModal = document.getElementById('loan-status-modal');
   const statusClose = document.getElementById('loan-status-close');
   const statusCancel = document.getElementById('loan-status-cancel');
@@ -1688,37 +2195,55 @@
   let guarantorCounter = 0;
   let borrowerSummary = null;
 
-  function openModal(){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
-  function closeModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
-  function openView(){ viewModal.classList.remove('hidden'); viewModal.classList.add('flex'); }
-  function closeView(){ viewModal.classList.add('hidden'); viewModal.classList.remove('flex'); }
-  function openStatus(){ statusModal.classList.remove('hidden'); statusModal.classList.add('flex'); }
-  function closeStatus(){ statusModal.classList.add('hidden'); statusModal.classList.remove('flex'); }
+  function openModal(){ if(modal){ modal.classList.remove('hidden'); modal.classList.add('flex'); } }
+  function closeModal(){ if(modal){ modal.classList.add('hidden'); modal.classList.remove('flex'); } }
+  function openView(){ if(viewModal){ viewModal.classList.remove('hidden'); viewModal.classList.add('flex'); } }
+  function closeView(){ if(viewModal){ viewModal.classList.add('hidden'); viewModal.classList.remove('flex'); } }
+  function openStatus(){ if(statusModal){ statusModal.classList.remove('hidden'); statusModal.classList.add('flex'); } }
+  function closeStatus(){ if(statusModal){ statusModal.classList.add('hidden'); statusModal.classList.remove('flex'); } }
 
   function money(n){
     const x = Number(n || 0);
-    return x.toLocaleString('rw-RW') + ' Frw';
+    return x.toLocaleString('rw-RW', {minimumFractionDigits: 0, maximumFractionDigits: 2}) + ' Frw';
+  }
+
+  function esc(v){
+    return (typeof globalEscapeHtml === 'function')
+      ? globalEscapeHtml(v ?? '')
+      : String(v ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+  }
+
+  function setText(el, value){
+    if(el) el.textContent = value;
+  }
+
+  async function readJsonResponse(res){
+    const text = await res.text();
+    if(!text || !text.trim()) throw new Error('Empty response');
+    try{
+      return JSON.parse(text);
+    }catch(err){
+      console.error('Non-JSON response:', text);
+      throw new Error('Server returned non-JSON.');
+    }
   }
 
   // ---------------------------
   // Accounts dropdown
   // ---------------------------
   async function loadAccounts(){
+    if(!accountSelect) return;
     try{
-      const res = await fetch('accounts_api.php');
-      const text = await res.text();
-
-      let json = null;
-      try{
-        json = JSON.parse(text);
-      }catch{
-        console.error('loadAccounts not JSON', text);
-        alert('Failed to load accounts');
-        return;
-      }
+      const res = await fetch('accounts_api.php', {credentials:'include'});
+      const json = await readJsonResponse(res);
 
       if(!res.ok){
-        alert(json.message || ('HTTP '+res.status));
+        alert(json.message || ('HTTP ' + res.status));
         return;
       }
 
@@ -1733,7 +2258,6 @@
       } else {
         alert(json.message || 'Failed to load accounts');
       }
-
     }catch(err){
       console.error(err);
       alert('Failed to load accounts: ' + err.message);
@@ -1745,38 +2269,49 @@
   // ---------------------------
   let borrowerTimer = null;
 
-  borrowerSearch.addEventListener('input', ()=>{
-    clearTimeout(borrowerTimer);
-    const q = borrowerSearch.value.trim();
-    borrowerTimer = setTimeout(()=> searchBorrowers(q), 250);
-  });
+  if(borrowerSearch){
+    borrowerSearch.addEventListener('input', ()=>{
+      clearTimeout(borrowerTimer);
+      const q = borrowerSearch.value.trim();
+      borrowerTimer = setTimeout(()=> searchBorrowers(q), 250);
+    });
+  }
 
   async function searchBorrowers(q){
+    if(!borrowerResults) return;
+
     borrowerResults.innerHTML = '';
     borrowerResults.classList.add('hidden');
     if(q.length < 2) return;
 
-    const res = await fetch(`${api}?action=search_users&q=${encodeURIComponent(q)}`, {credentials:'include'});
-    const json = await res.json();
-    if(!json.success) return;
+    try{
+      const res = await fetch(`${api}?action=search_users&q=${encodeURIComponent(q)}`, {credentials:'include'});
+      const json = await readJsonResponse(res);
+      if(!json.success) return;
 
-    borrowerResults.classList.remove('hidden');
-    (json.data||[]).forEach(u=>{
-      const item = document.createElement('button');
-      item.type = 'button';
-      item.className = 'w-full text-left px-3 py-2 hover:bg-slate-50 text-sm';
-      item.textContent = `${u.names} ${u.phone ? ' · '+u.phone : ''} ${Number(u.is_member)===1 ? ' · member' : ' · non-member'}`;
-      item.addEventListener('click', ()=> selectBorrower(u));
-      borrowerResults.appendChild(item);
-    });
+      borrowerResults.classList.remove('hidden');
+      (json.data || []).forEach(u => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'w-full text-left px-3 py-2 hover:bg-slate-50 text-sm';
+        item.textContent = `${u.names} ${u.phone ? ' · ' + u.phone : ''} ${Number(u.is_member)===1 ? ' · member' : ' · non-member'}`;
+        item.addEventListener('click', ()=> selectBorrower(u));
+        borrowerResults.appendChild(item);
+      });
+    }catch(err){
+      console.error(err);
+    }
   }
 
   async function selectBorrower(u){
-    borrowerHidden.value = u.id;
-    borrowerSelected.textContent = `${u.names} ${u.phone ? ' · '+u.phone : ''}`;
-    borrowerResults.innerHTML = '';
-    borrowerResults.classList.add('hidden');
-    borrowerSearch.value = '';
+    if(borrowerHidden) borrowerHidden.value = u.id;
+    setText(borrowerSelected, `${u.names} ${u.phone ? ' · ' + u.phone : ''}`);
+
+    if(borrowerResults){
+      borrowerResults.innerHTML = '';
+      borrowerResults.classList.add('hidden');
+    }
+    if(borrowerSearch) borrowerSearch.value = '';
 
     await loadBorrowerSummary(u.id);
     validateFormRules();
@@ -1784,41 +2319,53 @@
 
   async function loadBorrowerSummary(userId){
     borrowerSummary = null;
-    borrowerNetEl.textContent = '...';
-    borrowerUnpaidEl.textContent = '...';
-    borrowerMemberEl.textContent = '...';
+    setText(borrowerNetEl, '...');
+    setText(borrowerUnpaidEl, '...');
+    setText(borrowerMemberEl, '...');
 
     const detailsEl = document.getElementById('borrower-net-details');
 
-    const res = await fetch(`${api}?action=borrower_summary&user_id=${encodeURIComponent(userId)}`, {credentials:'include'});
-    const json = await res.json();
-    if(!json.success) return;
+    try{
+      const res = await fetch(`${api}?action=borrower_summary&user_id=${encodeURIComponent(userId)}`, {credentials:'include'});
+      const json = await readJsonResponse(res);
+      if(!json.success) return;
 
-    borrowerSummary = json.data;
-    borrowerNetEl.textContent = money(borrowerSummary.net_value);
-    borrowerUnpaidEl.textContent = money(borrowerSummary.unpaid_loans);
-    borrowerMemberEl.textContent = (Number(borrowerSummary.is_member)===1) ? 'Member' : 'Non-member';
+      borrowerSummary = json.data;
 
-    const b = borrowerSummary.net_breakdown || null;
-    if(detailsEl){
-      detailsEl.innerHTML = !b ? '' : `
-        <div class="text-xs text-slate-600 mt-1 space-y-1">
-          <div>Contrib: <b>${money(b.contrib)}</b></div>
-          <div>Withdrawals: <b>${money(b.withdrawals)}</b></div>
-          <div>Loans (unpaid): <b>${money(b.loans_principal)}</b></div>
-          <div>Guaranteed: <b>${money(b.guaranteed_to_others)}</b></div>
-          <div>Reserve: <b>${money(b.reserve)}</b></div>
-          <div class="text-[11px] text-slate-500">Net raw: ${money(b.net_raw)} → Net: <b>${money(b.net)}</b></div>
-        </div>
-      `;
+      setText(borrowerNetEl, money(borrowerSummary.net_value));
+      setText(
+        borrowerUnpaidEl,
+        `${money(borrowerSummary.unpaid_loans || 0)} + Int: ${money(borrowerSummary.unpaid_interest || 0)}`
+      );
+      setText(borrowerMemberEl, Number(borrowerSummary.is_member) === 1 ? 'Member' : 'Non-member');
+
+      const b = borrowerSummary.net_breakdown || null;
+      if(detailsEl){
+        detailsEl.innerHTML = !b ? '' : `
+          <div class="text-xs text-slate-600 mt-1 space-y-1">
+            <div>Contrib: <b>${money(b.contrib)}</b></div>
+            <div>Interest Share: <b>${money(b.calculated_interest || 0)}</b></div>
+            <div>Withdrawals: <b>${money(b.withdrawals)}</b></div>
+            <div>Loans Principal (unpaid): <b>${money(b.loans_principal)}</b></div>
+            <div>Loans Interest (unpaid): <b>${money(b.loans_interest || 0)}</b></div>
+            <div>Guaranteed: <b>${money(b.guaranteed_to_others)}</b></div>
+            <div>Reserve: <b>${money(b.reserve)}</b></div>
+            <div class="text-[11px] text-slate-500">Net raw: ${money(b.net_raw)} → Net: <b>${money(b.net)}</b></div>
+          </div>
+        `;
+      }
+    }catch(err){
+      console.error(err);
     }
 
     validateFormRules();
   }
 
   document.addEventListener('click', (e)=>{
-    if(!borrowerResults.contains(e.target) && e.target !== borrowerSearch){
-      borrowerResults.classList.add('hidden');
+    if(borrowerResults && borrowerSearch){
+      if(!borrowerResults.contains(e.target) && e.target !== borrowerSearch){
+        borrowerResults.classList.add('hidden');
+      }
     }
   });
 
@@ -1826,18 +2373,18 @@
   // Guarantors rows
   // ---------------------------
   function getRequiredGuarantee(principal){
-    const p = Number(principal||0);
+    const p = Number(principal || 0);
     if(!borrowerSummary || !borrowerSummary.id) return 0;
 
-    const isMember = Number(borrowerSummary.is_member)===1;
-    const net = Math.max(0, Number(borrowerSummary.net_value||0));
+    const isMember = Number(borrowerSummary.is_member) === 1;
+    const net = Math.max(0, Number(borrowerSummary.net_value || 0));
 
     return isMember ? Math.max(0, p - net) : p;
   }
 
   function sumGuarantors(){
     let sum = 0;
-    document.querySelectorAll('.guarantor-row').forEach(row=>{
+    document.querySelectorAll('.guarantor-row').forEach(row => {
       const amt = parseFloat(row.querySelector('.guarantee-amount')?.value || 0) || 0;
       sum += amt;
     });
@@ -1854,6 +2401,8 @@
   }
 
   async function addGuarantorRow(pref = null){
+    if(!guarantorsListEl) return;
+
     guarantorCounter++;
 
     const row = document.createElement('div');
@@ -1888,7 +2437,7 @@
 
     guarantorsListEl.appendChild(row);
 
-    const {select, hidden, amtInput} = getGuarantorRowData(row);
+    const {select, amtInput} = getGuarantorRowData(row);
     const resultsBox = row.querySelector('.guarantor-results');
     const removeBtn = row.querySelector('.btn-remove-guarantor');
 
@@ -1917,33 +2466,37 @@
       resultsBox.innerHTML = '';
       resultsBox.classList.add('hidden');
 
-      const borrowerId = borrowerHidden.value;
+      const borrowerId = borrowerHidden?.value || '';
       if(!borrowerId || q.length < 2) return;
 
-      const res = await fetch(`${api}?action=eligible_guarantors&borrower_id=${encodeURIComponent(borrowerId)}&q=${encodeURIComponent(q)}`, {credentials:'include'});
-      const json = await res.json();
-      if(!json.success) return;
+      try{
+        const res = await fetch(`${api}?action=eligible_guarantors&borrower_id=${encodeURIComponent(borrowerId)}&q=${encodeURIComponent(q)}`, {credentials:'include'});
+        const json = await readJsonResponse(res);
+        if(!json.success) return;
 
-      resultsBox.classList.remove('hidden');
+        resultsBox.classList.remove('hidden');
 
-      (json.data||[]).forEach(g=>{
-        const item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'w-full text-left px-3 py-2 hover:bg-slate-50 text-sm';
-        item.textContent = `${g.names} ${g.phone ? ' · '+g.phone : ''} · net: ${money(g.net_value)}`;
-        item.addEventListener('click', async ()=>{
-          await setGuarantorForRow(row, g.id, `${g.names}${g.phone ? ' · '+g.phone : ''}`, g.net_value);
-          resultsBox.innerHTML = '';
-          resultsBox.classList.add('hidden');
+        (json.data || []).forEach(g => {
+          const item = document.createElement('button');
+          item.type = 'button';
+          item.className = 'w-full text-left px-3 py-2 hover:bg-slate-50 text-sm';
+          item.textContent = `${g.names}${g.phone ? ' · ' + g.phone : ''} · net: ${money(g.net_value)}${Number(g.calculated_interest || 0) > 0 ? ' · int: ' + money(g.calculated_interest) : ''}`;
+          item.addEventListener('click', async ()=>{
+            await setGuarantorForRow(row, g.id, `${g.names}${g.phone ? ' · ' + g.phone : ''}`, g.net_value);
+            resultsBox.innerHTML = '';
+            resultsBox.classList.add('hidden');
+          });
+          resultsBox.appendChild(item);
         });
-        resultsBox.appendChild(item);
-      });
+      }catch(err){
+        console.error(err);
+      }
     }
 
     async function setGuarantorForRow(row, id, display, net){
       const {select, hidden, netEl, nameEl} = getGuarantorRowData(row);
       hidden.value = id;
-      nameEl.textContent = display || ('#'+id);
+      nameEl.textContent = display || ('#' + id);
       netEl.textContent = money(net);
       select.value = '';
       validateFormRules();
@@ -1954,8 +2507,8 @@
   // Form validation rules
   // ---------------------------
   function validateFormRules(){
-    const borrowerId = borrowerHidden.value;
-    const principal = parseFloat(principalInput.value || 0) || 0;
+    const borrowerId = borrowerHidden?.value || '';
+    const principal = parseFloat(principalInput?.value || 0) || 0;
 
     let ok = true;
     let msg = '';
@@ -1972,8 +2525,8 @@
       const required = getRequiredGuarantee(principal);
       const totalG = sumGuarantors();
 
-      requiredGuaranteeEl.textContent = money(required);
-      guarantorsTotalEl.textContent = money(totalG);
+      setText(requiredGuaranteeEl, money(required));
+      setText(guarantorsTotalEl, money(totalG));
 
       if(required > 0){
         if(totalG + 0.00001 < required){
@@ -1991,43 +2544,59 @@
             if(!msg) msg = 'Hitamo umwishingizi kandi ushyireho amount.';
           } else {
             if(used.has(gid)){
-              ok = false; msg = 'Hari umwishingizi washyizwemo kabiri.';
+              ok = false;
+              msg = 'Hari umwishingizi washyizwemo kabiri.';
             }
             used.add(gid);
 
             if(gid === borrowerId){
-              ok = false; msg = 'Borrower ntashobora kwiyishingira.';
+              ok = false;
+              msg = 'Borrower ntashobora kwiyishingira.';
             }
           }
         });
       } else {
-        requiredGuaranteeEl.textContent = money(0);
-        guarantorsTotalEl.textContent = money(sumGuarantors());
+        setText(requiredGuaranteeEl, money(0));
+        setText(guarantorsTotalEl, money(sumGuarantors()));
       }
     }
 
-    validationMsgEl.textContent = msg;
-    validationMsgEl.classList.toggle('hidden', !msg);
+    if(validationMsgEl){
+      validationMsgEl.textContent = msg;
+      validationMsgEl.classList.toggle('hidden', !msg);
+    }
 
-    saveBtn.disabled = !ok;
-    saveBtn.classList.toggle('opacity-50', !ok);
-    saveBtn.classList.toggle('cursor-not-allowed', !ok);
+    if(saveBtn){
+      saveBtn.disabled = !ok;
+      saveBtn.classList.toggle('opacity-50', !ok);
+      saveBtn.classList.toggle('cursor-not-allowed', !ok);
+    }
   }
 
-  principalInput.addEventListener('input', validateFormRules);
+  if(principalInput) principalInput.addEventListener('input', validateFormRules);
 
   // ---------------------------
   // Loans list
   // ---------------------------
   async function fetchLoans(q=''){
-    const res = await fetch(api + '?per_page=200' + (q ? ('&q='+encodeURIComponent(q)) : ''), { credentials:'include', cache:'no-store' });
-    const text = await res.text();
-    if(!text || text.trim()===''){ alert('Loans API returned empty response.'); return; }
-    let json;
-    try{ json = JSON.parse(text); }catch(e){ console.error('Non-JSON:', text); alert('Loans API returned non-JSON output.'); return; }
-    if(!res.ok){ alert(json.message || ('HTTP '+res.status)); return; }
-    if(json.success) renderLoans(json.data||[]);
-    else alert(json.message || 'Error loading loans');
+    try{
+      const res = await fetch(api + '?per_page=200' + (q ? ('&q=' + encodeURIComponent(q)) : ''), {
+        credentials:'include',
+        cache:'no-store'
+      });
+      const json = await readJsonResponse(res);
+
+      if(!res.ok){
+        alert(json.message || ('HTTP ' + res.status));
+        return;
+      }
+
+      if(json.success) renderLoans(json.data || []);
+      else alert(json.message || 'Error loading loans');
+    }catch(err){
+      console.error(err);
+      alert(err.message || 'Error loading loans');
+    }
   }
 
   function statusBadge(status){
@@ -2048,27 +2617,30 @@
       tr.innerHTML = `
         <td>${index + 1}</td>
         <td>
-          <div class="font-semibold">${globalEscapeHtml(r.borrower_name||'')}</div>
-          <div class="text-xs text-slate-600">${globalEscapeHtml(r.borrower_phone||'')}</div>
+          <div class="font-semibold">${esc(r.borrower_name || '')}</div>
+          <div class="text-xs text-slate-600">${esc(r.borrower_phone || '')}</div>
         </td>
-        <td>${globalEscapeHtml(r.account_name||'')}</td>
-        <td>${money(r.principal||0)}</td>
-        <td>${money(r.unpaid_principal||0)}</td>
-        <td>${globalEscapeHtml(r.start_date || '')}</td>
-        <td>${statusBadge(r.status||'requested')}</td>
-        <td>${globalEscapeHtml(r.end_date || 'Not Yet')}</td>
+        <td>${esc(r.account_name || '')}</td>
+        <td>${money(r.principal || 0)}</td>
+        <td>
+          <div>${money(r.unpaid_principal || 0)}</div>
+          <div class="text-xs text-slate-500">Int: ${money(r.unpaid_interest || 0)}</div>
+          <div class="text-xs text-slate-700 font-semibold">Total: ${money(r.total_due || 0)}</div>
+        </td>
+        <td>${esc(r.start_date || '')}</td>
+        <td>${statusBadge(r.status || 'requested')}</td>
+        <td>${esc(r.end_date || 'Not Yet')}</td>
         <td class="space-x-1">
           <button class="btn-ghost text-xs btn-view-loan" data-id="${r.loan_id}">Reba</button>
           <button class="btn-ghost text-xs btn-edit-loan" data-id="${r.loan_id}">Hindura</button>
           <button class="btn-ghost-danger text-xs btn-delete-loan" data-id="${r.loan_id}">Siba</button>
-          <button class="btn-secondary text-xs btn-status-loan" data-id="${r.loan_id}" data-status="${r.status||'requested'}">Change Status</button>
+          <button class="btn-secondary text-xs btn-status-loan" data-id="${r.loan_id}" data-status="${r.status || 'requested'}">Change Status</button>
         </td>
       `;
       tbody.appendChild(tr);
     });
   }
 
-  // Delegated table actions
   const tbody = document.querySelector(tbodySelector);
   if(tbody){
     tbody.addEventListener('click', async (e)=>{
@@ -2078,222 +2650,294 @@
       const stBtn   = e.target.closest('.btn-status-loan');
 
       if(viewBtn) await openLoanView(viewBtn.dataset.id);
-
       if(editBtn) await openLoanEdit(editBtn.dataset.id);
 
       if(delBtn){
         const id = delBtn.dataset.id;
         if(!confirm('Urashaka gusiba iyi nguzanyo?')) return;
-        const fd = new FormData();
-        fd.append('action','delete');
-        fd.append('id', id);
-        const res = await fetch(api, {method:'POST', body: fd, credentials:'include'});
-        const json = await res.json();
-        if(json.success) fetchLoans();
-        else alert(json.message||'Error');
+
+        try{
+          const fd = new FormData();
+          fd.append('action', 'delete');
+          fd.append('id', id);
+
+          const res = await fetch(api, {method:'POST', body: fd, credentials:'include'});
+          const json = await readJsonResponse(res);
+
+          if(json.success) fetchLoans();
+          else alert(json.message || 'Error');
+        }catch(err){
+          console.error(err);
+          alert(err.message || 'Error');
+        }
       }
 
       if(stBtn){
-        statusLoanId.value = stBtn.dataset.id;
-        statusCurrent.textContent = stBtn.dataset.status || 'requested';
-        statusSelect.value = stBtn.dataset.status || 'requested';
+        if(statusLoanId) statusLoanId.value = stBtn.dataset.id;
+        setText(statusCurrent, stBtn.dataset.status || 'requested');
+        if(statusSelect) statusSelect.value = stBtn.dataset.status || 'requested';
         openStatus();
       }
     });
   }
 
   async function openLoanView(id){
-    viewBody.innerHTML = 'Loading...';
-    const res = await fetch(api + '?id=' + encodeURIComponent(id), {credentials:'include'});
-    const json = await res.json();
-    if(!json.success){ viewBody.innerHTML = 'Not found'; openView(); return; }
-    const d = json.data;
+    if(viewBody) viewBody.innerHTML = 'Loading...';
 
-    const gHtml = (d.guarantors||[]).map(g=>`
-      <tr>
-        <td>${globalEscapeHtml(g.guarantor_name||'')}</td>
-        <td>${globalEscapeHtml(g.guarantor_phone||'')}</td>
-        <td>${money(g.guarantee_amount||0)}</td>
-        <td>${money(g.guarantor_net||0)}</td>
-        <td>${globalEscapeHtml(g.status||'')}</td>
-      </tr>
-    `).join('');
+    try{
+      const res = await fetch(api + '?id=' + encodeURIComponent(id), {credentials:'include'});
+      const json = await readJsonResponse(res);
 
-    viewBody.innerHTML = `
-      <div class="space-y-2">
-        <div><b>Loan:</b> #LN-${d.loan_id}</div>
-        <div><b>Borrower:</b> ${globalEscapeHtml(d.borrower_name||'')} · ${globalEscapeHtml(d.borrower_phone||'')}</div>
-        <div><b>Account (source):</b> ${globalEscapeHtml(d.account_name||'')}</div>
-        <div><b>Amount:</b> ${money(d.principal||0)}</div>
-        <div><b>Monthly rate:</b> ${globalEscapeHtml(d.monthly_interest_rate||'')}</div>
-        <div><b>Interest method:</b> ${globalEscapeHtml(d.interest_method||'')}</div>
-        <div><b>Term:</b> ${globalEscapeHtml(d.term_months||'')}</div>
-        <div><b>Status:</b> ${globalEscapeHtml(d.status||'requested')}</div>
-        <div><b>Start date:</b> ${globalEscapeHtml(d.start_date||'')}</div>
-        <div><b>End date:</b> ${globalEscapeHtml(d.end_date||'')}</div>
-        <div><b>Unpaid principal:</b> ${money(d.unpaid_principal||0)}</div>
+      if(!json.success){
+        if(viewBody) viewBody.innerHTML = 'Not found';
+        openView();
+        return;
+      }
 
-        <div class="mt-3">
-          <b>Guarantors</b>
-          <div class="mt-2 table-wrapper">
-            <table class="table">
-              <thead><tr><th>Name</th><th>Phone</th><th>Amount</th><th>Guarantor Net</th><th>Status</th></tr></thead>
-              <tbody>${gHtml || `<tr><td colspan="5" class="text-sm text-slate-600">Nta bamwishingizi</td></tr>`}</tbody>
-            </table>
+      const d = json.data;
+
+      const gHtml = (d.guarantors || []).map(g => `
+        <tr>
+          <td>${esc(g.guarantor_name || '')}</td>
+          <td>${esc(g.guarantor_phone || '')}</td>
+          <td>${money(g.guarantee_amount || 0)}</td>
+          <td>${money(g.guarantor_net || 0)}</td>
+          <td>${esc(g.status || '')}</td>
+        </tr>
+      `).join('');
+
+      if(viewBody){
+        viewBody.innerHTML = `
+          <div class="space-y-2">
+            <div><b>Loan:</b> #LN-${d.loan_id}</div>
+            <div><b>Borrower:</b> ${esc(d.borrower_name || '')} · ${esc(d.borrower_phone || '')}</div>
+            <div><b>Account (source):</b> ${esc(d.account_name || '')}</div>
+            <div><b>Amount:</b> ${money(d.principal || 0)}</div>
+            <div><b>Monthly rate:</b> ${esc(d.monthly_interest_rate || '')}</div>
+            <div><b>Interest method:</b> ${esc(d.interest_method || '')}</div>
+            <div><b>Term:</b> ${esc(d.term_months || '')}</div>
+            <div><b>Status:</b> ${esc(d.status || 'requested')}</div>
+            <div><b>Start date:</b> ${esc(d.start_date || '')}</div>
+            <div><b>End date:</b> ${esc(d.end_date || '')}</div>
+
+            <div class="mt-3 rounded-lg border p-3 bg-slate-50">
+              <div><b>Paid Principal:</b> ${money(d.paid_principal || 0)}</div>
+              <div><b>Unpaid Principal:</b> ${money(d.unpaid_principal || 0)}</div>
+              <div><b>Initial Interest Due:</b> ${money(d.initial_interest_due || 0)}</div>
+              <div><b>Paid Interest:</b> ${money(d.paid_interest || 0)}</div>
+              <div><b>Unpaid Interest:</b> ${money(d.unpaid_interest || 0)}</div>
+              <div class="font-semibold"><b>Total Due:</b> ${money(d.total_due || 0)}</div>
+            </div>
+
+            <div class="mt-3">
+              <b>Guarantors</b>
+              <div class="mt-2 table-wrapper">
+                <table class="table">
+                  <thead><tr><th>Name</th><th>Phone</th><th>Amount</th><th>Guarantor Net</th><th>Status</th></tr></thead>
+                  <tbody>${gHtml || `<tr><td colspan="5" class="text-sm text-slate-600">Nta bamwishingizi</td></tr>`}</tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="mt-2"><b>Notes:</b><br/>${esc(d.notes || '')}</div>
           </div>
-        </div>
+        `;
+      }
 
-        <div class="mt-2"><b>Notes:</b><br/>${globalEscapeHtml(d.notes||'')}</div>
-      </div>
-    `;
-    openView();
+      openView();
+    }catch(err){
+      console.error(err);
+      if(viewBody) viewBody.innerHTML = 'Error loading loan';
+      openView();
+    }
   }
 
   async function openLoanEdit(id){
-    const res = await fetch(api + '?id=' + encodeURIComponent(id), {credentials:'include'});
-    const json = await res.json();
-    if(!json.success){ alert(json.message||'Not found'); return; }
+    try{
+      const res = await fetch(api + '?id=' + encodeURIComponent(id), {credentials:'include'});
+      const json = await readJsonResponse(res);
 
-    const d = json.data;
-
-    form.reset();
-    document.getElementById('loan-id').value = d.loan_id;
-
-    accountSelect.value = d.account_id || '';
-
-    borrowerHidden.value = d.borrower_user_id || '';
-    borrowerSelected.textContent = `${d.borrower_name||''} ${d.borrower_phone ? ' · '+d.borrower_phone : ''}`;
-
-    principalInput.value = d.principal || '';
-    rateInput.value = d.monthly_interest_rate || '';
-    termInput.value = d.term_months || '';
-    methodSelect.value = d.interest_method || 'flat';
-    document.getElementById('loan-notes').value = d.notes || '';
-
-    loanStatusBadge.textContent = d.status || 'requested';
-
-    await loadBorrowerSummary(d.borrower_user_id);
-
-    guarantorsListEl.innerHTML = '';
-    guarantorCounter = 0;
-
-    if(d.guarantors && d.guarantors.length){
-      for(const g of d.guarantors){
-        await addGuarantorRow({
-          user_id: g.guarantor_user_id,
-          amount: g.guarantee_amount,
-          display: `${g.guarantor_name||''}${g.guarantor_phone ? ' · '+g.guarantor_phone : ''}`,
-          net_value: g.guarantor_net || 0
-        });
+      if(!json.success){
+        alert(json.message || 'Not found');
+        return;
       }
-    } else {
-      await addGuarantorRow();
-    }
 
-    validateFormRules();
-    openModal();
+      const d = json.data;
+
+      if(form) form.reset();
+      const loanIdEl = document.getElementById('loan-id');
+      const notesEl = document.getElementById('loan-notes');
+
+      if(loanIdEl) loanIdEl.value = d.loan_id;
+      if(accountSelect) accountSelect.value = d.account_id || '';
+
+      if(borrowerHidden) borrowerHidden.value = d.borrower_user_id || '';
+      setText(borrowerSelected, `${d.borrower_name || ''}${d.borrower_phone ? ' · ' + d.borrower_phone : ''}`);
+
+      if(principalInput) principalInput.value = d.principal || '';
+      if(rateInput) rateInput.value = d.monthly_interest_rate || '';
+      if(termInput) termInput.value = d.term_months || '';
+      if(notesEl) notesEl.value = d.notes || '';
+
+      setText(loanStatusBadge, d.status || 'requested');
+
+      await loadBorrowerSummary(d.borrower_user_id);
+
+      if(guarantorsListEl) guarantorsListEl.innerHTML = '';
+      guarantorCounter = 0;
+
+      if(d.guarantors && d.guarantors.length){
+        for(const g of d.guarantors){
+          await addGuarantorRow({
+            user_id: g.guarantor_user_id,
+            amount: g.guarantee_amount,
+            display: `${g.guarantor_name || ''}${g.guarantor_phone ? ' · ' + g.guarantor_phone : ''}`,
+            net_value: g.guarantor_net || 0
+          });
+        }
+      } else {
+        await addGuarantorRow();
+      }
+
+      validateFormRules();
+      openModal();
+    }catch(err){
+      console.error(err);
+      alert(err.message || 'Error loading loan');
+    }
   }
 
-  // Buttons / modal close
   if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
   if(modalClose) modalClose.addEventListener('click', closeModal);
-  if(modal) modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+  if(modal) modal.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
 
   if(viewClose) viewClose.addEventListener('click', closeView);
-  if(viewModal) viewModal.addEventListener('click', (e)=>{ if(e.target===viewModal) closeView(); });
+  if(viewModal) viewModal.addEventListener('click', (e)=>{ if(e.target === viewModal) closeView(); });
 
   if(statusClose) statusClose.addEventListener('click', closeStatus);
   if(statusCancel) statusCancel.addEventListener('click', closeStatus);
-  if(statusModal) statusModal.addEventListener('click', (e)=>{ if(e.target===statusModal) closeStatus(); });
+  if(statusModal) statusModal.addEventListener('click', (e)=>{ if(e.target === statusModal) closeStatus(); });
 
-  if(statusSave) statusSave.addEventListener('click', async ()=>{
-    const id = statusLoanId.value;
-    const st = statusSelect.value;
+  if(statusSave){
+    statusSave.addEventListener('click', async ()=>{
+      const id = statusLoanId?.value || '';
+      const st = statusSelect?.value || '';
 
-    const fd = new FormData();
-    fd.append('action','change_status');
-    fd.append('id', id);
-    fd.append('status', st);
+      try{
+        const fd = new FormData();
+        fd.append('action', 'change_status');
+        fd.append('id', id);
+        fd.append('status', st);
 
-    const res = await fetch(api, {method:'POST', body: fd, credentials:'include'});
-    const json = await res.json();
-    if(json.success){ closeStatus(); fetchLoans(); }
-    else alert(json.message || 'Error changing status');
-  });
+        const res = await fetch(api, {method:'POST', body: fd, credentials:'include'});
+        const json = await readJsonResponse(res);
 
-  if(btnNewLoan) btnNewLoan.addEventListener('click', async ()=>{
-    form.reset();
-    document.getElementById('loan-id').value = '';
+        if(json.success){
+          closeStatus();
+          fetchLoans();
+        } else {
+          alert(json.message || 'Error changing status');
+        }
+      }catch(err){
+        console.error(err);
+        alert(err.message || 'Error changing status');
+      }
+    });
+  }
 
-    if(accountSelect) accountSelect.value = '';
+  if(btnNewLoan){
+    btnNewLoan.addEventListener('click', async ()=>{
+      if(form) form.reset();
 
-    borrowerHidden.value = '';
-    borrowerSelected.textContent = 'Ntawe';
-    borrowerSummary = null;
-    borrowerNetEl.textContent = '-';
-    borrowerUnpaidEl.textContent = '-';
-    borrowerMemberEl.textContent = '-';
+      const loanIdEl = document.getElementById('loan-id');
+      if(loanIdEl) loanIdEl.value = '';
+      if(accountSelect) accountSelect.value = '';
 
-    loanStatusBadge.textContent = 'requested';
+      if(borrowerHidden) borrowerHidden.value = '';
+      setText(borrowerSelected, 'Ntawe');
 
-    guarantorsListEl.innerHTML = '';
-    guarantorCounter = 0;
-    await addGuarantorRow();
+      borrowerSummary = null;
+      setText(borrowerNetEl, '-');
+      setText(borrowerUnpaidEl, '-');
+      setText(borrowerMemberEl, '-');
 
-    validateFormRules();
-    openModal();
-  });
+      const detailsEl = document.getElementById('borrower-net-details');
+      if(detailsEl) detailsEl.innerHTML = '';
+
+      setText(loanStatusBadge, 'requested');
+
+      if(guarantorsListEl) guarantorsListEl.innerHTML = '';
+      guarantorCounter = 0;
+      await addGuarantorRow();
+
+      validateFormRules();
+      openModal();
+    });
+  }
 
   if(btnRefreshLoans) btnRefreshLoans.addEventListener('click', ()=> fetchLoans());
 
-  if(btnAddGuarantor) btnAddGuarantor.addEventListener('click', async (e)=>{
-    e.preventDefault();
-    await addGuarantorRow();
-    validateFormRules();
-  });
-
-  if(saveBtn) saveBtn.addEventListener('click', async ()=>{
-    if(saveBtn.disabled) return;
-
-    const id = document.getElementById('loan-id').value;
-
-    const fd = new FormData();
-    fd.append('action', id ? 'update' : 'create');
-    if(id) fd.append('id', id);
-
-    fd.append('account_id', accountSelect.value);
-    fd.append('borrower_user_id', borrowerHidden.value);
-    fd.append('principal', principalInput.value);
-    fd.append('monthly_interest_rate', rateInput.value);
-    fd.append('interest_method', methodSelect.value);
-    fd.append('term_months', termInput.value);
-    fd.append('notes', document.getElementById('loan-notes').value || '');
-
-    const guarantorsArray = [];
-    document.querySelectorAll('.guarantor-row').forEach(row=>{
-      const gid = row.querySelector('.guarantor-id')?.value || '';
-      const amt = row.querySelector('.guarantee-amount')?.value || '';
-      if(gid && amt) guarantorsArray.push({user_id: gid, amount: amt});
+  if(btnAddGuarantor){
+    btnAddGuarantor.addEventListener('click', async (e)=>{
+      e.preventDefault();
+      await addGuarantorRow();
+      validateFormRules();
     });
-    fd.append('guarantors', JSON.stringify(guarantorsArray));
+  }
 
-    const res = await fetch(api, {method:'POST', body: fd, credentials:'include'});
-    const text = await res.text();
-    let json;
-    try{ json = JSON.parse(text); }
-    catch(e){ console.error('Non-JSON:', text); alert('Server returned non-JSON.'); return; }
+  if(saveBtn){
+    saveBtn.addEventListener('click', async ()=>{
+      if(saveBtn.disabled) return;
 
-    if(!res.ok){ alert(json.message || ('HTTP Error '+res.status)); return; }
+      try{
+        const id = document.getElementById('loan-id')?.value || '';
+        const notesEl = document.getElementById('loan-notes');
 
-    if(json.success){ closeModal(); fetchLoans(); }
-    else alert(json.message || 'Error saving');
+        const fd = new FormData();
+        fd.append('action', id ? 'update' : 'create');
+        if(id) fd.append('id', id);
+
+        fd.append('account_id', accountSelect?.value || '');
+        fd.append('borrower_user_id', borrowerHidden?.value || '');
+        fd.append('principal', principalInput?.value || '');
+        fd.append('monthly_interest_rate', rateInput?.value || '');
+        fd.append('interest_method', INTEREST_METHOD);
+        fd.append('term_months', termInput?.value || '');
+        fd.append('notes', notesEl?.value || '');
+
+        const guarantorsArray = [];
+        document.querySelectorAll('.guarantor-row').forEach(row=>{
+          const gid = row.querySelector('.guarantor-id')?.value || '';
+          const amt = row.querySelector('.guarantee-amount')?.value || '';
+          if(gid && amt) guarantorsArray.push({user_id: gid, amount: amt});
+        });
+        fd.append('guarantors', JSON.stringify(guarantorsArray));
+
+        const res = await fetch(api, {method:'POST', body: fd, credentials:'include'});
+        const json = await readJsonResponse(res);
+
+        if(!res.ok){
+          alert(json.message || ('HTTP Error ' + res.status));
+          return;
+        }
+
+        if(json.success){
+          closeModal();
+          fetchLoans();
+        } else {
+          alert(json.message || 'Error saving');
+        }
+      }catch(err){
+        console.error(err);
+        alert(err.message || 'Server returned non-JSON.');
+      }
+    });
+  }
+
+  ['change', 'input'].forEach(evt => {
+    if(form) form.addEventListener(evt, ()=> validateFormRules());
   });
 
-  ['change','input'].forEach(evt=>{
-    form.addEventListener(evt, ()=> validateFormRules());
-  });
-
-  // init
   loadAccounts();
   fetchLoans();
 })();
@@ -2305,7 +2949,7 @@
 (function () {
   // --- 1. Configuration & Constants ---
   const CONFIG = {
-    api: "expenses_api.php", 
+    api: "transactions_api.php",
     currency: "Frw",
     locale: "rw-RW",
     reserveMin: 120000,
@@ -2314,47 +2958,38 @@
 
   // --- 2. Application State ---
   const STATE = {
-    accounts: [],          // [{account_id, name, balance}]
-    selectedUser: null,    // User object
-    userSummary: null,     // From user_summary endpoint
-    userLoans: [],         // Active loans for selected user
-    loanSummary: null,     // Specific loan breakdown
-    lastUserQuery: "",
+    accounts: [],
+    selectedUser: null,
+    userLoans: [],
+    loanSummary: null,
     saving: false
   };
 
   // --- 3. DOM Cache ---
   const DOM = {
-    tbody: document.getElementById("transactions-tbody"),
-    modal: document.getElementById("transaction-modal"),
-    form: document.getElementById("transaction-form"),
-
-    // Inputs
-    id: document.getElementById("transaction-id"),
-    date: document.getElementById("transaction-date"),
-    user: document.getElementById("transaction-user"),
-    userSearch: null, // Initialized in ensureExtraUI()
-
-    account: document.getElementById("transaction-account"),
-    typeWrap: document.getElementById("transaction-type-wrapper"),
-    type: document.getElementById("transaction-type"),
-    direction: document.getElementById("transaction-direction"),
-
-    loanWrap: document.getElementById("loan-id-wrapper"),
-    loanId: document.getElementById("transaction-loan-id"),
-
-    amount: document.getElementById("transaction-amount"),
-    desc: document.getElementById("transaction-description"),
-    proof: document.getElementById("transaction-proof"),
-    hint: document.getElementById("transaction-proof-hint"),
-    infoBox: null, // Initialized in ensureExtraUI()
-
-    // Buttons
-    btnNew: document.getElementById("btn-new-transaction"),
+    tbody:      document.getElementById("transactions-tbody"),
+    modal:      document.getElementById("transaction-modal"),
+    form:       document.getElementById("transaction-form"),
+    id:         document.getElementById("transaction-id"),
+    date:       document.getElementById("transaction-date"),
+    user:       document.getElementById("transaction-user"),
+    userSearch: document.getElementById("transaction-user-search"),
+    account:    document.getElementById("transaction-account"),
+    typeWrap:   document.getElementById("transaction-type-wrapper"),
+    type:       document.getElementById("transaction-type"),
+    direction:  document.getElementById("transaction-direction"),
+    loanWrap:   document.getElementById("loan-id-wrapper"),
+    loanId:     document.getElementById("transaction-loan-id"),
+    amount:     document.getElementById("transaction-amount"),
+    desc:       document.getElementById("transaction-description"),
+    proof:      document.getElementById("transaction-proof"),
+    hint:       document.getElementById("transaction-proof-hint"),
+    infoBox:    document.getElementById("transaction-info-box"),
+    btnNew:     document.getElementById("btn-new-transaction"),
     btnRefresh: document.getElementById("btn-refresh-transactions"),
-    btnSave: document.getElementById("transaction-save"),
-    btnCancel: document.getElementById("transaction-cancel"),
-    btnClose: document.getElementById("transaction-modal-close")
+    btnSave:    document.getElementById("transaction-save"),
+    btnCancel:  document.getElementById("transaction-cancel"),
+    btnClose:   document.getElementById("transaction-modal-close")
   };
 
   // --- 4. Utilities & Formatters ---
@@ -2363,18 +2998,19 @@
 
     typeLabel: (t) => {
       const labels = {
-        contribution: "Contribution",
-        withdrawal: "Withdrawal",
-        loan_principal: "Loan Payment (Total)",
-        loan_interest: "Loan Interest (Receipt)",
-        expense: "Expense"
+        contribution:   "Contribution",
+        withdrawal:     "Withdrawal",
+        loan_principal: "Loan Payment (Principal)",
+        loan_interest:  "Loan Interest",
+        expense:        "Expense",
+        other_income:   "Other Income",
+        other_out:      "Other Out"
       };
       return labels[(t || "").toLowerCase()] || t;
     },
 
     toDTL: (mysqlDt) => (mysqlDt ? mysqlDt.replace(" ", "T").slice(0, 16) : ""),
-    fromDTL: (dtl) => (dtl ? dtl.replace("T", " ") + ":00" : ""),
-    
+
     escape: (s) => String(s ?? "").replace(/[&<>"']/g, m => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
     }[m]))
@@ -2383,36 +3019,27 @@
   const Utils = {
     debounce: (fn, wait = CONFIG.debounceTime) => {
       let t;
-      return (...args) => {
-        clearTimeout(t);
-        t = setTimeout(() => fn(...args), wait);
-      };
+      return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
     }
   };
 
   // --- 5. API Layer ---
   async function apiRequest(url, options = {}) {
-    const res = await fetch(url, { credentials: "include", ...options });
+    const res  = await fetch(url, { credentials: "include", ...options });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json.success) {
-      throw new Error(json.message || `HTTP Error ${res.status}`);
-    }
+    if (!res.ok || !json.success) throw new Error(json.message || `HTTP Error ${res.status}`);
     return json;
   }
 
-  // --- 6. UI Logic Controllers ---
+  // --- 6. UI Logic ---
   const UI = {
+
     setSaveState: (enabled, reason = "") => {
       const isDisabled = !enabled || STATE.saving;
       DOM.btnSave.disabled = isDisabled;
       DOM.btnSave.classList.toggle("opacity-50", isDisabled);
       DOM.btnSave.classList.toggle("cursor-not-allowed", isDisabled);
-      
-      if (DOM.hint) {
-        const base = DOM.hint.dataset.baseHint || DOM.hint.textContent || "";
-        DOM.hint.dataset.baseHint = base;
-        DOM.hint.textContent = reason ? `${base} | ${reason}` : base;
-      }
+      if (DOM.hint) DOM.hint.textContent = reason || "Itegeko kuri transaction nshya.";
     },
 
     toggleModal: (show = true) => {
@@ -2420,7 +3047,7 @@
       DOM.modal.classList.toggle("flex", show);
       if (!show) {
         DOM.form.reset();
-        STATE.selectedUser = STATE.userSummary = STATE.loanSummary = null;
+        STATE.selectedUser = STATE.loanSummary = null;
         STATE.userLoans = [];
         UI.updateInfoBox("");
         UI.syncLogic();
@@ -2431,6 +3058,12 @@
 
     renderRows: (rows) => {
       if (!DOM.tbody) return;
+      if (!rows || rows.length === 0) {
+        DOM.tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400 text-sm">
+          Nta transactions zibonetse
+        </td></tr>`;
+        return;
+      }
       DOM.tbody.innerHTML = rows.map((r, i) => `
         <tr class="border-b hover:bg-gray-50 text-sm">
           <td class="p-3">${i + 1}</td>
@@ -2444,97 +3077,84 @@
           <td class="p-3">
             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
               r.direction === "IN" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-            }">${Format.escape(r.direction)}</span>
+            }">${Format.escape(r.direction || "")}</span>
           </td>
-          <td class="p-3 font-mono font-bold">${Format.escape(Format.money(r.amount))}</td>
+          <td class="p-3 font-mono font-bold">${Format.money(r.amount)}</td>
           <td class="p-3 space-x-1">
-            <button class="text-emerald-600 hover:underline btn-edit" data-id="${r.transaction_id}">Edit</button>
+            <button class="text-emerald-600 hover:underline btn-edit" data-id="${r.transaction_id}">Hindura</button>
             <button class="text-red-600 hover:underline btn-delete" data-id="${r.transaction_id}">Siba</button>
           </td>
         </tr>
       `).join("");
+
+      // wire edit/delete on rendered rows
+      DOM.tbody.querySelectorAll(".btn-edit").forEach(btn => {
+        btn.onclick = () => openEdit(Number(btn.dataset.id));
+      });
+      DOM.tbody.querySelectorAll(".btn-delete").forEach(btn => {
+        btn.onclick = () => deleteTransaction(Number(btn.dataset.id));
+      });
     },
 
     syncLogic: async () => {
-      const type = (DOM.type.value || "").toLowerCase();
+      const type        = (DOM.type.value || "").toLowerCase();
       const userSelected = !!DOM.user.value;
 
       UI.renderTypeOptions();
 
-      // Show Type dropdown based on context
+      // Show/hide type wrapper
       if (DOM.typeWrap) DOM.typeWrap.classList.toggle("hidden", !userSelected && type !== "expense");
 
-      // Visibility of loan fields
+      // Show/hide loan wrapper
       const isLoan = ["loan_principal", "loan_interest"].includes(type);
-      DOM.loanWrap?.classList.toggle("hidden", !isLoan);
+      if (DOM.loanWrap) DOM.loanWrap.classList.toggle("hidden", !isLoan);
 
-      // Auto-set Direction
-      DOM.direction.value = ["contribution", "loan_principal", "loan_interest"].includes(type) ? "IN" : "OUT";
+      // Auto-set direction
+      DOM.direction.value = ["contribution", "loan_principal", "loan_interest", "other_income"].includes(type) ? "IN" : "OUT";
 
       if (isLoan && userSelected) await UI.loadUserLoans();
-      await UI.validateAll();
+      UI.validateAll();
     },
 
     renderTypeOptions: () => {
       const types = [
-        { v: "", t: "-- Ubwoko --" },
-        { v: "contribution", t: "Contribution" },
-        { v: "withdrawal", t: "Withdrawal" },
-        { v: "loan_principal", t: "Loan Payment (Total)" },
-        { v: "loan_interest", t: "Loan Interest (Receipt)" },
-        { v: "expense", t: "Expense" }
+        { v: "",               t: "-- Ubwoko --" },
+        { v: "contribution",   t: "Contribution" },
+        { v: "withdrawal",     t: "Withdrawal" },
+        { v: "loan_principal", t: "Loan Payment (Principal)" },
+        { v: "loan_interest",  t: "Loan Interest" },
+        { v: "expense",        t: "Expense" },
+        { v: "other_income",   t: "Other Income" },
+        { v: "other_out",      t: "Other Out" }
       ];
 
       const userSelected = !!DOM.user.value;
-      const current = DOM.type.value;
+      const current      = DOM.type.value;
+      const allowed      = userSelected ? types : types.filter(x => x.v === "" || x.v === "expense");
 
-      let allowed = userSelected ? types : types.filter(x => x.v === "" || x.v === "expense");
-      
-      DOM.type.innerHTML = allowed.map(x => `<option value="${x.v}">${Format.escape(x.t)}</option>`).join("");
+      DOM.type.innerHTML = allowed.map(x =>
+        `<option value="${x.v}">${Format.escape(x.t)}</option>`
+      ).join("");
       DOM.type.value = [...DOM.type.options].some(o => o.value === current) ? current : "";
     },
 
-    validateAll: async () => {
-      const type = (DOM.type.value || "").toLowerCase();
+    validateAll: () => {
+      const type   = (DOM.type.value || "").toLowerCase();
       const amount = Number(DOM.amount.value || 0);
-      const accId = Number(DOM.account.value || 0);
-      
-      let valid = true;
-      let reason = "";
+      const accId  = Number(DOM.account.value || 0);
+      let valid = true, reason = "";
 
-      // Standard validations
-      if (!accId) { valid = false; reason = "Select account."; }
-      else if (!type) { valid = false; reason = "Select type."; }
-      else if (amount <= 0) { valid = false; reason = "Amount > 0."; }
-      else if (type !== "expense" && !DOM.user.value) { valid = false; reason = "Select member."; }
+      if (!accId)                                   { valid = false; reason = "Hitamo konti."; }
+      else if (!type)                               { valid = false; reason = "Hitamo ubwoko."; }
+      else if (amount <= 0)                         { valid = false; reason = "Umubare ugomba kuba > 0."; }
+      else if (type !== "expense" && !DOM.user.value) { valid = false; reason = "Hitamo umunyamuryango."; }
 
-      // Logic: Balance Checks
-      if (valid && ["withdrawal", "expense"].includes(type)) {
+      // Balance check for OUT types
+      if (valid && ["withdrawal", "expense", "other_out"].includes(type)) {
         const acc = STATE.accounts.find(a => Number(a.account_id) === accId);
-        if (amount > (acc?.balance || 0)) { valid = false; reason = "Insufficient account balance."; }
-      }
-
-      // Logic: Withdrawal Limit
-      if (valid && type === "withdrawal") {
-        const max = STATE.userSummary?.withdrawable_max || 0;
-        if (amount > max) { valid = false; reason = `Exceeds limit (${Format.money(max)})`; }
-      }
-
-      // Logic: Loan Previews
-      if (type === "loan_principal" && STATE.loanSummary) {
-        const dueI = Number(STATE.loanSummary.interest_due || 0);
-        const remP = Number(STATE.loanSummary.principal_remaining || 0);
-        const payI = Math.min(amount, dueI);
-        const payP = Math.min(amount - payI, remP);
-
-        UI.updateInfoBox((DOM.infoBox.innerHTML.split('Loan Preview')[0]) + `
-          <div class="mt-2 text-xs rounded border border-blue-200 bg-blue-50 p-2">
-            <p class="font-bold border-b mb-1">Loan Preview</p>
-            <p>Interest: ${Format.money(payI)} | Principal: ${Format.money(payP)}</p>
-          </div>
-        `);
-        
-        if (amount > (dueI + remP)) { valid = false; reason = "Amount exceeds loan total."; }
+        if (acc && amount > Number(acc.balance || 0)) {
+          valid = false; reason = `Amafaranga ari kuri konti ntahagije (${Format.money(acc.balance)}).`;
+        }
       }
 
       UI.setSaveState(valid, reason);
@@ -2542,98 +3162,210 @@
     },
 
     loadUserLoans: async () => {
-      const json = await apiRequest(`${CONFIG.api}?user_loans=1&user_id=${DOM.user.value}`);
-      STATE.userLoans = json.data || [];
-      DOM.loanId.innerHTML = '<option value="">-- Select Loan --</option>' + 
-        STATE.userLoans.map(l => `<option value="${l.loan_id}">#LN-${l.loan_id} (Rem: ${Format.money(l.principal_remaining)})</option>`).join("");
+      try {
+        const userId = DOM.user.value;
+        const json   = await apiRequest(`loans_api.php?per_page=100`);
+        STATE.userLoans = (json.data || []).filter(l =>
+          String(l.borrower_user_id) === String(userId) && l.status === "approved"
+        );
+        DOM.loanId.innerHTML = '<option value="">-- Hitamo Loan --</option>' +
+          STATE.userLoans.map(l =>
+            `<option value="${l.loan_id}">#LN-${l.loan_id} – ${Format.escape(l.borrower_name || "")}</option>`
+          ).join("");
+      } catch (e) {
+        console.error("loadUserLoans failed:", e.message);
+      }
     }
   };
 
-  // --- 7. Event Wiring ---
+  // --- 7. Edit / Delete helpers ---
+  async function openEdit(id) {
+    try {
+      const json = await apiRequest(`${CONFIG.api}?id=${id}`);
+      const r    = json.data;
+
+      UI.toggleModal(true);
+      DOM.id.value        = r.transaction_id;
+      DOM.date.value      = Format.toDTL(r.tx_date);
+      DOM.account.value   = r.account_id;
+      DOM.direction.value = r.direction;
+      DOM.amount.value    = r.amount;
+      DOM.desc.value      = r.description || "";
+
+      // Populate user dropdown with the existing user so it's selectable
+      if (r.user_id) {
+        DOM.user.innerHTML = `<option value="${r.user_id}">${Format.escape(r.user_name || r.user_id)}</option>`;
+        DOM.user.value = r.user_id;
+      }
+
+      // Show type wrapper, set type
+      if (DOM.typeWrap) DOM.typeWrap.classList.remove("hidden");
+      DOM.type.innerHTML = `<option value="${r.type}">${Format.escape(Format.typeLabel(r.type))}</option>`;
+      DOM.type.value = r.type;
+
+      if (r.loan_id) {
+        if (DOM.loanWrap) DOM.loanWrap.classList.remove("hidden");
+        DOM.loanId.innerHTML = `<option value="${r.loan_id}">#LN-${r.loan_id}</option>`;
+        DOM.loanId.value = r.loan_id;
+      }
+
+      // Hide proof required hint on edit
+      if (DOM.hint) DOM.hint.textContent = "Injiza dosiye nshya gusa niba ushaka kuyisubiraho.";
+      if (DOM.proof) DOM.proof.removeAttribute("required");
+
+      document.getElementById("transaction-modal-title").textContent = "Hindura Transaction";
+      UI.setSaveState(true);
+
+    } catch (e) {
+      alert("Kugerageza kohereza amakuru: " + e.message);
+    }
+  }
+
+  async function deleteTransaction(id) {
+    if (!confirm(`Uremeza gusiba transaction #${id}?`)) return;
+    try {
+      const fd = new FormData();
+      fd.set("action", "delete");
+      fd.set("id", id);
+      await apiRequest(CONFIG.api, { method: "POST", body: fd });
+      loadList();
+    } catch (e) {
+      alert("Gusiba byanze: " + e.message);
+    }
+  }
+
+  async function loadList() {
+    try {
+      DOM.tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400 text-sm">
+        <i class="fas fa-spinner fa-spin mr-2"></i>Gutegura...
+      </td></tr>`;
+      const json = await apiRequest(`${CONFIG.api}?per_page=100`);
+      UI.renderRows(json.data || []);
+    } catch (e) {
+      console.error("loadList failed:", e.message);
+      DOM.tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-red-500 text-sm">
+        Gufungura urutonde byanze: ${Format.escape(e.message)}
+      </td></tr>`;
+    }
+  }
+
+  // --- 8. Event Wiring ---
   function bindEvents() {
-    DOM.btnNew.onclick = () => { UI.toggleModal(true); DOM.date.value = new Date().toISOString().slice(0, 16); UI.syncLogic(); };
-    DOM.btnClose.onclick = DOM.btnCancel.onclick = () => UI.toggleModal(false);
-    DOM.btnRefresh.onclick = () => apiRequest(`${CONFIG.api}?per_page=200`).then(j => UI.renderRows(j.data));
 
-    // User Search
-    DOM.userSearch.oninput = Utils.debounce(async (e) => {
-      const q = e.target.value.trim();
-      if (q.length < 2) return;
-      const json = await apiRequest(`${CONFIG.api}?users=1&q=${encodeURIComponent(q)}`);
-      DOM.user.innerHTML = '<option value="">-- Select Member --</option>' + 
-        json.data.map(u => `<option value="${u.id}">${Format.escape(u.names)} | ${u.phone1}</option>`).join("");
-    });
-
-    DOM.user.onchange = async () => {
-      if (!DOM.user.value) return;
-      const json = await apiRequest(`${CONFIG.api}?user_summary=1&user_id=${DOM.user.value}`);
-      STATE.userSummary = json.data;
-      UI.updateInfoBox(`
-        <div class="mt-2 text-xs rounded border bg-slate-50 p-2">
-          <p><b>Max Withdrawable:</b> <span class="text-emerald-700 font-bold">${Format.money(STATE.userSummary.withdrawable_max)}</span></p>
-        </div>
-      `);
+    DOM.btnNew.onclick = () => {
+      // Reset modal title and proof requirement
+      document.getElementById("transaction-modal-title").textContent = "Ongeza Transaction";
+      if (DOM.proof) DOM.proof.setAttribute("required", "required");
+      if (DOM.hint)  DOM.hint.textContent = "Itegeko kuri transaction nshya.";
+      UI.toggleModal(true);
+      DOM.date.value = new Date().toISOString().slice(0, 16);
+      DOM.id.value   = "";
       UI.syncLogic();
     };
 
+    DOM.btnClose.onclick  = () => UI.toggleModal(false);
+    DOM.btnCancel.onclick = () => UI.toggleModal(false);
+    DOM.btnRefresh.onclick = loadList;
+
+    // User search
+    DOM.userSearch.oninput = Utils.debounce(async (e) => {
+      const q = e.target.value.trim();
+      if (q.length < 2) return;
+      try {
+        const json = await apiRequest(`users_api.php?q=${encodeURIComponent(q)}&per_page=20`);
+        DOM.user.innerHTML = '<option value="">-- Hitamo User --</option>' +
+          (json.data || []).map(u =>
+            `<option value="${u.id}">${Format.escape(u.names)} | ${u.phone1 || ""}</option>`
+          ).join("");
+      } catch (e) { console.error("User search failed:", e.message); }
+    }, CONFIG.debounceTime);
+
+    // User selected
+    DOM.user.onchange = () => UI.syncLogic();
+
+    // Loan selected — show info
     DOM.loanId.onchange = async () => {
-      const asOf = DOM.date.value.slice(0, 10);
-      const json = await apiRequest(`${CONFIG.api}?loan_summary=1&loan_id=${DOM.loanId.value}&as_of=${asOf}`);
-      STATE.loanSummary = json.data;
+      const loanId = DOM.loanId.value;
+      if (!loanId) return;
+      const loan = STATE.userLoans.find(l => String(l.loan_id) === String(loanId));
+      if (loan) {
+        UI.updateInfoBox(`
+          <div class="mt-2 text-xs rounded border border-blue-200 bg-blue-50 p-2">
+            <p class="font-bold mb-1">Loan #${loan.loan_id} – ${Format.escape(loan.borrower_name || "")}</p>
+            <p>Principal: <b>${Format.money(loan.principal_amount)}</b></p>
+            <p>Status: <b>${Format.escape(loan.status)}</b></p>
+          </div>
+        `);
+      }
       UI.validateAll();
     };
 
-    [DOM.type, DOM.amount, DOM.account, DOM.date].forEach(el => el.onchange = UI.syncLogic);
+    [DOM.type, DOM.amount, DOM.account, DOM.date].forEach(el => {
+      if (el) el.onchange = () => UI.syncLogic();
+    });
 
+    // Save
     DOM.btnSave.onclick = async () => {
-      if (!(await UI.validateAll())) return;
+      if (!UI.validateAll()) return;
       STATE.saving = true;
-      UI.setSaveState(false, "Saving...");
+      UI.setSaveState(false, "Kubika...");
 
       try {
-        const fd = new FormData(DOM.form);
-        const type = DOM.type.value;
-        
-        if (type === "loan_principal") {
-          fd.set("action", "loan_payment_split");
-          fd.set("total_amount", DOM.amount.value);
-        } else {
-          fd.set("action", "create");
-        }
+        const fd     = new FormData(DOM.form);
+        const isEdit = !!DOM.id.value;
+
+        // loan_principal goes as create (API handles split internally)
+        fd.set("action", isEdit ? "update" : "create");
 
         const res = await apiRequest(CONFIG.api, { method: "POST", body: fd });
-        if (res.split) alert(`Paid: Int ${Format.money(res.split.interest_paid_now)} | Prin ${Format.money(res.split.principal_paid_now)}`);
-        
+
+        // If API returned split info, show it
+        if (res.data?.interest_paid !== undefined) {
+          alert(
+            `Byishyuwe:\n` +
+            `• Interest: ${Format.money(res.data.interest_paid)}\n` +
+            `• Principal: ${Format.money(res.data.principal_paid)}`
+          );
+        }
+
         UI.toggleModal(false);
-        DOM.btnRefresh.click();
+        loadList();
       } catch (e) {
-        alert(e.message);
+        alert("Kubika byanze: " + e.message);
       } finally {
         STATE.saving = false;
+        UI.setSaveState(true);
       }
     };
   }
 
-  // --- 8. Initialization ---
+  // --- 9. Initialization ---
   (async function init() {
-    // Dynamic UI Elements
-    const searchInput = document.createElement("input");
-    searchInput.placeholder = "Shakisha Member (Name/Phone)...";
-    searchInput.className = "w-full mb-2 rounded border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-300 outline-none";
-    DOM.user.parentElement.insertBefore(searchInput, DOM.user);
-    DOM.userSearch = searchInput;
+    try {
+      // Load accounts
+      try {
+        const accJson = await apiRequest("accounts_api.php");
+        STATE.accounts = accJson.data || [];
+        DOM.account.innerHTML = '<option value="">-- Hitamo Konti --</option>' +
+          STATE.accounts.map(a =>
+            `<option value="${a.account_id}">${Format.escape(a.name)}${a.balance !== undefined ? ` (${Format.money(a.balance)})` : ""}</option>`
+          ).join("");
+      } catch (e) {
+        console.error("Accounts load failed:", e.message);
+        DOM.account.innerHTML = '<option value="">-- Konti ntizashoboka --</option>';
+      }
 
-    const infoBox = document.createElement("div");
-    DOM.amount.parentElement.appendChild(infoBox);
-    DOM.infoBox = infoBox;
+      bindEvents();
+      await loadList();
 
-    // Load Initial Data
-    const accJson = await apiRequest(`${CONFIG.api}?accounts=1`);
-    STATE.accounts = accJson.data;
-    DOM.account.innerHTML = '<option value="">-- Account --</option>' + 
-      STATE.accounts.map(a => `<option value="${a.account_id}">${Format.escape(a.name)} (${Format.money(a.balance)})</option>`).join("");
-
-    bindEvents();
-    DOM.btnRefresh.click();
+    } catch (e) {
+      console.error("Transaction module init failed:", e);
+      if (DOM.tbody) {
+        DOM.tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-red-500 text-sm">
+          Module yanze gutangira: ${Format.escape(e.message)}
+        </td></tr>`;
+      }
+    }
   })();
+
 })();
