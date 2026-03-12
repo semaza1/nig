@@ -121,16 +121,8 @@
         if (titleEl && titles[key]) {
         titleEl.textContent = titles[key];
         }
-        // ensure the newly shown section is scrolled into view (prefer the inner .card)
-        const sectionEl = document.getElementById(`section-${key}`);
-        const targetCard = sectionEl ? sectionEl.querySelector('.card') : null;
-        const target = targetCard || sectionEl;
-        if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    });
+      
+      });
     });
     // Users management JS
     (function () {
@@ -769,131 +761,446 @@
 
     })(); // end Settings module
 
+/* OVERVIEW MODULE */
+(function () {
+  const api = 'overview_api.php';
 
-    /* ══════════════════════════════════════════════════════════════════
-    OVERVIEW LIVE CARDS + CHART MODULE
-    ══════════════════════════════════════════════════════════════════ */
-    (function () {
-    const api = 'overview_api.php';
-    let chartInstance = null;
+  let portfolioChartInstance = null;
+  let incomeExpenseChartInstance = null;
+  let loanStatusChartInstance = null;
 
-    const fmt = (v, frw=true) => Number(v||0).toLocaleString('rw-RW') + (frw?' Frw':'');
+  const money = (v) => `${Number(v || 0).toLocaleString('rw-RW')} Frw`;
+  const num = (v) => `${Number(v || 0).toLocaleString('rw-RW')}`;
+  const pct = (v) => `${Number(v || 0).toLocaleString('rw-RW', { maximumFractionDigits: 1 })}%`;
+  const el = (id) => document.getElementById(id);
 
-    async function loadOverview() {
-        try {
-        const res  = await fetch(api, { cache:'no-store', credentials:'include' });
-        const json = await res.json();
-        if (!json.success) { console.error('overview', json.message); return; }
+  const detailModal = el('overview-detail-modal');
+  const detailTitle = el('overview-detail-title');
+  const detailSubtitle = el('overview-detail-subtitle');
+  const detailBody = el('overview-detail-body');
+  const detailClose = el('overview-detail-close');
+  const detailPdf = el('overview-detail-download-pdf');
+  const detailExcel = el('overview-detail-download-excel');
 
-        const s = json.stats;
+  let currentDetailType = '';
 
-        // ── Cards ─────────────────────────────────────────────────
-        const el = id => document.getElementById(id);
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
 
-        if (el('ov-members'))  el('ov-members').textContent  = s.total_members;
-        if (el('ov-loans'))    el('ov-loans').textContent    = s.total_loans;
-        if (el('ov-loans-sub'))el('ov-loans-sub').textContent= `Izikora: ${s.active_loans} – Zose: ${s.total_loans}`;
-        if (el('ov-interest')) el('ov-interest').textContent = fmt(s.total_interest);
-        if (el('ov-expenses')) el('ov-expenses').textContent = fmt(s.total_expenses);
+  function setText(id, value) {
+    const node = el(id);
+    if (node) node.textContent = value;
+  }
 
-        // ── Pending loans table ────────────────────────────────────
-        const pendingTbody = document.querySelector('#section-overview .card table:first-of-type tbody');
-        if (pendingTbody && json.pending_loans) {
-            pendingTbody.innerHTML = '';
-            if (json.pending_loans.length === 0) {
-            pendingTbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-sm text-slate-400">Nta nguzanyo zitegereje</td></tr>`;
-            } else {
-            json.pending_loans.forEach(l => {
-                const tr = document.createElement('tr');
-                const badge = l.status==='approved'
-                ? '<span class="badge badge-success">Yemejwe</span>'
-                : '<span class="badge badge-warning">Irategereje</span>';
-                tr.innerHTML = `
-                <td>${l.borrower_name}</td>
-                <td>${Number(l.principal_amount).toLocaleString('rw-RW')}</td>
-                <td>${l.start_date||''}</td>
-                <td>${badge}</td>
-                <td><button class="btn-ghost text-xs">Hindura</button></td>
-                `;
-                pendingTbody.appendChild(tr);
-            });
-            }
-        }
+  function safeDivide(a, b) {
+    a = Number(a || 0);
+    b = Number(b || 0);
+    if (!b) return 0;
+    return (a / b) * 100;
+  }
 
-        // ── Recent payments table ──────────────────────────────────
-        const payTbody = document.querySelector('#section-overview .card:last-of-type table tbody');
-        if (payTbody && json.recent_payments) {
-            payTbody.innerHTML = '';
-            if (json.recent_payments.length === 0) {
-            payTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-sm text-slate-400">Nta payments zibonetse</td></tr>`;
-            } else {
-            json.recent_payments.forEach(p => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                <td>${p.user_name||''}</td>
-                <td>${p.tx_date||''}</td>
-                <td>${Number(p.amount||0).toLocaleString('rw-RW')}</td>
-                <td>${p.loan_id ? '#LN-'+p.loan_id : '—'}</td>
-                <td><span class="badge badge-success">Byakiriwe</span></td>
-                <td><button class="btn-ghost text-xs">Hindura</button></td>
-                `;
-                payTbody.appendChild(tr);
-            });
-            }
-        }
+  function destroyChart(instanceRef) {
+    if (instanceRef) instanceRef.destroy();
+    return null;
+  }
 
-        // ── Chart ──────────────────────────────────────────────────
-        const chartEl = document.getElementById('portfolioChart');
-        if (chartEl && window.Chart) {
+  function openDetailModal() {
+    if (!detailModal) return;
+    detailModal.classList.remove('hidden');
+    detailModal.classList.add('flex');
+  }
 
-        // fallback values (same output as your static chart)
-        const fallback = {
-            labels: ["Mut", "Gas", "Wer", "Mata", "Gic", "Kam"],
-            invest: [1200000, 1450000, 1600000, 1750000, 1900000, 2100000],
-            loans:  [600000, 720000, 800000, 780000, 760000, 740000],
-            assets: [850000, 900000, 950000, 1000000, 1100000, 1150000],
-            expenses:[80000, 60000, 90000, 70000, 65000, 85000],
-        };
+  function closeDetailModal() {
+    if (!detailModal) return;
+    detailModal.classList.add('hidden');
+    detailModal.classList.remove('flex');
+  }
 
-        const c = (json && json.chart) ? json.chart : fallback;
+  function downloadChart(canvasId, filename) {
+    const canvas = el(canvasId);
+    if (!canvas) return;
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
 
-        if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  function renderRecentActivity(items) {
+    const box = el('ov-recent-activity');
+    if (!box) return;
 
-        chartInstance = new Chart(chartEl, {
-            type: 'line',
-            data: {
-            labels: c.labels,
-            datasets: [
-                { label:'Ishoramari (Imigabane yose)', data:c.invest,   borderColor:'#2F6B4F', backgroundColor:'rgba(47,107,79,.1)',  tension:.35, borderWidth:2 },
-                { label:'Inguzanyo ziriho',            data:c.loans,    borderColor:'#E89C2C', backgroundColor:'rgba(232,156,44,.08)',tension:.35, borderWidth:2 },
-                { label:'Assets',                      data:c.assets,   borderColor:'#6B4A2D', backgroundColor:'rgba(107,74,45,.08)', tension:.35, borderWidth:2 },
-                { label:'Expenses',                    data:c.expenses, borderColor:'#DC2626', backgroundColor:'rgba(220,38,38,.06)', tension:.35, borderWidth:2 },
-            ],
-            },
-            options: {
-            responsive:true,
-            maintainAspectRatio:false,
-            plugins: {
-                legend:{ position:'bottom', labels:{ usePointStyle:true, boxWidth:8 } },
-                tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${Number(ctx.parsed.y||0).toLocaleString('rw-RW')} Frw` } },
-            },
-            scales: {
-                y:{ ticks:{ callback: v=>`${Number(v).toLocaleString('rw-RW')} Frw` }, grid:{ color:'rgba(148,163,184,.2)' } },
-                x:{ grid:{ display:false } },
-            },
-            },
-        });
-        }
-
-        } catch(e) { console.error('loadOverview', e); }
+    if (!Array.isArray(items) || items.length === 0) {
+      box.innerHTML = `<div class="rounded-lg bg-slate-50 px-3 py-3 text-xs text-slate-500">Nta bikorwa biheruka kuboneka.</div>`;
+      return;
     }
 
-    // Load on page ready AND when Overview sidebar tab is clicked
-    loadOverview();
-    document.querySelector('[data-section="overview"]')
-        ?.addEventListener('click', loadOverview);
+    box.innerHTML = items.map(item => `
+      <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-xs font-semibold text-slate-700">${escapeHtml(item.title || '')}</p>
+            <p class="mt-1 text-[11px] text-slate-500">${escapeHtml(item.description || '')}</p>
+          </div>
+          <div class="text-[10px] text-slate-400 whitespace-nowrap">${escapeHtml(item.when || '')}</div>
+        </div>
+      </div>
+    `).join('');
+  }
 
-    })(); // end Overview module
+  function renderTable(headers, rows) {
+    return `
+      <div class="table-wrapper overflow-x-auto">
+        <table class="table w-full">
+          <thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>
+          <tbody>
+            ${rows.length ? rows.join('') : `<tr><td colspan="${headers.length}" class="py-6 text-center text-sm text-slate-400">Nta makuru abonetse</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function renderMembersDetail(data) {
+    const rows = (data.items || []).map(item => `
+      <tr>
+        <td>${item.has_profile_image ? `<img src="${api}?action=image&type=member_profile&id=${item.id}" class="h-12 w-12 rounded object-cover border" alt="" />` : ''}</td>
+        <td>${escapeHtml(item.names || '')}</td>
+        <td>${escapeHtml(item.phone1 || '')}</td>
+        <td>${escapeHtml(item.phone2 || '')}</td>
+        <td>${escapeHtml(item.email || '')}</td>
+        <td>${escapeHtml(item.nid_passport || '')}</td>
+        <td>${item.is_member == 1 ? 'Member' : ''}</td>
+        <td>${money(item.net_value || 0)}</td>
+      </tr>
+    `);
+    return renderTable(['Image', 'Names', 'Phone 1', 'Phone 2', 'Email', 'NID/Passport', 'Type', 'Net'], rows);
+  }
+
+  function renderCashDetail(data) {
+    const calc = data.calculation || {};
+    const calcHtml = `
+      <div class="mb-4 grid gap-3 md:grid-cols-4">
+        <div class="rounded-lg bg-slate-50 p-3 text-sm"><b>Contributions</b><br>${money(calc.contributions || 0)}</div>
+        <div class="rounded-lg bg-slate-50 p-3 text-sm"><b>Interest</b><br>${money(calc.interest || 0)}</div>
+        <div class="rounded-lg bg-slate-50 p-3 text-sm"><b>Expenses</b><br>${money(calc.expenses || 0)}</div>
+        <div class="rounded-lg bg-slate-50 p-3 text-sm"><b>Cash</b><br>${money(calc.cash || 0)}</div>
+      </div>
+    `;
+    const rows = (data.items || []).map(item => `
+      <tr>
+        <td>${escapeHtml(item.tx_date || '')}</td>
+        <td>${escapeHtml(item.type || '')}</td>
+        <td>${escapeHtml(item.user_name || '')}</td>
+        <td>${escapeHtml(item.account_name || '')}</td>
+        <td>${escapeHtml(item.direction || '')}</td>
+        <td>${money(item.amount || 0)}</td>
+        <td>${escapeHtml(item.description || '')}</td>
+        <td>${item.has_proof_image ? `<img src="${api}?action=image&type=proof&tx_id=${item.transaction_id}" class="h-10 w-10 rounded object-cover border" alt="" />` : (escapeHtml(item.proof_name || ''))}</td>
+      </tr>
+    `);
+    return calcHtml + renderTable(['Date', 'Type', 'User', 'Account', 'Direction', 'Amount', 'Description', 'Proof'], rows);
+  }
+
+  function renderInterestDetail(data) {
+    const rows = (data.items || []).map(item => `
+      <tr>
+        <td>${escapeHtml(item.tx_date || '')}</td>
+        <td>${escapeHtml(item.user_name || '')}</td>
+        <td>${item.loan_id ? '#LN-' + escapeHtml(item.loan_id) : ''}</td>
+        <td>${escapeHtml(item.account_name || '')}</td>
+        <td>${money(item.amount || 0)}</td>
+        <td>${escapeHtml(item.description || '')}</td>
+        <td>${item.has_proof_image ? `<img src="${api}?action=image&type=proof&tx_id=${item.transaction_id}" class="h-10 w-10 rounded object-cover border" alt="" />` : (escapeHtml(item.proof_name || ''))}</td>
+      </tr>
+    `);
+    return renderTable(['Date', 'User', 'Loan', 'Account', 'Amount', 'Description', 'Proof'], rows);
+  }
+
+  function renderExpensesDetail(data) {
+    const rows = (data.items || []).map(item => `
+      <tr>
+        <td>${escapeHtml(item.tx_date || '')}</td>
+        <td>${escapeHtml(item.account_name || '')}</td>
+        <td>${money(item.amount || 0)}</td>
+        <td>${escapeHtml(item.description || '')}</td>
+        <td>${escapeHtml(item.created_by_name || '')}</td>
+        <td>${item.has_proof_image ? `<img src="${api}?action=image&type=proof&tx_id=${item.transaction_id}" class="h-10 w-10 rounded object-cover border" alt="" />` : (escapeHtml(item.proof_name || ''))}</td>
+      </tr>
+    `);
+    return renderTable(['Date', 'Account', 'Amount', 'Description', 'Created By', 'Proof'], rows);
+  }
+
+  function renderLoansDetail(data) {
+    const rows = (data.items || []).map(item => `
+      <tr>
+        <td>${item.loan_id ? '#LN-' + escapeHtml(item.loan_id) : ''}</td>
+        <td>${escapeHtml(item.borrower_name || '')}</td>
+        <td>${escapeHtml(item.borrower_phone || '')}</td>
+        <td>${money(item.principal || 0)}</td>
+        <td>${money(item.unpaid_principal || 0)}</td>
+        <td>${escapeHtml(item.monthly_interest_rate || '')}</td>
+        <td>${escapeHtml(item.interest_method || '')}</td>
+        <td>${escapeHtml(item.status || '')}</td>
+        <td>${escapeHtml(item.start_date || '')}</td>
+        <td>${escapeHtml(item.end_date || '')}</td>
+      </tr>
+    `);
+    return renderTable(['Loan', 'Borrower', 'Phone', 'Principal', 'Unpaid', 'Rate', 'Method', 'Status', 'Start Date', 'End Date'], rows);
+  }
+
+  function renderRequestedLoansDetail(data) {
+    const rows = (data.items || []).map(item => `
+      <tr>
+        <td>${item.loan_id ? '#LN-' + escapeHtml(item.loan_id) : ''}</td>
+        <td>${escapeHtml(item.borrower_name || '')}</td>
+        <td>${escapeHtml(item.borrower_phone || '')}</td>
+        <td>${money(item.principal || 0)}</td>
+        <td>${escapeHtml(item.monthly_interest_rate || '')}</td>
+        <td>${escapeHtml(item.interest_method || '')}</td>
+        <td>${escapeHtml(item.status || '')}</td>
+        <td>${escapeHtml(item.created_at || '')}</td>
+      </tr>
+    `);
+    return renderTable(['Loan', 'Borrower', 'Phone', 'Principal', 'Rate', 'Method', 'Status', 'Created At'], rows);
+  }
+
+  function renderAssetsDetail(data) {
+    const rows = (data.items || []).map(item => `
+      <tr>
+        <td>${item.asset_id ? '#AS-' + escapeHtml(item.asset_id) : ''}</td>
+        <td>${escapeHtml(item.name || '')}</td>
+        <td>${escapeHtml(item.purchase_date || '')}</td>
+        <td>${money(item.purchase_value || 0)}</td>
+        <td>${escapeHtml(item.location || '')}</td>
+        <td>${escapeHtml(item.holders_count || 0)}</td>
+        <td>${item.sold_value === null || item.sold_value === '' ? '' : money(item.sold_value)}</td>
+      </tr>
+    `);
+    return renderTable(['Asset', 'Name', 'Purchase Date', 'Purchase Value', 'Location', 'Holders', 'Sold Value'], rows);
+  }
+
+  function renderGuarantorsDetail(data) {
+    const rows = (data.items || []).map(item => `
+      <tr>
+        <td>${escapeHtml(item.names || '')}</td>
+        <td>${escapeHtml(item.phone1 || '')}</td>
+        <td>${money(item.total_guaranteed || 0)}</td>
+        <td>${escapeHtml(item.active_loans || 0)}</td>
+      </tr>
+    `);
+    return renderTable(['Names', 'Phone', 'Guaranteed Amount', 'Active Loans'], rows);
+  }
+
+  function renderDetailBody(type, data) {
+    switch (type) {
+      case 'members': return renderMembersDetail(data);
+      case 'cash': return renderCashDetail(data);
+      case 'interest': return renderInterestDetail(data);
+      case 'expenses': return renderExpensesDetail(data);
+      case 'loans': return renderLoansDetail(data);
+      case 'requested_loans': return renderRequestedLoansDetail(data);
+      case 'assets': return renderAssetsDetail(data);
+      case 'guarantors': return renderGuarantorsDetail(data);
+      default: return `<div class="text-sm text-slate-500">No detail renderer found.</div>`;
+    }
+  }
+
+  async function loadDetail(type) {
+    currentDetailType = type;
+    detailBody.innerHTML = `<div class="text-sm text-slate-500">Loading...</div>`;
+    detailTitle.textContent = 'Overview Details';
+    detailSubtitle.textContent = '';
+    openDetailModal();
+
+    try {
+      const res = await fetch(`${api}?action=detail&type=${encodeURIComponent(type)}`, {
+        cache: 'no-store',
+        credentials: 'include'
+      });
+      const json = await res.json();
+
+      if (!json.success) {
+        detailBody.innerHTML = `<div class="text-sm text-red-600">${escapeHtml(json.message || 'Failed')}</div>`;
+        return;
+      }
+
+      detailTitle.textContent = json.title || 'Overview Details';
+      detailSubtitle.textContent = json.subtitle || '';
+      detailBody.innerHTML = renderDetailBody(type, json.data || {});
+    } catch (e) {
+      console.error(e);
+      detailBody.innerHTML = `<div class="text-sm text-red-600">Failed to load details.</div>`;
+    }
+  }
+
+  function renderPortfolioChart(chartData) {
+    const chartEl = el('portfolioChart');
+    if (!chartEl || !window.Chart) return;
+
+    portfolioChartInstance = destroyChart(portfolioChartInstance);
+
+    portfolioChartInstance = new Chart(chartEl, {
+      type: 'line',
+      data: {
+        labels: chartData.labels || [],
+        datasets: [
+          { label: 'Contributions', data: chartData.contributions || [], borderColor: '#2F6B4F', backgroundColor: 'rgba(47,107,79,.10)', tension: 0.35, borderWidth: 2, fill: false },
+          { label: 'Active Loans',  data: chartData.loans || [],         borderColor: '#E89C2C', backgroundColor: 'rgba(232,156,44,.08)', tension: 0.35, borderWidth: 2, fill: false },
+          { label: 'Assets',        data: chartData.assets || [],        borderColor: '#6B4A2D', backgroundColor: 'rgba(107,74,45,.08)', tension: 0.35, borderWidth: 2, fill: false },
+          { label: 'Interest',      data: chartData.interest || [],      borderColor: '#7C3AED', backgroundColor: 'rgba(124,58,237,.08)', tension: 0.35, borderWidth: 2, fill: false },
+          { label: 'Expenses',      data: chartData.expenses || [],      borderColor: '#DC2626', backgroundColor: 'rgba(220,38,38,.06)', tension: 0.35, borderWidth: 2, fill: false }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } },
+          tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${money(ctx.parsed.y || 0)}` } }
+        },
+        scales: {
+          y: { ticks: { callback: (v) => money(v) }, grid: { color: 'rgba(148,163,184,.2)' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  function renderIncomeExpenseChart(chartData) {
+    const chartEl = el('incomeExpenseChart');
+    if (!chartEl || !window.Chart) return;
+
+    incomeExpenseChartInstance = destroyChart(incomeExpenseChartInstance);
+
+    incomeExpenseChartInstance = new Chart(chartEl, {
+      type: 'bar',
+      data: {
+        labels: chartData.labels || [],
+        datasets: [
+          { label: 'Income', data: chartData.income || [], backgroundColor: 'rgba(47,107,79,.75)', borderColor: '#2F6B4F', borderWidth: 1 },
+          { label: 'Expenses', data: chartData.expenses || [], backgroundColor: 'rgba(220,38,38,.70)', borderColor: '#DC2626', borderWidth: 1 }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${money(ctx.parsed.y || 0)}` } }
+        },
+        scales: {
+          y: { ticks: { callback: (v) => money(v) }, grid: { color: 'rgba(148,163,184,.2)' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  function renderLoanStatusChart(chartData) {
+    const chartEl = el('loanStatusChart');
+    if (!chartEl || !window.Chart) return;
+
+    loanStatusChartInstance = destroyChart(loanStatusChartInstance);
+
+    loanStatusChartInstance = new Chart(chartEl, {
+      type: 'doughnut',
+      data: {
+        labels: chartData.labels || [],
+        datasets: [{
+          data: chartData.values || [],
+          backgroundColor: ['#F59E0B', '#10B981', '#64748B', '#DC2626', '#7C3AED'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${num(ctx.parsed || 0)}` } }
+        }
+      }
+    });
+  }
+
+  async function loadOverview() {
+    try {
+      const res = await fetch(api, { cache: 'no-store', credentials: 'include' });
+      const json = await res.json();
+
+      if (!json.success) {
+        console.error('overview', json.message);
+        return;
+      }
+
+      const s = json.stats || {};
+
+      setText('ov-members', num(s.total_members || 0));
+      setText('ov-accounts-balance', money(s.total_cash || 0));
+      setText('ov-interest', money(s.total_interest || 0));
+      setText('ov-expenses', money(s.total_expenses || 0));
+      setText('ov-loans-issued', money(s.total_loans_issued || 0));
+      setText('ov-loans-requested', num(s.requested_loans || 0));
+      setText('ov-assets-value', money(s.total_assets_value || 0));
+      setText('ov-guarantors', num(s.total_guarantors || 0));
+
+      const totalPortfolio =
+        Number(s.total_cash || 0) +
+        Number(s.total_loans_issued || 0) +
+        Number(s.total_assets_value || 0);
+
+      setText('ov-ratio-cash-assets', pct(safeDivide(s.total_cash || 0, s.total_assets_value || 0)));
+      setText('ov-ratio-loans-portfolio', pct(safeDivide(s.total_loans_issued || 0, totalPortfolio)));
+      setText('ov-ratio-expense-income', pct(safeDivide(s.total_expenses || 0, s.total_income || 0)));
+      setText('ov-ratio-interest-yield', pct(safeDivide(s.total_interest || 0, s.total_loans_issued || 0)));
+
+      renderRecentActivity(json.recent_activity || []);
+      renderPortfolioChart(json.portfolio_chart || {});
+      renderIncomeExpenseChart(json.income_expense_chart || {});
+      renderLoanStatusChart(json.loan_status_chart || {});
+    } catch (e) {
+      console.error('loadOverview', e);
+    }
+  }
+
+  document.querySelectorAll('.overview-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const type = card.getAttribute('data-overview-detail');
+      if (type) loadDetail(type);
+    });
+  });
+
+  detailClose?.addEventListener('click', closeDetailModal);
+  detailModal?.addEventListener('click', (e) => {
+    if (e.target === detailModal) closeDetailModal();
+  });
+
+  detailPdf?.addEventListener('click', () => {
+    if (!currentDetailType) return;
+    window.open(`${api}?action=report&type=${encodeURIComponent(currentDetailType)}&format=pdf`, '_blank');
+  });
+
+  detailExcel?.addEventListener('click', () => {
+    if (!currentDetailType) return;
+    window.open(`${api}?action=report&type=${encodeURIComponent(currentDetailType)}&format=excel`, '_blank');
+  });
+
+  el('btn-download-portfolio-chart')?.addEventListener('click', () => downloadChart('portfolioChart', 'portfolio_chart.png'));
+  el('btn-download-income-expense-chart')?.addEventListener('click', () => downloadChart('incomeExpenseChart', 'income_expense_chart.png'));
+  el('btn-download-loan-status-chart')?.addEventListener('click', () => downloadChart('loanStatusChart', 'loan_status_chart.png'));
+
+  loadOverview();
+  document.querySelector('[data-section="overview"]')?.addEventListener('click', loadOverview);
+})();
 
   // Assets management JS with holders
   (function () {
