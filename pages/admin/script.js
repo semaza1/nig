@@ -1,361 +1,594 @@
 
-    // Global user management functions (available from any tab)
-    const apiUrl = 'users_api.php';
-    const viewModal = document.getElementById('user-view-modal');
-    const viewModalClose = document.getElementById('view-modal-close');
-    const viewClose = document.getElementById('view-close');
-    let globalEscapeHtml = (s) => {
-    if (s === null || s === undefined) return '';
-    const str = String(s);
-    return str.replace(/[&<>'"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
-    };
+    // ══════════════════════════════════════════════════════════════════
+//  USERS  –  complete script (global helpers + view modal + CRUD)
+//  Drop this in as a full replacement for the existing script block.
+// ══════════════════════════════════════════════════════════════════
 
-    let openViewModal = () => { viewModal.classList.remove('hidden'); viewModal.classList.add('flex'); };
-    let closeViewModal = () => { viewModal.classList.add('hidden'); viewModal.classList.remove('flex'); };
+/* ─────────────────────────────────────────────────────────────
+   Global helpers (used by other tabs too via window.*)
+───────────────────────────────────────────────────────────── */
+const apiUrl = 'users_api.php';
 
-    let viewUserDetails = async (id) => {
-    try{
-        const res = await fetch(`${apiUrl}?id=${encodeURIComponent(id)}`, {cache:'no-store'});
-        if (!res.ok) {
-        const text = await res.text();
-        console.error('View fetch error status', res.status, text);
-        alert('Error fetching user details: ' + res.status);
-        return;
-        }
-        const json = await res.json();
-        if(json.success && json.data){
-        const d = json.data;
-        const out = document.getElementById('user-details');
-        out.innerHTML = `
-            <div><strong>ID:</strong> ${globalEscapeHtml(d.id)}</div>
-            <div><strong>Amazina:</strong> ${globalEscapeHtml(d.names)}</div>
-            <div><strong>NID/Passport:</strong> ${globalEscapeHtml(d.nid_passport)}</div>
-            <div><strong>Email:</strong> ${globalEscapeHtml(d.email)}</div>
-            <div><strong>Telefoni 1:</strong> ${globalEscapeHtml(d.phone1)}</div>
-            <div><strong>Telefoni 2:</strong> ${globalEscapeHtml(d.phone2 || '')}</div>
-            <div><strong>Umwishingira:</strong> ${globalEscapeHtml(d.guarantee_name || '')}</div>
-            <div><strong>G. NID:</strong> ${globalEscapeHtml(d.guarantee_nid_passport || '')}</div>
-            <div><strong>G. Email:</strong> ${globalEscapeHtml(d.guarantee_email || '')}</div>
-            <div><strong>G. Phone1:</strong> ${globalEscapeHtml(d.guarantee_phone1 || '')}</div>
-            <div><strong>G. Phone2:</strong> ${globalEscapeHtml(d.guarantee_phone2 || '')}</div>
-            <div><strong>Is Member:</strong> ${d.is_member ? 'Yes' : 'No'}</div>
-            <div><strong>Is Admin:</strong> ${d.is_admin ? 'Yes' : 'No'}</div>
-        `;
-        openViewModal();
-        } else {
-        console.error('View response', json);
-        alert(json.message || 'No details available');
-        }
-    }catch(err){ console.error('View error', err); alert('Network error'); }
-    };
+const globalEscapeHtml = (s) => {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>'"]/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])
+  );
+};
+window.globalEscapeHtml = globalEscapeHtml;
 
-    // Global event delegation: handle Reba clicks from any table (works across all tabs)
-    document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('btn-view')) {
-        const id = e.target.dataset.id;
-        viewUserDetails(id);
-    }
+const _money  = (v) => Number(v || 0).toLocaleString('rw-RW') + ' Frw';
+const _orDash = (v) =>
+  (v !== null && v !== undefined && String(v).trim() !== '')
+    ? globalEscapeHtml(v)
+    : '<span class="text-slate-300">—</span>';
+
+const _pill = (s) => {
+  const map = {
+    approved : 'spill spill-green',
+    closed   : 'spill spill-slate',
+    defaulted: 'spill spill-red',
+    requested: 'spill spill-amber',
+    rejected : 'spill spill-red',
+    accepted : 'spill spill-green',
+    pending  : 'spill spill-amber',
+  };
+  const cls = map[(s || '').toLowerCase()] || 'spill spill-slate';
+  return `<span class="${cls}">${globalEscapeHtml(s)}</span>`;
+};
+
+/* ─────────────────────────────────────────────────────────────
+   Tab switching (sidebar navigation)
+───────────────────────────────────────────────────────────── */
+const menu = document.getElementById('admin-menu');
+const sections = [
+  'overview','members','users','loans','accounts','shares',
+  'payments','expenses','transactions','assets','notifications','reports','settings',
+];
+const titles = {
+  overview    : "Isuzuma rusange ry'Ikimina",
+  members     : "Urutonde n'imicungire y'abanyamuryango",
+  users       : "Imicungire y'abakoresha (Create / Edit / Delete)",
+  accounts    : "Amafaranga (Accounts) - Imicungire y'ama konti",
+  loans       : "Inguzanyo zose z'Ikimina",
+  shares      : "Imigabane n'inyungu zayo",
+  payments    : "Kwishyura kw'inguzanyo",
+  expenses    : "Expenses z'Ikimina",
+  transactions: "Transactions - Izafari z'amafaranga",
+  assets      : "Imutungo (Assets) y'Ikimina",
+  notifications:"Notifications (Ubutumwa bwo kumenyesha)",
+  reports     : "Raporo z'ingenzi z'Ikimina",
+  settings    : "Igenamiterere (Settings) z'Ikimina",
+};
+
+menu.querySelectorAll('button[data-section]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const key = btn.getAttribute('data-section');
+    menu.querySelectorAll('button[data-section]').forEach(b => b.classList.remove('sidebar-link-active'));
+    btn.classList.add('sidebar-link-active');
+    sections.forEach(s => {
+      const el = document.getElementById(`section-${s}`);
+      if (el) el.classList.toggle('hidden', s !== key);
     });
+    const titleEl = document.getElementById('section-title');
+    if (titleEl && titles[key]) titleEl.textContent = titles[key];
+  });
+});
 
-    // View modal close handlers
-    viewModalClose.addEventListener('click', closeViewModal);
-    viewClose.addEventListener('click', closeViewModal);
-    viewModal.addEventListener('click', (e) => { if (e.target === viewModal) closeViewModal(); });
+/* ─────────────────────────────────────────────────────────────
+   USER VIEW MODAL  –  tabbed full profile
+───────────────────────────────────────────────────────────── */
+(function () {
+  const uvModal = document.getElementById('user-view-modal');
+  const openUVM  = () => { uvModal.classList.remove('hidden'); uvModal.classList.add('flex'); };
+  const closeUVM = () => { uvModal.classList.add('hidden');    uvModal.classList.remove('flex'); };
 
-    // Simple tab switching for admin sections
-    const menu = document.getElementById("admin-menu");
-    const sections = [
-    "overview",
-    "members",
-    "users",
-    "loans",
-    "accounts",
-    "shares",
-    "payments",
-    "expenses",
-    "transactions",
-    "assets",
-    "notifications",
-    "reports",
-    "settings",
-    ];
-    const titles = {
-    overview: "Isuzuma rusange ry'Ikimina",
-    members: "Urutonde n'imicungire y'abanyamuryango",
-    users: "Imicungire y'abakoresha (Create / Edit / Delete)",
-    accounts: "Amafaranga (Accounts) - Imicungire y'ama konti",
-    loans: "Inguzanyo zose z'Ikimina",
-    shares: "Imigabane n'inyungu zayo",
-    payments: "Kwishyura kw'inguzanyo",
-    expenses: "Expenses z'Ikimina",
-    transactions: "Transactions - Izafari z'amafaranga",
-    assets: "Imutungo (Assets) y'Ikimina",
-    notifications: "Notifications (Ubutumwa bwo kumenyesha)",
-    reports: "Raporo z'ingenzi z'Ikimina",
-    settings: "Igenamiterere (Settings) z'Ikimina",
-    };
+  document.getElementById('view-modal-close').addEventListener('click', closeUVM);
+  document.getElementById('view-close').addEventListener('click', closeUVM);
+  uvModal.addEventListener('click', e => { if (e.target === uvModal) closeUVM(); });
 
-    menu.querySelectorAll("button[data-section]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-        const key = btn.getAttribute("data-section");
+  /* Tab switching inside view modal */
+  uvModal.querySelectorAll('.uvm-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      uvModal.querySelectorAll('.uvm-tab').forEach(b => b.classList.remove('uvm-tab-active'));
+      uvModal.querySelectorAll('.uvm-panel').forEach(p => p.classList.add('hidden'));
+      btn.classList.add('uvm-tab-active');
+      const panel = document.getElementById('uvm-tab-' + btn.dataset.tab);
+      if (panel) panel.classList.remove('hidden');
+    });
+  });
 
-        // active link style
-        menu.querySelectorAll("button[data-section]").forEach((b) => {
-        b.classList.remove("sidebar-link-active");
-        });
-        btn.classList.add("sidebar-link-active");
+  /* ── HTML helpers ─────────────────────────────────────── */
+  function setHTML(id, html) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  }
 
-        // toggle sections
-        sections.forEach((s) => {
-        const el = document.getElementById(`section-${s}`);
-        if (el) {
-            const hide = (s !== key);
-            el.classList.toggle("hidden", hide);
-            if(s === 'notifications'){
-            console.log('notification section visibility set to', !hide);
-            }
-        }
-        });
+  function buildTable(headers, rows, empty = 'Nta makuru abonetse') {
+    if (!rows.length) {
+      return `<p class="py-8 text-center text-sm text-slate-400">${empty}</p>`;
+    }
+    return `
+      <div class="uvm-tbl-wrap">
+        <table>
+          <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+          <tbody>${rows.join('')}</tbody>
+        </table>
+      </div>`;
+  }
 
-        const titleEl = document.getElementById("section-title");
-        if (titleEl && titles[key]) {
-        titleEl.textContent = titles[key];
-        }
-      
+  /* ── Fill: Profile tab ────────────────────────────────── */
+  function fillProfile(d) {
+    const initials = (d.names || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+    document.getElementById('uvm-avatar').textContent = initials;
+    document.getElementById('uvm-name').textContent   = d.names || '—';
+    document.getElementById('uvm-email').textContent  = d.email || '—';
+    document.getElementById('uvm-badge-member').classList.toggle('hidden', !d.is_member);
+    document.getElementById('uvm-badge-admin').classList.toggle('hidden',  !d.is_admin);
+
+    setHTML('p-names',  _orDash(d.names));
+    setHTML('p-nid',    _orDash(d.nid_passport));
+    setHTML('p-email',  _orDash(d.email));
+    setHTML('p-ph1',    _orDash(d.phone1));
+    setHTML('p-ph2',    _orDash(d.phone2));
+    setHTML('p-roles',
+      (d.is_member ? '<span class="spill spill-green">Member</span> ' : '') +
+      (d.is_admin  ? '<span class="spill spill-blue">Admin</span>'   : '')
+    );
+    setHTML('p-gname',  _orDash(d.guarantee_name));
+    setHTML('p-gnid',   _orDash(d.guarantee_nid_passport));
+    setHTML('p-gemail', _orDash(d.guarantee_email));
+    setHTML('p-gph1',   _orDash(d.guarantee_phone1));
+    setHTML('p-gph2',   _orDash(d.guarantee_phone2));
+  }
+
+  /* ── Fill: Transactions tab ───────────────────────────── */
+  function fillTransactions(items) {
+    setHTML('uvm-tx-count', `${items.length} record${items.length !== 1 ? 's' : ''}`);
+
+    const rows = items.map(t => `
+      <tr>
+        <td>${_orDash(t.tx_date)}</td>
+        <td><span class="spill spill-slate">${globalEscapeHtml(t.type)}</span></td>
+        <td><span class="${t.direction === 'IN' ? 'spill spill-green' : 'spill spill-red'}">
+              ${globalEscapeHtml(t.direction)}</span></td>
+        <td class="text-right font-semibold ${t.direction === 'IN' ? 'text-emerald-700' : 'text-rose-600'}">
+          ${t.direction === 'IN' ? '+' : '−'}${_money(t.amount)}</td>
+        <td>${_orDash(t.account_name)}</td>
+        <td>${t.loan_id ? `<span class="font-mono text-xs">#LN-${globalEscapeHtml(t.loan_id)}</span>` : _orDash(null)}</td>
+        <td class="max-w-[12rem] truncate">${_orDash(t.description)}</td>
+      </tr>`);
+
+    setHTML('uvm-tx-body', buildTable(
+      ['Date','Type','Dir','Amount','Account','Loan','Description'], rows
+    ));
+  }
+
+  /* ── Fill: Contributions tab ──────────────────────────── */
+  function fillContributions(items) {
+    const relevant = items.filter(t =>
+      (t.type === 'contribution' && t.direction === 'IN') ||
+      (t.type === 'withdrawal'   && t.direction === 'OUT')
+    );
+    const net =
+      relevant.filter(t => t.type === 'contribution').reduce((s, t) => s + Number(t.amount || 0), 0) -
+      relevant.filter(t => t.type === 'withdrawal').reduce((s, t) => s + Number(t.amount || 0), 0);
+
+    setHTML('uvm-contrib-total', 'Net: ' + _money(net));
+
+    const rows = relevant.map(t => `
+      <tr>
+        <td>${_orDash(t.tx_date)}</td>
+        <td><span class="spill spill-slate">${globalEscapeHtml(t.type)}</span></td>
+        <td><span class="${t.direction === 'IN' ? 'spill spill-green' : 'spill spill-red'}">
+              ${globalEscapeHtml(t.direction)}</span></td>
+        <td class="text-right font-semibold ${t.direction === 'IN' ? 'text-emerald-700' : 'text-rose-600'}">
+          ${t.direction === 'IN' ? '+' : '−'}${_money(t.amount)}</td>
+        <td class="max-w-[12rem] truncate">${_orDash(t.description)}</td>
+      </tr>`);
+
+    setHTML('uvm-contrib-body', buildTable(
+      ['Date','Type','Direction','Amount','Description'], rows,
+      'Nta contributions/withdrawals abonetse'
+    ));
+  }
+
+  /* ── Fill: Loans tab ──────────────────────────────────── */
+  function fillLoans(loans) {
+    setHTML('uvm-loans-count', `${loans.length} loan${loans.length !== 1 ? 's' : ''}`);
+
+    const rows = loans.map(l => `
+      <tr>
+        <td class="font-mono text-xs">#LN-${globalEscapeHtml(l.loan_id)}</td>
+        <td class="text-right font-semibold">${_money(l.principal)}</td>
+        <td class="text-right font-semibold text-rose-600">${_money(l.unpaid_principal)}</td>
+        <td>${_pill(l.status)}</td>
+        <td>${l.interest_rate != null ? globalEscapeHtml(l.interest_rate) + '%' : _orDash(null)}</td>
+        <td>${_orDash(l.start_date)}</td>
+        <td>${_orDash(l.end_date)}</td>
+      </tr>`);
+
+    setHTML('uvm-loans-body', buildTable(
+      ['Loan #','Principal','Unpaid','Status','Rate','Start','End'], rows,
+      'Nta loans abonetse'
+    ));
+  }
+
+  /* ── Fill: Guaranteed tab ─────────────────────────────── */
+  function fillGuaranteed(items) {
+    const total = items.reduce((s, g) => s + Number(g.guarantee_amount || 0), 0);
+    setHTML('uvm-guar-total', 'Total: ' + _money(total));
+
+    const rows = items.map(g => `
+      <tr>
+        <td class="font-mono text-xs">#LN-${globalEscapeHtml(g.loan_id)}</td>
+        <td>${_orDash(g.borrower_name)}</td>
+        <td class="text-right font-semibold">${_money(g.guarantee_amount)}</td>
+        <td class="text-right">${_money(g.loan_principal)}</td>
+        <td>${_pill(g.status)}</td>
+        <td>${_pill(g.loan_status)}</td>
+        <td>${_orDash(g.since)}</td>
+      </tr>`);
+
+    setHTML('uvm-guar-body', buildTable(
+      ['Loan #','Borrower','My Guarantee','Loan Principal','My Status','Loan Status','Since'],
+      rows, 'Ntacyo yishingiye'
+    ));
+  }
+
+  /* ── Fill: Assets tab ─────────────────────────────────── */
+  function fillAssets(items) {
+    const rows = items.map(a => `
+      <tr>
+        <td class="font-mono text-xs">#AS-${globalEscapeHtml(a.asset_id)}</td>
+        <td>${_orDash(a.name)}</td>
+        <td>${_orDash(a.purchase_date)}</td>
+        <td class="text-right font-semibold">${_money(a.purchase_value)}</td>
+        <td>${_orDash(a.location)}</td>
+        <td>${(a.sold_value !== null && a.sold_value !== '')
+              ? _money(a.sold_value)
+              : '<span class="spill spill-green">Active</span>'}</td>
+      </tr>`);
+
+    setHTML('uvm-assets-body', buildTable(
+      ['Asset #','Name','Purchase Date','Value','Location','Sold'], rows,
+      'Nta assets abonetse'
+    ));
+  }
+
+  /* ── Fill: Summary tab ────────────────────────────────── */
+  function fillSummary(transactions, loans, guaranteed) {
+    const sum   = (arr) => arr.reduce((s, t) => s + Number(t.amount || 0), 0);
+    const contribs    = transactions.filter(t => t.type === 'contribution'   && t.direction === 'IN');
+    const withdrawals = transactions.filter(t => t.type === 'withdrawal'     && t.direction === 'OUT');
+    const interest    = transactions.filter(t => t.type === 'loan_interest'  && t.direction === 'IN');
+    const princPaid   = transactions.filter(t => t.type === 'loan_principal' && t.direction === 'IN');
+    const allIn       = transactions.filter(t => t.direction === 'IN');
+    const allOut      = transactions.filter(t => t.direction === 'OUT');
+
+    const totalContrib   = sum(contribs);
+    const totalWithdraw  = sum(withdrawals);
+    const totalInterest  = sum(interest);
+    const totalPrincPaid = sum(princPaid);
+    const totalPrincipal = loans.reduce((s, l) => s + Number(l.principal || 0), 0);
+    const totalUnpaid    = loans.reduce((s, l) => s + Number(l.unpaid_principal || 0), 0);
+    const totalGuar      = guaranteed.reduce((s, g) => s + Number(g.guarantee_amount || 0), 0);
+    const activeLoans    = loans.filter(l => ['approved','defaulted'].includes(l.status));
+    const netVal         = (totalContrib + totalInterest) - (totalWithdraw + totalUnpaid + totalGuar);
+
+    setHTML('sum-contrib',        _money(totalContrib));
+    setHTML('sum-withdraw',       _money(totalWithdraw));
+    setHTML('sum-interest',       _money(totalInterest));
+    setHTML('sum-principal-paid', _money(totalPrincPaid));
+    setHTML('sum-active-loans',   activeLoans.length + ' loan' + (activeLoans.length !== 1 ? 's' : ''));
+    setHTML('sum-loan-principal', _money(totalPrincipal));
+    setHTML('sum-unpaid',         _money(totalUnpaid));
+    setHTML('sum-guaranteed',     _money(totalGuar));
+    setHTML('sum-tx-in',          _money(sum(allIn)));
+    setHTML('sum-tx-out',         _money(sum(allOut)));
+    setHTML('sum-tx-count',       transactions.length + ' total');
+    setHTML('sum-net',            _money(Math.max(0, netVal)));
+
+    // Recent 6
+    const recent = [...transactions]
+      .sort((a, b) => (b.tx_date || '').localeCompare(a.tx_date || ''))
+      .slice(0, 6);
+
+    setHTML('sum-recent', recent.length
+      ? recent.map(t => `
+          <div class="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="spill spill-slate">${globalEscapeHtml(t.type)}</span>
+              <span class="text-[11px] text-slate-400">${globalEscapeHtml(t.tx_date || '')}</span>
+              ${t.description
+                ? `<span class="hidden text-[11px] text-slate-400 sm:inline truncate max-w-[10rem]">${globalEscapeHtml(t.description)}</span>`
+                : ''}
+            </div>
+            <span class="text-xs font-bold ${t.direction === 'IN' ? 'text-emerald-700' : 'text-rose-600'}">
+              ${t.direction === 'IN' ? '+' : '−'}${_money(t.amount)}
+            </span>
+          </div>`).join('')
+      : '<p class="text-xs text-slate-400">Nta bikorwa biheruka</p>'
+    );
+  }
+
+  /* ── Main loader ──────────────────────────────────────── */
+  async function viewUserDetails(id) {
+    // Reset to Profile tab
+    uvModal.querySelectorAll('.uvm-tab').forEach(b => b.classList.remove('uvm-tab-active'));
+    uvModal.querySelectorAll('.uvm-panel').forEach(p => p.classList.add('hidden'));
+    const firstTab = uvModal.querySelector('.uvm-tab[data-tab="profile"]');
+    if (firstTab) firstTab.classList.add('uvm-tab-active');
+
+    // Clear header while loading
+    document.getElementById('uvm-avatar').textContent  = '…';
+    document.getElementById('uvm-name').textContent    = 'Loading…';
+    document.getElementById('uvm-email').textContent   = '';
+    document.getElementById('uvm-badge-member').classList.add('hidden');
+    document.getElementById('uvm-badge-admin').classList.add('hidden');
+
+    document.getElementById('uvm-loading').classList.remove('hidden');
+    document.getElementById('uvm-error').classList.add('hidden');
+    openUVM();
+
+    try {
+      const res  = await fetch(`${apiUrl}?id=${encodeURIComponent(id)}&full=1`, {
+        cache: 'no-store', credentials: 'include',
       });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const json = await res.json();
+
+      document.getElementById('uvm-loading').classList.add('hidden');
+
+      if (!json.success || !json.data) {
+        const errEl = document.getElementById('uvm-error');
+        errEl.textContent = json.message || 'Failed to load user data.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      const transactions = json.transactions || [];
+      const loans        = json.loans        || [];
+      const guaranteed   = json.guaranteed   || [];
+      const assets       = json.assets       || [];
+
+      // Show profile panel
+      const profilePanel = document.getElementById('uvm-tab-profile');
+      if (profilePanel) profilePanel.classList.remove('hidden');
+
+      fillProfile(json.data);
+      fillTransactions(transactions);
+      fillContributions(transactions);
+      fillLoans(loans);
+      fillGuaranteed(guaranteed);
+      fillAssets(assets);
+      fillSummary(transactions, loans, guaranteed);
+
+    } catch (err) {
+      console.error('[UVM]', err);
+      document.getElementById('uvm-loading').classList.add('hidden');
+      const errEl = document.getElementById('uvm-error');
+      errEl.textContent = 'Network error: ' + err.message;
+      errEl.classList.remove('hidden');
+    }
+  }
+
+  // Expose so CRUD table's event delegation can call it
+  window.viewUserDetails = viewUserDetails;
+
+  // Global delegation: any .btn-view anywhere on page
+  document.addEventListener('click', e => {
+    if (e.target.classList.contains('btn-view')) {
+      viewUserDetails(e.target.dataset.id);
+    }
+  });
+})();
+
+/* ─────────────────────────────────────────────────────────────
+   USERS CRUD TABLE
+───────────────────────────────────────────────────────────── */
+(function () {
+  const form       = document.getElementById('user-form');
+  const tbody      = document.getElementById('users-tbody');
+  const btnNew     = document.getElementById('btn-new-user');
+  const btnRefresh = document.getElementById('btn-refresh-users');
+  const saveBtn    = document.getElementById('user-save');
+  const modal      = document.getElementById('user-modal');
+  const modalTitle = document.getElementById('modal-title');
+  const modalClose = document.getElementById('modal-close');
+
+  let currentPage  = 1;
+  let perPage      = 10;
+  let currentQuery = '';
+  let lastTotal    = 0;
+
+  const esc = globalEscapeHtml;
+  function openModal()  { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+  function closeModal() { modal.classList.add('hidden');    modal.classList.remove('flex'); }
+
+  async function fetchUsers(page = currentPage, q = currentQuery) {
+    try {
+      const url  = `${apiUrl}?page=${page}&per_page=${perPage}` + (q ? `&q=${encodeURIComponent(q)}` : '');
+      const res  = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) {
+        if (res.status === 403) { alert('Unauthorized. Please log in as admin.'); return; }
+        alert('Error loading users: ' + res.status); return;
+      }
+      const json = await res.json();
+      if (json.success) {
+        currentPage = json.page     || page;
+        perPage     = json.per_page || perPage;
+        lastTotal   = json.total    || 0;
+        renderTable(json.data || []);
+        updatePagination();
+      } else {
+        alert(json.message || 'Error loading users');
+      }
+    } catch (e) { console.error(e); alert('Network error'); }
+  }
+
+  function renderTable(users) {
+    tbody.innerHTML = '';
+    users.forEach((u, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${(currentPage - 1) * perPage + idx + 1}</td>
+        <td class="font-medium">${esc(u.names)}</td>
+        <td>${esc(u.email || '')}</td>
+        <td>${esc(u.phone1 || '')}</td>
+        <td>${u.is_member ? '<span class="spill spill-green">Yes</span>' : '<span class="spill spill-slate">No</span>'}</td>
+        <td>${u.is_admin  ? '<span class="spill spill-blue">Yes</span>'  : '<span class="spill spill-slate">No</span>'}</td>
+        <td class="flex flex-wrap gap-1">
+          <button class="btn-ghost btn-view"         data-id="${u.id}">👁 Reba</button>
+          <button class="btn-ghost btn-edit"         data-id="${u.id}">✏ Hindura</button>
+          <button class="btn-ghost-danger btn-delete"data-id="${u.id}">🗑 Siba</button>
+        </td>`;
+      tbody.appendChild(tr);
     });
-    // Users management JS
-    (function () {
-    const form = document.getElementById('user-form');
-    const tbody = document.getElementById('users-tbody');
-    const btnNew = document.getElementById('btn-new-user');
-    const btnRefresh = document.getElementById('btn-refresh-users');
-    const saveBtn = document.getElementById('user-save');
-    const modal = document.getElementById('user-modal');
-    const modalTitle = document.getElementById('modal-title');
-    const modalClose = document.getElementById('modal-close');
+    tbody.querySelectorAll('.btn-edit').forEach(b   => b.addEventListener('click', onEdit));
+    tbody.querySelectorAll('.btn-delete').forEach(b => b.addEventListener('click', onDelete));
+  }
 
-    let currentPage = 1;
-    let perPage = 10;
-    let currentQuery = '';
-    let lastTotal = 0;
+  function updatePagination() {
+    const totalPages = Math.max(1, Math.ceil(lastTotal / perPage));
+    document.getElementById('users-page').textContent = `${currentPage} / ${totalPages}`;
+    document.getElementById('users-prev').disabled    = currentPage <= 1;
+    document.getElementById('users-next').disabled    = currentPage >= totalPages;
+  }
 
-    // Use escapeHtml from global scope
-    function escapeHtml(s){
-        return globalEscapeHtml(s);
-    }
+  function clearForm() {
+    form.reset();
+    document.getElementById('user-id').value = '';
+    saveBtn.textContent    = 'Bika';
+    modalTitle.textContent = 'Umunyamukoresha Mushya';
+    document.getElementById('has-phone2').checked           = false;
+    document.getElementById('phone2-section').classList.add('hidden');
+    document.getElementById('has-guarantor').checked        = false;
+    document.getElementById('guarantor-section').classList.add('hidden');
+    document.getElementById('has-guarantee-phone2').checked = false;
+    document.getElementById('guarantee-phone2-section').classList.add('hidden');
+  }
 
-    function openModal(){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
-    function closeModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
+  function fillForm(u) {
+    document.getElementById('user-id').value               = u.id;
+    document.getElementById('user-names').value            = u.names            || '';
+    document.getElementById('user-nid').value              = u.nid_passport     || '';
+    document.getElementById('user-email').value            = u.email            || '';
+    document.getElementById('user-phone1').value           = u.phone1           || '';
+    document.getElementById('user-password').value         = '';
+    document.getElementById('user-is-member').checked      = !!u.is_member;
+    document.getElementById('user-is-admin').checked       = !!u.is_admin;
 
-    async function fetchUsers(page = currentPage, q = currentQuery){
-        try{
-        const url = `${apiUrl}?page=${page}&per_page=${perPage}` + (q ? `&q=${encodeURIComponent(q)}` : '');
-        const res = await fetch(url, {cache: 'no-store'});
-        if (!res.ok) {
-            if (res.status === 403) {
-            alert('Unauthorized. Please log in as admin.');
-            return;
-            }
-            const txt = await res.text();
-            console.error('fetchUsers error', res.status, txt);
-            alert('Error loading users: ' + res.status);
-            return;
-        }
-        const json = await res.json();
-        if(json.success){
-            currentPage = json.page || page;
-            perPage = json.per_page || perPage;
-            lastTotal = json.total || 0;
-            renderUsersTable(json.data || []);
-            updatePagination();
-        } else {
-            alert(json.message || 'Error loading users');
-        }
-        }catch(e){ console.error(e); alert('Network error'); }
-    }
+    const hasPhone2 = !!(u.phone2 && u.phone2.trim());
+    document.getElementById('has-phone2').checked          = hasPhone2;
+    document.getElementById('phone2-section').classList.toggle('hidden', !hasPhone2);
+    document.getElementById('user-phone2').value           = u.phone2           || '';
 
-    function renderUsersTable(users){
-        tbody.innerHTML = '';
-        users.forEach(u => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${tbody.children.length + 1}</td>
-            <td>${escapeHtml(u.names)}</td>
-            <td>${escapeHtml(u.email)}</td>
-            <td>${escapeHtml(u.phone1 || '')}</td>
-            <td>${u.is_member ? 'Yes' : 'No'}</td>
-            <td>${u.is_admin ? 'Yes' : 'No'}</td>
-            <td>
-            <button class="btn-ghost btn-view" data-id="${u.id}">Reba</button>
-            <button class="btn-ghost btn-edit" data-id="${u.id}">Hindura</button>
-            <button class="btn-ghost-danger btn-delete" data-id="${u.id}">Siba</button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-        });
-        // attach handlers for edit and delete only (view is handled globally via event delegation)
-        tbody.querySelectorAll('.btn-edit').forEach(b=>b.addEventListener('click', onEdit));
-        tbody.querySelectorAll('.btn-delete').forEach(b=>b.addEventListener('click', onDelete));
-    }
+    const hasGuarantor = !!(u.guarantee_name && u.guarantee_name.trim());
+    document.getElementById('has-guarantor').checked       = hasGuarantor;
+    document.getElementById('guarantor-section').classList.toggle('hidden', !hasGuarantor);
+    document.getElementById('user-guarantee-name').value   = u.guarantee_name           || '';
+    document.getElementById('user-guarantee-nid').value    = u.guarantee_nid_passport   || '';
+    document.getElementById('user-guarantee-email').value  = u.guarantee_email          || '';
+    document.getElementById('user-guarantee-phone1').value = u.guarantee_phone1         || '';
 
-    function updatePagination(){
-        const pageEl = document.getElementById('users-page');
-        const prev = document.getElementById('users-prev');
-        const next = document.getElementById('users-next');
-        const totalPages = Math.max(1, Math.ceil(lastTotal / perPage));
-        pageEl.textContent = `${currentPage} / ${totalPages}`;
-        prev.disabled = currentPage <= 1;
-        next.disabled = currentPage >= totalPages;
-    }
+    const hasGPh2 = !!(u.guarantee_phone2 && u.guarantee_phone2.trim());
+    document.getElementById('has-guarantee-phone2').checked  = hasGPh2;
+    document.getElementById('guarantee-phone2-section').classList.toggle('hidden', !hasGPh2);
+    document.getElementById('user-guarantee-phone2').value   = u.guarantee_phone2       || '';
 
-    function clearForm(){
-        form.reset();
-        document.getElementById('user-id').value = '';
-        saveBtn.textContent = 'Bika';
-        modalTitle.textContent = 'Umunyamukoresha Mushya';
-        // Reset conditional sections
-        document.getElementById('has-phone2').checked = false;
-        document.getElementById('phone2-section').classList.add('hidden');
-        document.getElementById('has-guarantor').checked = false;
-        document.getElementById('guarantor-section').classList.add('hidden');
-        document.getElementById('has-guarantee-phone2').checked = false;
-        document.getElementById('guarantee-phone2-section').classList.add('hidden');
-    }
+    saveBtn.textContent    = 'Hindura';
+    modalTitle.textContent = 'Guhindura Umukoresha';
+    openModal();
+  }
 
-    function fillForm(u){
-        document.getElementById('user-id').value = u.id;
-        document.getElementById('user-names').value = u.names || '';
-        document.getElementById('user-nid').value = u.nid_passport || '';
-        document.getElementById('user-email').value = u.email || '';
-        document.getElementById('user-phone1').value = u.phone1 || '';
-        document.getElementById('user-password').value = '';
-        document.getElementById('user-is-member').checked = !!u.is_member;
-        document.getElementById('user-is-admin').checked = !!u.is_admin;
+  async function onEdit(e) {
+    const id = e.currentTarget.dataset.id;
+    try {
+      const res  = await fetch(`${apiUrl}?id=${encodeURIComponent(id)}`, { cache: 'no-store' });
+      const json = await res.json();
+      if (json.success && json.data) fillForm(json.data);
+    } catch (err) { console.error(err); }
+  }
 
-        // Handle phone2
-        const hasPhone2 = u.phone2 && u.phone2.trim() !== '';
-        document.getElementById('has-phone2').checked = hasPhone2;
-        document.getElementById('phone2-section').classList.toggle('hidden', !hasPhone2);
-        document.getElementById('user-phone2').value = u.phone2 || '';
+  async function onDelete(e) {
+    const id = e.currentTarget.dataset.id;
+    if (!confirm('Urashaka koko gusiba uyu mukoresha?')) return;
+    const fd = new FormData();
+    fd.append('action', 'delete');
+    fd.append('id', id);
+    try {
+      const res  = await fetch(apiUrl, { method: 'POST', body: fd });
+      const json = await res.json();
+      if (json.success) fetchUsers(1);
+      else alert(json.message || 'Error deleting');
+    } catch (err) { console.error(err); alert('Network error'); }
+  }
 
-        // Handle guarantor
-        const hasGuarantor = u.guarantee_name && u.guarantee_name.trim() !== '';
-        document.getElementById('has-guarantor').checked = hasGuarantor;
-        document.getElementById('guarantor-section').classList.toggle('hidden', !hasGuarantor);
-        document.getElementById('user-guarantee-name').value = u.guarantee_name || '';
-        document.getElementById('user-guarantee-nid').value = u.guarantee_nid_passport || '';
-        document.getElementById('user-guarantee-email').value = u.guarantee_email || '';
-        document.getElementById('user-guarantee-phone1').value = u.guarantee_phone1 || '';
+  form.addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const id     = document.getElementById('user-id').value;
+    const fd     = new FormData(form);
+    fd.append('action', id ? 'update' : 'create');
+    try {
+      const res  = await fetch(apiUrl, { method: 'POST', body: fd });
+      const json = await res.json();
+      if (json.success) { fetchUsers(1); clearForm(); closeModal(); }
+      else alert(json.message || 'Error saving user');
+    } catch (e) { console.error(e); alert('Network error'); }
+  });
 
-        // Handle guarantee phone2
-        const hasGuaranteePhone2 = u.guarantee_phone2 && u.guarantee_phone2.trim() !== '';
-        document.getElementById('has-guarantee-phone2').checked = hasGuaranteePhone2;
-        document.getElementById('guarantee-phone2-section').classList.toggle('hidden', !hasGuaranteePhone2);
-        document.getElementById('user-guarantee-phone2').value = u.guarantee_phone2 || '';
+  btnNew.addEventListener('click', () => { clearForm(); openModal(); document.getElementById('user-names').focus(); });
+  btnRefresh.addEventListener('click', () => fetchUsers(1));
+  document.getElementById('user-cancel').addEventListener('click', closeModal);
+  modalClose.addEventListener('click', closeModal);
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
-        saveBtn.textContent = 'Hindura';
-        modalTitle.textContent = 'Guhindura Umukoresha';
-        openModal();
-    }
+  saveBtn.addEventListener('click', () => {
+    if (typeof form.requestSubmit === 'function') form.requestSubmit();
+    else form.submit();
+  });
 
-    async function onEdit(e){
-        const id = e.currentTarget.dataset.id;
-        try{
-        const res = await fetch(`${apiUrl}?id=${encodeURIComponent(id)}`, {cache:'no-store'});
-        const json = await res.json();
-        if(json.success && json.data){ fillForm(json.data); }
-        }catch(e){console.error(e);}
-    }
+  // Conditional toggles
+  document.getElementById('has-phone2').addEventListener('change', e =>
+    document.getElementById('phone2-section').classList.toggle('hidden', !e.target.checked));
+  document.getElementById('has-guarantor').addEventListener('change', e =>
+    document.getElementById('guarantor-section').classList.toggle('hidden', !e.target.checked));
+  document.getElementById('has-guarantee-phone2').addEventListener('change', e =>
+    document.getElementById('guarantee-phone2-section').classList.toggle('hidden', !e.target.checked));
 
-    async function onDelete(e){
-        const id = e.currentTarget.dataset.id;
-        if(!confirm('Urashaka koko gusiba uyu mukoresha?')) return;
-        const fd = new FormData(); fd.append('action','delete'); fd.append('id', id);
-        try{
-        const res = await fetch(apiUrl, {method:'POST', body: fd});
-        const json = await res.json();
-        if(json.success){ fetchUsers(1); }
-        else alert(json.message || 'Error deleting');
-        }catch(err){ console.error(err); alert('Network error'); }
-    }
+  // Search & pagination
+  const searchInput = document.getElementById('users-search');
+  let searchTimer = null;
+  searchInput.addEventListener('input', e => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => { currentQuery = e.target.value.trim(); fetchUsers(1, currentQuery); }, 300);
+  });
+  document.getElementById('users-search-btn').addEventListener('click', () => {
+    currentQuery = searchInput.value.trim(); fetchUsers(1, currentQuery);
+  });
+  document.getElementById('users-prev').addEventListener('click', () => {
+    if (currentPage > 1) { currentPage--; fetchUsers(currentPage, currentQuery); }
+  });
+  document.getElementById('users-next').addEventListener('click', () => {
+    const totalPages = Math.max(1, Math.ceil(lastTotal / perPage));
+    if (currentPage < totalPages) { currentPage++; fetchUsers(currentPage, currentQuery); }
+  });
 
-    form.addEventListener('submit', async (ev)=>{
-        ev.preventDefault();
-        const id = document.getElementById('user-id').value;
-        const action = id ? 'update' : 'create';
-        const fd = new FormData(form);
-        fd.append('action', action);
-        try{
-        const res = await fetch(apiUrl, {method:'POST', body: fd});
-        const json = await res.json();
-        if(json.success){ fetchUsers(1); clearForm(); closeModal(); }
-        else alert(json.message || 'Error saving user');
-        }catch(e){ console.error(e); alert('semaza'); }
-    });
+  // Load admin name in header
+  (async function loadSession() {
+    try {
+      const resp = await fetch('../get_session.php', { cache: 'no-store' });
+      const js   = await resp.json();
+      if (js.success && js.data?.names) {
+        const el = document.getElementById('admin-name');
+        if (el) el.textContent = js.data.names;
+      }
+    } catch (e) { /* ignore */ }
+  })();
 
-    // Modal handlers
-    btnNew.addEventListener('click', ()=>{ clearForm(); openModal(); document.getElementById('user-names').focus(); });
-    btnRefresh.addEventListener('click', ()=> fetchUsers(1));
-    document.getElementById('user-cancel').addEventListener('click', closeModal);
-    modalClose.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
-
-    // Ensure save button submits the form (in case it's outside the form)
-    if (saveBtn) {
-        saveBtn.addEventListener('click', (e) => {
-        if (typeof form.requestSubmit === 'function') { form.requestSubmit(); } else { form.submit(); }
-        });
-    }
-
-    // Conditional visibility toggles
-    document.getElementById('has-phone2').addEventListener('change', (e)=>{
-        const section = document.getElementById('phone2-section');
-        section.classList.toggle('hidden', !e.target.checked);
-    });
-    document.getElementById('has-guarantor').addEventListener('change', (e)=>{
-        const section = document.getElementById('guarantor-section');
-        section.classList.toggle('hidden', !e.target.checked);
-    });
-    document.getElementById('has-guarantee-phone2').addEventListener('change', (e)=>{
-        const section = document.getElementById('guarantee-phone2-section');
-        section.classList.toggle('hidden', !e.target.checked);
-    });
-
-    // Search and pagination controls
-    const searchInput = document.getElementById('users-search');
-    const searchBtn = document.getElementById('users-search-btn');
-    const prevBtn = document.getElementById('users-prev');
-    const nextBtn = document.getElementById('users-next');
-
-    let searchTimer = null;
-    searchInput.addEventListener('input', (e)=>{
-        clearTimeout(searchTimer);
-        searchTimer = setTimeout(()=>{
-        currentQuery = e.target.value.trim();
-        fetchUsers(1, currentQuery);
-        }, 300);
-    });
-    searchBtn.addEventListener('click', ()=>{ currentQuery = searchInput.value.trim(); fetchUsers(1, currentQuery); });
-
-    prevBtn.addEventListener('click', ()=>{ if (currentPage>1){ currentPage--; fetchUsers(currentPage, currentQuery); } });
-    nextBtn.addEventListener('click', ()=>{ const totalPages = Math.max(1, Math.ceil(lastTotal / perPage)); if (currentPage<totalPages){ currentPage++; fetchUsers(currentPage, currentQuery); } });
-
-    // Fetch current session info (admin name) and show in header
-    (async function loadSession(){
-        try{
-        const resp = await fetch('../get_session.php', {cache: 'no-store'});
-        const js = await resp.json();
-        if(js.success && js.data && js.data.names){
-            const el = document.getElementById('admin-name');
-            if(el) el.textContent = js.data.names;
-        }
-        }catch(e){ /* ignore */ }
-    })();
-
-    // initial load
-    fetchUsers(1);
-    })();
+  fetchUsers(1);
+})();
 
     // Accounts management JS
     (function(){

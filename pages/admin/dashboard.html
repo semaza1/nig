@@ -308,50 +308,336 @@
             </div>
           </div>
 
-          <!-- USERS (admin CRUD) -->
-          <div id="section-users" class="hidden space-y-4">
+          <div id="user-view-modal"
+              class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-3 backdrop-blur-sm">
+            <div class="flex h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
 
-            <!-- USER VIEW MODAL -->
-            <div id="user-view-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
-              <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
-                <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
-                  <h2 class="text-lg font-semibold text-primary-dark">Amakuru y'Umunyamukoresha</h2>
-                  <button id="view-modal-close" class="text-gray-500 hover:text-gray-700" title="Funga">
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                  </button>
+              <!-- Header -->
+              <div class="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4">
+                <div class="flex flex-wrap items-center gap-3">
+                  <div id="uvm-avatar"
+                      class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-dark text-sm font-bold text-white">
+                    ?
+                  </div>
+                  <div>
+                    <h2 id="uvm-name"  class="text-base font-bold text-slate-800">—</h2>
+                    <p  id="uvm-email" class="text-xs text-slate-500">—</p>
+                  </div>
+                  <span id="uvm-badge-member"
+                        class="hidden rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Member</span>
+                  <span id="uvm-badge-admin"
+                        class="hidden rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">Admin</span>
                 </div>
-                <div class="px-6 py-4">
-                  <div id="user-details" class="space-y-2 text-sm text-slate-700">
-                    <!-- populated by JS -->
+                <button id="view-modal-close"
+                        class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700">
+                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Tab bar -->
+              <div class="shrink-0 flex overflow-x-auto border-b border-slate-200 bg-slate-50 px-3">
+                <button class="uvm-tab uvm-tab-active" data-tab="profile">👤 Profile</button>
+                <button class="uvm-tab" data-tab="transactions">💸 Transactions</button>
+                <button class="uvm-tab" data-tab="contributions">💰 Contributions</button>
+                <button class="uvm-tab" data-tab="loans">🏦 Loans</button>
+                <button class="uvm-tab" data-tab="guaranteed">🤝 Guaranteed</button>
+                <button class="uvm-tab" data-tab="assets">🏢 Assets</button>
+                <button class="uvm-tab" data-tab="summary">📊 Summary</button>
+              </div>
+
+              <!-- Scrollable body -->
+              <div class="flex-1 overflow-y-auto px-6 py-5">
+
+                <!-- Spinner -->
+                <div id="uvm-loading" class="hidden py-20 text-center text-sm text-slate-400">
+                  <svg class="mx-auto mb-3 h-8 w-8 animate-spin text-slate-400"
+                      xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>
+                  Gukurura amakuru…
+                </div>
+                <!-- Error -->
+                <div id="uvm-error"
+                    class="hidden rounded-xl bg-red-50 px-4 py-6 text-center text-sm text-red-600"></div>
+
+                <!-- PROFILE -->
+                <div id="uvm-tab-profile" class="uvm-panel space-y-4">
+                  <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="uvm-section-label">Personal Information</p>
+                    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 text-sm">
+                      <div><p class="uvm-field-label">Full Name</p>      <p id="p-names"  class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">NID / Passport</p> <p id="p-nid"    class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Email</p>          <p id="p-email"  class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Phone 1</p>        <p id="p-ph1"    class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Phone 2</p>        <p id="p-ph2"    class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Roles</p>          <p id="p-roles"  class="uvm-field-val">—</p></div>
+                    </div>
+                  </div>
+                  <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="uvm-section-label">Guarantor (Umwishingira)</p>
+                    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 text-sm">
+                      <div><p class="uvm-field-label">Name</p>    <p id="p-gname"  class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">NID</p>     <p id="p-gnid"   class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Email</p>   <p id="p-gemail" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Phone 1</p> <p id="p-gph1"   class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Phone 2</p> <p id="p-gph2"   class="uvm-field-val">—</p></div>
+                    </div>
                   </div>
                 </div>
-                <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
-                  <button id="view-close" class="btn-ghost">Funga</button>
+
+                <!-- TRANSACTIONS -->
+                <div id="uvm-tab-transactions" class="uvm-panel hidden">
+                  <div class="mb-3 flex items-center justify-between">
+                    <p class="uvm-section-label">All Transactions</p>
+                    <span id="uvm-tx-count" class="uvm-badge bg-slate-100 text-slate-600">—</span>
+                  </div>
+                  <div id="uvm-tx-body"></div>
                 </div>
+
+                <!-- CONTRIBUTIONS -->
+                <div id="uvm-tab-contributions" class="uvm-panel hidden">
+                  <div class="mb-3 flex items-center justify-between">
+                    <p class="uvm-section-label">Contributions &amp; Withdrawals</p>
+                    <span id="uvm-contrib-total" class="uvm-badge bg-emerald-100 text-emerald-700">—</span>
+                  </div>
+                  <div id="uvm-contrib-body"></div>
+                </div>
+
+                <!-- LOANS -->
+                <div id="uvm-tab-loans" class="uvm-panel hidden">
+                  <div class="mb-3 flex items-center justify-between">
+                    <p class="uvm-section-label">Loans Borrowed</p>
+                    <span id="uvm-loans-count" class="uvm-badge bg-amber-100 text-amber-700">—</span>
+                  </div>
+                  <div id="uvm-loans-body"></div>
+                </div>
+
+                <!-- GUARANTEED -->
+                <div id="uvm-tab-guaranteed" class="uvm-panel hidden">
+                  <div class="mb-3 flex items-center justify-between">
+                    <p class="uvm-section-label">Loans This User Has Guaranteed</p>
+                    <span id="uvm-guar-total" class="uvm-badge bg-violet-100 text-violet-700">—</span>
+                  </div>
+                  <div id="uvm-guar-body"></div>
+                </div>
+
+                <!-- ASSETS -->
+                <div id="uvm-tab-assets" class="uvm-panel hidden">
+                  <div class="mb-3"><p class="uvm-section-label">Asset Holdings</p></div>
+                  <div id="uvm-assets-body"></div>
+                </div>
+
+                <!-- SUMMARY -->
+                <div id="uvm-tab-summary" class="uvm-panel hidden space-y-4">
+                  <p class="uvm-section-label">Financial Summary</p>
+                  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div class="uvm-kpi bg-emerald-50"><p class="uvm-kpi-label">Total Contributed</p>   <p id="sum-contrib"        class="uvm-kpi-val text-emerald-700">—</p></div>
+                    <div class="uvm-kpi bg-rose-50">   <p class="uvm-kpi-label">Total Withdrawn</p>     <p id="sum-withdraw"       class="uvm-kpi-val text-rose-600">—</p></div>
+                    <div class="uvm-kpi bg-amber-50">  <p class="uvm-kpi-label">Interest Paid</p>       <p id="sum-interest"       class="uvm-kpi-val text-amber-600">—</p></div>
+                    <div class="uvm-kpi bg-blue-50">   <p class="uvm-kpi-label">Principal Repaid</p>    <p id="sum-principal-paid" class="uvm-kpi-val text-blue-600">—</p></div>
+                    <div class="uvm-kpi bg-slate-50">  <p class="uvm-kpi-label">Active Loans</p>        <p id="sum-active-loans"   class="uvm-kpi-val text-slate-700">—</p></div>
+                    <div class="uvm-kpi bg-slate-50">  <p class="uvm-kpi-label">Total Loan Principal</p><p id="sum-loan-principal" class="uvm-kpi-val text-slate-700">—</p></div>
+                    <div class="uvm-kpi bg-rose-50">   <p class="uvm-kpi-label">Unpaid Principal</p>    <p id="sum-unpaid"         class="uvm-kpi-val text-rose-700">—</p></div>
+                    <div class="uvm-kpi bg-violet-50"> <p class="uvm-kpi-label">Guaranteed Amount</p>   <p id="sum-guaranteed"     class="uvm-kpi-val text-violet-700">—</p></div>
+                    <div class="uvm-kpi bg-emerald-50"><p class="uvm-kpi-label">Total Money IN</p>       <p id="sum-tx-in"          class="uvm-kpi-val text-emerald-700">—</p></div>
+                    <div class="uvm-kpi bg-rose-50">   <p class="uvm-kpi-label">Total Money OUT</p>      <p id="sum-tx-out"         class="uvm-kpi-val text-rose-600">—</p></div>
+                    <div class="uvm-kpi bg-slate-50">  <p class="uvm-kpi-label">Total Transactions</p>  <p id="sum-tx-count"       class="uvm-kpi-val text-slate-700">—</p></div>
+                    <div class="uvm-kpi border-emerald-300 bg-emerald-100">
+                      <p class="uvm-kpi-label font-semibold text-emerald-700">Net Value</p>
+                      <p id="sum-net" class="uvm-kpi-val text-emerald-800">—</p>
+                    </div>
+                  </div>
+                  <div class="rounded-xl border border-slate-200 p-4">
+                    <p class="uvm-section-label mb-3">Recent Activity (last 6)</p>
+                    <div id="sum-recent" class="space-y-2"></div>
+                  </div>
+                </div>
+
+              </div><!-- /scrollable body -->
+
+              <!-- Footer -->
+              <div class="flex shrink-0 justify-end border-t border-slate-200 bg-slate-50 px-6 py-3">
+                <button id="view-close" class="btn-ghost text-sm">Funga</button>
               </div>
             </div>
+          </div>
+          <!-- /USER VIEW MODAL -->
 
+
+          <!-- ╔══════════════════════════════════════════════════════════════╗
+              ║  USER CREATE/EDIT MODAL                                     ║
+              ║  Also lives OUTSIDE #section-users for the same reason.     ║
+              ╚══════════════════════════════════════════════════════════════╝ -->
+          <div id="user-modal"
+              class="fixed inset-0 z-50 hidden h-full items-center justify-center bg-black/50 p-4">
+            <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
+              <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+                <h2 id="modal-title" class="text-lg font-semibold text-primary-dark">Umunyamukoresha Mushya</h2>
+                <button id="modal-close" class="text-gray-500 hover:text-gray-700" title="Funga">
+                  <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="px-6 py-4">
+                <form id="user-form" class="space-y-6">
+                  <input type="hidden" name="id" id="user-id" />
+
+                  <div>
+                    <h3 class="mb-4 text-sm font-semibold text-primary-dark">Amakuru y'Umunyamuryango</h3>
+                    <div class="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label for="user-names" class="block text-xs font-medium text-slate-700">Amazina *</label>
+                        <input id="user-names" name="names" type="text" required
+                              class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                              placeholder="Izina ryombi" />
+                      </div>
+                      <div>
+                        <label for="user-nid" class="block text-xs font-medium text-slate-700">NID / Passport</label>
+                        <input id="user-nid" name="nid_passport" type="text"
+                              class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                              placeholder="1199080023975090" />
+                      </div>
+                      <div>
+                        <label for="user-email" class="block text-xs font-medium text-slate-700">Email</label>
+                        <input id="user-email" name="email" type="email"
+                              class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                              placeholder="email@example.com" />
+                      </div>
+                      <div>
+                        <label for="user-phone1" class="block text-xs font-medium text-slate-700">Telefoni ya Mbere *</label>
+                        <input id="user-phone1" name="phone1" type="text"
+                              class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                              placeholder="0784921483" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="border-t pt-4">
+                    <label class="flex items-center gap-2">
+                      <input id="has-phone2" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
+                      <span class="text-sm font-medium text-slate-700">Ifite Telefoni y'Kabiri?</span>
+                    </label>
+                    <div id="phone2-section" class="mt-4 hidden">
+                      <label class="block text-xs font-medium text-slate-700">Telefoni y'Kabiri</label>
+                      <input id="user-phone2" name="phone2" type="text"
+                            class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            placeholder="0788 000 000" />
+                    </div>
+                  </div>
+
+                  <div class="border-t pt-4">
+                    <label class="block text-xs font-medium text-slate-700">Ijambo ry'ibanga *</label>
+                    <input id="user-password" name="password" type="password"
+                          class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                          placeholder="Shyiramo ijambo ry'ibanga" />
+                    <p class="mt-1 text-[11px] text-slate-500">(Ubwabo niba ushaka guhindura)</p>
+                  </div>
+
+                  <div class="border-t pt-4">
+                    <label class="flex items-center gap-2">
+                      <input id="has-guarantor" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
+                      <span class="text-sm font-medium text-slate-700">Ifite Umwishingira?</span>
+                    </label>
+                    <div id="guarantor-section" class="mt-4 hidden space-y-4">
+                      <h3 class="text-sm font-semibold text-primary-dark">Amakuru y'Umwishingira</h3>
+                      <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <label class="block text-xs font-medium text-slate-700">Izina ry'Umwishingira</label>
+                          <input id="user-guarantee-name" name="guarantee_name" type="text"
+                                class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                placeholder="Izina ryombi" />
+                        </div>
+                        <div>
+                          <label class="block text-xs font-medium text-slate-700">NID / Passport y'Umwishingira</label>
+                          <input id="user-guarantee-nid" name="guarantee_nid_passport" type="text"
+                                class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                placeholder="1199080023975090" />
+                        </div>
+                        <div>
+                          <label class="block text-xs font-medium text-slate-700">Email y'Umwishingira</label>
+                          <input id="user-guarantee-email" name="guarantee_email" type="email"
+                                class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                placeholder="email@example.com" />
+                        </div>
+                        <div>
+                          <label class="block text-xs font-medium text-slate-700">Telefoni ya Mbere y'Umwishingira</label>
+                          <input id="user-guarantee-phone1" name="guarantee_phone1" type="text"
+                                class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                placeholder="0784921483" />
+                        </div>
+                      </div>
+                      <div>
+                        <label class="flex items-center gap-2">
+                          <input id="has-guarantee-phone2" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
+                          <span class="text-xs font-medium text-slate-700">Telefoni y'Kabiri y'Umwishingira</span>
+                        </label>
+                        <div id="guarantee-phone2-section" class="mt-2 hidden">
+                          <input id="user-guarantee-phone2" name="guarantee_phone2" type="text"
+                                class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                placeholder="0788 000 000" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="border-t pt-4">
+                    <label class="mb-3 block text-xs font-medium text-slate-700">Imiterere</label>
+                    <div class="flex flex-wrap gap-4">
+                      <label class="flex items-center gap-2">
+                        <input id="user-is-member" name="is_member" type="checkbox"
+                              class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
+                        <span class="text-sm text-slate-700">Umunyamuryango</span>
+                      </label>
+                      <label class="flex items-center gap-2">
+                        <input id="user-is-admin" name="is_admin" type="checkbox"
+                              class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
+                        <span class="text-sm text-slate-700">Admin</span>
+                      </label>
+                    </div>
+                  </div>
+                </form>
+              </div>
+              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
+                <button id="user-cancel" class="btn-ghost">Siba</button>
+                <button id="user-save"   class="btn-primary">Bika</button>
+              </div>
+            </div>
+          </div>
+          <!-- /USER CREATE/EDIT MODAL -->
+
+
+          <!-- ╔══════════════════════════════════════════════════════════════╗
+              ║  USERS SECTION  –  the actual page content                  ║
+              ║  Only the table + controls live here. Modals are above.     ║
+              ╚══════════════════════════════════════════════════════════════╝ -->
+          <div id="section-users" class="hidden space-y-4">
             <p class="text-sm font-semibold text-primary-dark">Abanyamuryango</p>
             <div class="card">
               <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <p class="text-xs text-slate-600">Hano umuyobozi ashobora kurema, guhindura no gusiba abanyamuryango n' abataribo.</p>
+                <p class="text-xs text-slate-600">
+                  Hano umuyobozi ashobora kurema, guhindura no gusiba abanyamuryango n' abataribo.
+                </p>
                 <div class="flex gap-2">
-                  <button id="btn-new-user" class="btn-secondary text-xs">Umunyamukoresha Mushya</button>
+                  <button id="btn-new-user"      class="btn-secondary text-xs">Umunyamukoresha Mushya</button>
                   <button id="btn-refresh-users" type="button" class="btn-primary text-xs">Refresh</button>
                 </div>
               </div>
 
               <div class="mt-4">
-                <div class="flex items-center justify-between mb-3">
+                <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div class="flex items-center gap-2">
-                    <input id="users-search" type="search" placeholder="Shakisha amazina / email / telefoni" class="rounded-lg border px-3 py-2 text-sm" />
+                    <input id="users-search" type="search"
+                          placeholder="Shakisha amazina / email / telefoni"
+                          class="rounded-lg border px-3 py-2 text-sm" />
                     <button id="users-search-btn" class="btn-secondary text-xs">Shakisha</button>
                   </div>
                   <div class="flex items-center gap-2">
                     <button id="users-prev" class="btn-ghost text-xs">Prev</button>
-                    <span id="users-page" class="text-sm">1</span>
+                    <span   id="users-page" class="text-sm">1</span>
                     <button id="users-next" class="btn-ghost text-xs">Next</button>
                   </div>
                 </div>
@@ -360,7 +646,7 @@
                   <table class="table">
                     <thead>
                       <tr>
-                        <th>ID</th>
+                        <th>#</th>
                         <th>Amazina</th>
                         <th>Email</th>
                         <th>Telefoni</th>
@@ -377,124 +663,40 @@
               </div>
             </div>
           </div>
+          <!-- /USERS SECTION -->
 
-          <!-- USER MODAL -->
-          <div id="user-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4">
-            <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
-              <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
-                <h2 id="modal-title" class="text-lg font-semibold text-primary-dark">Umunyamukoresha Mushya</h2>
-                <button id="modal-close" class="text-gray-500 hover:text-gray-700" title="Funga">
-                  <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                </button>
-              </div>
-              <div class="px-6 py-4">
-                <form id="user-form" class="space-y-6">
-                  <input type="hidden" name="id" id="user-id" />
-                  
-                  <!-- Personal Info Section -->
-                  <div>
-                    <h3 class="mb-4 text-sm font-semibold text-primary-dark">Amakuru y'Umunyamuryango</h3>
-                    <div class="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label for="user-names" class="block text-xs font-medium text-slate-700">Amazina *</label>
-                        <input id="user-names" name="names" type="text" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Izina ryombi" required />
-                      </div>
-                      <div>
-                        <label for="user-nid" class="block text-xs font-medium text-slate-700">NID / Passport</label>
-                        <input id="user-nid" name="nid_passport" type="text" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="1199080023975090" />
-                      </div>
-                      <div>
-                        <label for="user-email" class="block text-xs font-medium text-slate-700">Email</label>
-                        <input id="user-email" name="email" type="email" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="email@example.com" />
-                      </div>
-                      <div>
-                        <label for="user-phone1" class="block text-xs font-medium text-slate-700">Telefoni ya Mbere *</label>
-                        <input id="user-phone1" name="phone1" type="text" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="0784921483" />
-                      </div>
-                    </div>
-                  </div>
 
-                  <!-- Optional Phone Section -->
-                  <div class="border-t pt-4">
-                    <label class="flex items-center gap-2">
-                      <input id="has-phone2" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
-                      <span class="text-sm font-medium text-slate-700">Ifite Telefoni y'Kabiri?</span>
-                    </label>
-                    <div id="phone2-section" class="mt-4 hidden">
-                      <label class="block text-xs font-medium text-slate-700">Telefoni y'Kabiri</label>
-                      <input id="user-phone2" name="phone2" type="text" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="0788 000 000" />
-                    </div>
-                  </div>
+          <!-- ── Scoped styles for the view modal ─────────────────────── -->
+          <style>
+          .uvm-tab          { padding:.55rem .85rem; font-size:.72rem; font-weight:500; color:#64748b; white-space:nowrap; border-bottom:2px solid transparent; background:transparent; cursor:pointer; transition:color .15s,border-color .15s; }
+          .uvm-tab:hover    { color:#1e293b; }
+          .uvm-tab-active   { color:#2F6B4F; border-bottom-color:#2F6B4F; font-weight:600; }
 
-                  <!-- Password Section -->
-                  <div class="border-t pt-4">
-                    <label class="block text-xs font-medium text-slate-700">Ijambo ry'ibanga *</label>
-                    <input id="user-password" name="password" type="password" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Shyiramo ijambo ry'ibanga" />
-                    <p class="mt-1 text-[11px] text-slate-500">(Ubwabo niba ushaka guhindura)</p>
-                  </div>
+          .uvm-section-label { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#94a3b8; }
+          .uvm-field-label   { font-size:.62rem; color:#94a3b8; margin-bottom:.1rem; }
+          .uvm-field-val     { font-size:.85rem; font-weight:500; color:#1e293b; }
+          .uvm-badge         { display:inline-block; padding:.15rem .6rem; border-radius:9999px; font-size:.7rem; font-weight:600; }
 
-                  <!-- Guarantor Section -->
-                  <div class="border-t pt-4">
-                    <label class="flex items-center gap-2">
-                      <input id="has-guarantor" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
-                      <span class="text-sm font-medium text-slate-700">Ifite Umwishingira?</span>
-                    </label>
-                    <div id="guarantor-section" class="mt-4 hidden space-y-4">
-                      <h3 class="text-sm font-semibold text-primary-dark">Amakuru y'Umwishingira</h3>
-                      <div class="grid gap-4 md:grid-cols-2">
-                        <div>
-                          <label class="block text-xs font-medium text-slate-700">Izina ry'Umwishingira</label>
-                          <input id="user-guarantee-name" name="guarantee_name" type="text" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Izina ryombi" />
-                        </div>
-                        <div>
-                          <label class="block text-xs font-medium text-slate-700">NID / Passport y'Umwishingira</label>
-                          <input id="user-guarantee-nid" name="guarantee_nid_passport" type="text" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="1199080023975090" />
-                        </div>
-                        <div>
-                          <label class="block text-xs font-medium text-slate-700">Email y'Umwishingira</label>
-                          <input id="user-guarantee-email" name="guarantee_email" type="email" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="email@example.com" />
-                        </div>
-                        <div>
-                          <label class="block text-xs font-medium text-slate-700">Telefoni ya Mbere y'Umwishingira</label>
-                          <input id="user-guarantee-phone1" name="guarantee_phone1" type="text" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="0784921483" />
-                        </div>
-                      </div>
-                      <div>
-                        <label class="flex items-center gap-2">
-                          <input id="has-guarantee-phone2" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
-                          <span class="text-xs font-medium text-slate-700">Telefoni y'Kabiri y'Umwishingira</span>
-                        </label>
-                        <div id="guarantee-phone2-section" class="mt-2 hidden">
-                          <input id="user-guarantee-phone2" name="guarantee_phone2" type="text" class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="0788 000 000" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+          .uvm-kpi           { border-radius:.75rem; border:1px solid #e2e8f0; padding:1rem; text-align:center; }
+          .uvm-kpi-label     { font-size:.62rem; color:#94a3b8; }
+          .uvm-kpi-val       { margin-top:.25rem; font-size:1.1rem; font-weight:700; }
 
-                  <!-- Status Section -->
-                  <div class="border-t pt-4">
-                    <label class="block text-xs font-medium text-slate-700 mb-3">Imiterere</label>
-                    <div class="flex flex-wrap gap-4">
-                      <label class="flex items-center gap-2">
-                        <input id="user-is-member" name="is_member" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
-                        <span class="text-sm text-slate-700">Umunyamuryango</span>
-                      </label>
-                      <label class="flex items-center gap-2">
-                        <input id="user-is-admin" name="is_admin" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
-                        <span class="text-sm text-slate-700">Admin</span>
-                      </label>
-                    </div>
-                  </div>
-                </form>
-              </div>
-              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
-                <button id="user-cancel" class="btn-ghost">Siba</button>
-                <button id="user-save" type="submit" class="btn-primary">Bika</button>
-              </div>
-            </div>
-          </div>
+          .uvm-tbl-wrap                  { overflow-x:auto; border-radius:.75rem; border:1px solid #e2e8f0; }
+          .uvm-tbl-wrap table            { width:100%; border-collapse:collapse; font-size:.75rem; }
+          .uvm-tbl-wrap thead tr         { background:#f8fafc; }
+          .uvm-tbl-wrap th               { padding:.5rem .75rem; text-align:left; font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; border-bottom:1px solid #e2e8f0; white-space:nowrap; }
+          .uvm-tbl-wrap td               { padding:.6rem .75rem; border-bottom:1px solid #f1f5f9; color:#334155; vertical-align:middle; }
+          .uvm-tbl-wrap tr:last-child td { border-bottom:none; }
+          .uvm-tbl-wrap tr:hover td      { background:#f8fafc; }
+
+          .spill        { display:inline-block; padding:.12rem .5rem; border-radius:9999px; font-size:.62rem; font-weight:700; line-height:1.5; }
+          .spill-green  { background:#dcfce7; color:#16a34a; }
+          .spill-amber  { background:#fef3c7; color:#d97706; }
+          .spill-red    { background:#fee2e2; color:#dc2626; }
+          .spill-slate  { background:#f1f5f9; color:#64748b; }
+          .spill-violet { background:#ede9fe; color:#7c3aed; }
+          .spill-blue   { background:#dbeafe; color:#2563eb; }
+          </style>
           
 
           <!-- ACCOUNTS (admin CRUD) -->
