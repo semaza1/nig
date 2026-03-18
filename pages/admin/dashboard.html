@@ -308,35 +308,275 @@
             </div>
           </div>
 
-          <div id="user-view-modal"
-              class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-3 backdrop-blur-sm">
-            <div class="flex h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+          <!-- USERS SECTION -->
+          <div id="section-users" class="space-y-4">
+            <p class="text-sm font-semibold text-primary-dark">Abakoresha</p>
+
+            <div class="card rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <p class="text-xs text-slate-600">
+                  Hano umuyobozi ashobora kurema, guhindura no gusiba abakoresha.
+                </p>
+
+                <div class="flex gap-2">
+                  <button id="btn-new-user" class="btn-secondary rounded-lg px-3 py-2 text-xs font-semibold">
+                    Umunyamukoresha Mushya
+                  </button>
+                  <button id="btn-refresh-users" type="button" class="btn-primary rounded-lg px-3 py-2 text-xs font-semibold">
+                    Refresh
+                  </button>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div class="flex items-center gap-2">
+                    <input
+                      id="users-search"
+                      type="search"
+                      placeholder="Shakisha amazina / email / telefoni / NID"
+                      class="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary"
+                    />
+                    <button id="users-search-btn" class="btn-secondary rounded-lg px-3 py-2 text-xs font-semibold">
+                      Shakisha
+                    </button>
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <button id="users-prev" class="btn-ghost rounded-lg px-3 py-2 text-xs">Prev</button>
+                    <span id="users-page" class="text-sm text-slate-700">1 / 1</span>
+                    <button id="users-next" class="btn-ghost rounded-lg px-3 py-2 text-xs">Next</button>
+                  </div>
+                </div>
+
+                <div class="overflow-x-auto rounded-xl border border-slate-200">
+                  <table class="min-w-full text-sm">
+                    <thead class="bg-slate-50">
+                      <tr>
+                        <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">#</th>
+                        <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Amazina</th>
+                        <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Email</th>
+                        <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Telefoni</th>
+                        <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Member</th>
+                        <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Admin</th>
+                        <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Profile Img</th>
+                        <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">NID Img</th>
+                        <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Ibikorwa</th>
+                      </tr>
+                    </thead>
+                    <tbody id="users-tbody" class="divide-y divide-slate-100">
+                      <!-- JS fills here -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- USER CREATE / EDIT MODAL -->
+          <div id="user-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+            <div class="max-h-[95vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+              <div class="sticky top-0 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+                <h2 id="modal-title" class="text-lg font-semibold text-slate-800">Umunyamukoresha Mushya</h2>
+                <button id="modal-close" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700">✕</button>
+              </div>
+
+              <div class="px-6 py-5">
+                <form id="user-form" class="space-y-6" enctype="multipart/form-data">
+                  <input type="hidden" name="id" id="user-id" />
+
+                  <!-- Basic info -->
+                  <div>
+                    <h3 class="mb-3 text-sm font-semibold text-slate-800">Amakuru y'Umunyamukoresha</h3>
+                    <div class="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label for="user-names" class="block text-xs font-medium text-slate-700">Amazina *</label>
+                        <input id="user-names" name="names" type="text" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                      </div>
+
+                      <div>
+                        <label for="user-nid" class="block text-xs font-medium text-slate-700">NID / Passport *</label>
+                        <input id="user-nid" name="nid_passport" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                      </div>
+
+                      <div>
+                        <label for="user-email" class="block text-xs font-medium text-slate-700">Email</label>
+                        <input id="user-email" name="email" type="email" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                      </div>
+
+                      <div>
+                        <label for="user-phone1" class="block text-xs font-medium text-slate-700">Telefoni ya Mbere</label>
+                        <input id="user-phone1" name="phone1" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Optional phone 2 -->
+                  <div class="border-t border-slate-200 pt-4">
+                    <label class="flex items-center gap-2">
+                      <input id="has-phone2" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
+                      <span class="text-sm font-medium text-slate-700">Ifite Telefoni ya Kabiri?</span>
+                    </label>
+
+                    <div id="phone2-section" class="mt-4 hidden">
+                      <label for="user-phone2" class="block text-xs font-medium text-slate-700">Telefoni ya Kabiri</label>
+                      <input id="user-phone2" name="phone2" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                    </div>
+                  </div>
+
+                  <!-- Password -->
+                  <div class="border-t border-slate-200 pt-4">
+                    <label for="user-password" class="block text-xs font-medium text-slate-700">Ijambo ry'ibanga *</label>
+                    <input id="user-password" name="password" type="password" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                    <p class="mt-1 text-[11px] text-slate-500">
+                      Iyo uhindura umukoresha, shyiramo gusa niba ushaka guhindura password.
+                    </p>
+                  </div>
+
+                  <!-- Images -->
+                  <div class="border-t border-slate-200 pt-4">
+                    <h3 class="mb-3 text-sm font-semibold text-slate-800">Amashusho</h3>
+
+                    <div class="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label for="user-profile-image" class="block text-xs font-medium text-slate-700">Profile Image</label>
+                        <input id="user-profile-image" name="profile_image" type="file" accept="image/*"
+                              class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                        <a id="user-current-profile-link" href="#" target="_blank" class="mt-2 hidden text-xs font-medium text-blue-600 underline">
+                          Reba profile image iriho
+                        </a>
+                        <img id="user-profile-preview" class="mt-3 hidden h-24 w-24 rounded-lg border border-slate-200 object-cover" alt="Profile Preview" />
+                      </div>
+
+                      <div>
+                        <label for="user-nid-image" class="block text-xs font-medium text-slate-700">NID / Passport Image</label>
+                        <input id="user-nid-image" name="nid_image" type="file" accept="image/*"
+                              class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                        <a id="user-current-nid-link" href="#" target="_blank" class="mt-2 hidden text-xs font-medium text-blue-600 underline">
+                          Reba NID image iriho
+                        </a>
+                        <img id="user-nid-preview" class="mt-3 hidden max-h-24 rounded-lg border border-slate-200 object-contain" alt="NID Preview" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Guarantor -->
+                  <div class="border-t border-slate-200 pt-4">
+                    <label class="flex items-center gap-2">
+                      <input id="has-guarantor" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
+                      <span class="text-sm font-medium text-slate-700">Ifite Umwishingira?</span>
+                    </label>
+
+                    <div id="guarantor-section" class="mt-4 hidden space-y-4">
+                      <h3 class="text-sm font-semibold text-slate-800">Amakuru y'Umwishingira</h3>
+
+                      <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <label for="user-guarantee-name" class="block text-xs font-medium text-slate-700">Izina ry'Umwishingira</label>
+                          <input id="user-guarantee-name" name="guarantee_name" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                        </div>
+
+                        <div>
+                          <label for="user-guarantee-nid" class="block text-xs font-medium text-slate-700">NID / Passport y'Umwishingira</label>
+                          <input id="user-guarantee-nid" name="guarantee_nid_passport" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                        </div>
+
+                        <div>
+                          <label for="user-guarantee-email" class="block text-xs font-medium text-slate-700">Email y'Umwishingira</label>
+                          <input id="user-guarantee-email" name="guarantee_email" type="email" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                        </div>
+
+                        <div>
+                          <label for="user-guarantee-phone1" class="block text-xs font-medium text-slate-700">Telefoni ya Mbere y'Umwishingira</label>
+                          <input id="user-guarantee-phone1" name="guarantee_phone1" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label class="flex items-center gap-2">
+                          <input id="has-guarantee-phone2" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
+                          <span class="text-xs font-medium text-slate-700">Telefoni ya Kabiri y'Umwishingira</span>
+                        </label>
+
+                        <div id="guarantee-phone2-section" class="mt-2 hidden">
+                          <input id="user-guarantee-phone2" name="guarantee_phone2" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Roles -->
+                  <div class="border-t border-slate-200 pt-4">
+                    <label class="mb-3 block text-xs font-medium text-slate-700">Imiterere</label>
+                    <div class="flex flex-wrap gap-4">
+                      <label class="flex items-center gap-2">
+                        <input id="user-is-member" name="is_member" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
+                        <span class="text-sm text-slate-700">Umunyamuryango</span>
+                      </label>
+
+                      <label class="flex items-center gap-2">
+                        <input id="user-is-admin" name="is_admin" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
+                        <span class="text-sm text-slate-700">Admin</span>
+                      </label>
+                    </div>
+                  </div>
+                </form>
+              </div>
+
+              <div class="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
+                <button id="user-cancel" class="btn-ghost rounded-lg px-4 py-2 text-sm">Siba</button>
+                <button id="user-save" class="btn-primary rounded-lg px-4 py-2 text-sm font-semibold">Bika</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- USER VIEW MODAL -->
+          <div id="user-view-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-3 backdrop-blur-sm">
+            <div class="flex h-[95vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
 
               <!-- Header -->
               <div class="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4">
                 <div class="flex flex-wrap items-center gap-3">
-                  <div id="uvm-avatar"
-                      class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-dark text-sm font-bold text-white">
-                    ?
+                  <div class="relative h-14 w-14 shrink-0">
+                    <img id="uvm-avatar-img"
+                        class="hidden h-14 w-14 rounded-full border border-slate-200 object-cover"
+                        alt="Profile" />
+                    <div id="uvm-avatar"
+                        class="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-700 text-sm font-bold text-white">
+                      ?
+                    </div>
                   </div>
+
                   <div>
-                    <h2 id="uvm-name"  class="text-base font-bold text-slate-800">—</h2>
-                    <p  id="uvm-email" class="text-xs text-slate-500">—</p>
+                    <h2 id="uvm-name" class="text-base font-bold text-slate-800">—</h2>
+                    <p id="uvm-email" class="text-xs text-slate-500">—</p>
                   </div>
+
                   <span id="uvm-badge-member"
-                        class="hidden rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Member</span>
+                        class="hidden rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                    Member
+                  </span>
+
                   <span id="uvm-badge-admin"
-                        class="hidden rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">Admin</span>
+                        class="hidden rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                    Admin
+                  </span>
                 </div>
-                <button id="view-modal-close"
-                        class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700">
-                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                  </svg>
-                </button>
+
+                <div class="flex items-center gap-2">
+                  <button id="uvm-download-pdf"
+                          class="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90">
+                    Download PDF
+                  </button>
+
+                  <button id="view-modal-close"
+                          class="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+                    ✕
+                  </button>
+                </div>
               </div>
 
-              <!-- Tab bar -->
+              <!-- Tabs -->
               <div class="shrink-0 flex overflow-x-auto border-b border-slate-200 bg-slate-50 px-3">
                 <button class="uvm-tab uvm-tab-active" data-tab="profile">👤 Profile</button>
                 <button class="uvm-tab" data-tab="transactions">💸 Transactions</button>
@@ -347,48 +587,68 @@
                 <button class="uvm-tab" data-tab="summary">📊 Summary</button>
               </div>
 
-              <!-- Scrollable body -->
+              <!-- Body -->
               <div class="flex-1 overflow-y-auto px-6 py-5">
 
-                <!-- Spinner -->
                 <div id="uvm-loading" class="hidden py-20 text-center text-sm text-slate-400">
-                  <svg class="mx-auto mb-3 h-8 w-8 animate-spin text-slate-400"
-                      xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                  </svg>
-                  Gukurura amakuru…
+                  Gukurura amakuru...
                 </div>
-                <!-- Error -->
-                <div id="uvm-error"
-                    class="hidden rounded-xl bg-red-50 px-4 py-6 text-center text-sm text-red-600"></div>
 
-                <!-- PROFILE -->
+                <div id="uvm-error" class="hidden rounded-xl bg-red-50 px-4 py-6 text-center text-sm text-red-600"></div>
+
+                <!-- PROFILE TAB -->
                 <div id="uvm-tab-profile" class="uvm-panel space-y-4">
                   <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
                     <p class="uvm-section-label">Personal Information</p>
                     <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 text-sm">
-                      <div><p class="uvm-field-label">Full Name</p>      <p id="p-names"  class="uvm-field-val">—</p></div>
-                      <div><p class="uvm-field-label">NID / Passport</p> <p id="p-nid"    class="uvm-field-val">—</p></div>
-                      <div><p class="uvm-field-label">Email</p>          <p id="p-email"  class="uvm-field-val">—</p></div>
-                      <div><p class="uvm-field-label">Phone 1</p>        <p id="p-ph1"    class="uvm-field-val">—</p></div>
-                      <div><p class="uvm-field-label">Phone 2</p>        <p id="p-ph2"    class="uvm-field-val">—</p></div>
-                      <div><p class="uvm-field-label">Roles</p>          <p id="p-roles"  class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Full Name</p><p id="p-names" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">NID / Passport</p><p id="p-nid" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Email</p><p id="p-email" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Phone 1</p><p id="p-ph1" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Phone 2</p><p id="p-ph2" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Roles</p><p id="p-roles" class="uvm-field-val">—</p></div>
                     </div>
                   </div>
+
                   <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <p class="uvm-section-label">Guarantor (Umwishingira)</p>
+                    <p class="uvm-section-label">Images</p>
+                    <div class="grid gap-4 md:grid-cols-2">
+                      <div class="rounded-xl border border-slate-200 bg-white p-4">
+                        <p class="uvm-field-label mb-2">Profile Image</p>
+                        <div class="flex min-h-[220px] items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
+                          <img id="uvm-profile-full-img"
+                              class="hidden max-h-52 rounded-lg object-cover"
+                              alt="Profile Image" />
+                          <div id="uvm-profile-placeholder" class="text-center text-sm text-slate-400">
+                            Nta profile image ihari
+                          </div>
+                        </div>
+                      </div>
+
+                      <div id="uvm-nid-wrap" class="hidden rounded-xl border border-slate-200 bg-white p-4">
+                        <p class="uvm-field-label mb-2">NID / Passport Image</p>
+                        <div class="flex min-h-[220px] items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
+                          <img id="uvm-nid-img"
+                              class="max-h-52 rounded-lg object-contain"
+                              alt="NID Image" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="uvm-section-label">Guarantor</p>
                     <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 text-sm">
-                      <div><p class="uvm-field-label">Name</p>    <p id="p-gname"  class="uvm-field-val">—</p></div>
-                      <div><p class="uvm-field-label">NID</p>     <p id="p-gnid"   class="uvm-field-val">—</p></div>
-                      <div><p class="uvm-field-label">Email</p>   <p id="p-gemail" class="uvm-field-val">—</p></div>
-                      <div><p class="uvm-field-label">Phone 1</p> <p id="p-gph1"   class="uvm-field-val">—</p></div>
-                      <div><p class="uvm-field-label">Phone 2</p> <p id="p-gph2"   class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Name</p><p id="p-gname" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">NID</p><p id="p-gnid" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Email</p><p id="p-gemail" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Phone 1</p><p id="p-gph1" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Phone 2</p><p id="p-gph2" class="uvm-field-val">—</p></div>
                     </div>
                   </div>
                 </div>
 
-                <!-- TRANSACTIONS -->
+                <!-- TRANSACTIONS TAB -->
                 <div id="uvm-tab-transactions" class="uvm-panel hidden">
                   <div class="mb-3 flex items-center justify-between">
                     <p class="uvm-section-label">All Transactions</p>
@@ -397,16 +657,16 @@
                   <div id="uvm-tx-body"></div>
                 </div>
 
-                <!-- CONTRIBUTIONS -->
+                <!-- CONTRIBUTIONS TAB -->
                 <div id="uvm-tab-contributions" class="uvm-panel hidden">
                   <div class="mb-3 flex items-center justify-between">
-                    <p class="uvm-section-label">Contributions &amp; Withdrawals</p>
+                    <p class="uvm-section-label">Contribution / Interest / Withdrawal / Expense History</p>
                     <span id="uvm-contrib-total" class="uvm-badge bg-emerald-100 text-emerald-700">—</span>
                   </div>
                   <div id="uvm-contrib-body"></div>
                 </div>
 
-                <!-- LOANS -->
+                <!-- LOANS TAB -->
                 <div id="uvm-tab-loans" class="uvm-panel hidden">
                   <div class="mb-3 flex items-center justify-between">
                     <p class="uvm-section-label">Loans Borrowed</p>
@@ -415,7 +675,7 @@
                   <div id="uvm-loans-body"></div>
                 </div>
 
-                <!-- GUARANTEED -->
+                <!-- GUARANTEED TAB -->
                 <div id="uvm-tab-guaranteed" class="uvm-panel hidden">
                   <div class="mb-3 flex items-center justify-between">
                     <p class="uvm-section-label">Loans This User Has Guaranteed</p>
@@ -424,263 +684,118 @@
                   <div id="uvm-guar-body"></div>
                 </div>
 
-                <!-- ASSETS -->
+                <!-- ASSETS TAB -->
                 <div id="uvm-tab-assets" class="uvm-panel hidden">
                   <div class="mb-3"><p class="uvm-section-label">Asset Holdings</p></div>
                   <div id="uvm-assets-body"></div>
                 </div>
 
-                <!-- SUMMARY -->
+                <!-- SUMMARY TAB -->
                 <div id="uvm-tab-summary" class="uvm-panel hidden space-y-4">
                   <p class="uvm-section-label">Financial Summary</p>
+
                   <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <div class="uvm-kpi bg-emerald-50"><p class="uvm-kpi-label">Total Contributed</p>   <p id="sum-contrib"        class="uvm-kpi-val text-emerald-700">—</p></div>
-                    <div class="uvm-kpi bg-rose-50">   <p class="uvm-kpi-label">Total Withdrawn</p>     <p id="sum-withdraw"       class="uvm-kpi-val text-rose-600">—</p></div>
-                    <div class="uvm-kpi bg-amber-50">  <p class="uvm-kpi-label">Interest Paid</p>       <p id="sum-interest"       class="uvm-kpi-val text-amber-600">—</p></div>
-                    <div class="uvm-kpi bg-blue-50">   <p class="uvm-kpi-label">Principal Repaid</p>    <p id="sum-principal-paid" class="uvm-kpi-val text-blue-600">—</p></div>
-                    <div class="uvm-kpi bg-slate-50">  <p class="uvm-kpi-label">Active Loans</p>        <p id="sum-active-loans"   class="uvm-kpi-val text-slate-700">—</p></div>
-                    <div class="uvm-kpi bg-slate-50">  <p class="uvm-kpi-label">Total Loan Principal</p><p id="sum-loan-principal" class="uvm-kpi-val text-slate-700">—</p></div>
-                    <div class="uvm-kpi bg-rose-50">   <p class="uvm-kpi-label">Unpaid Principal</p>    <p id="sum-unpaid"         class="uvm-kpi-val text-rose-700">—</p></div>
-                    <div class="uvm-kpi bg-violet-50"> <p class="uvm-kpi-label">Guaranteed Amount</p>   <p id="sum-guaranteed"     class="uvm-kpi-val text-violet-700">—</p></div>
-                    <div class="uvm-kpi bg-emerald-50"><p class="uvm-kpi-label">Total Money IN</p>       <p id="sum-tx-in"          class="uvm-kpi-val text-emerald-700">—</p></div>
-                    <div class="uvm-kpi bg-rose-50">   <p class="uvm-kpi-label">Total Money OUT</p>      <p id="sum-tx-out"         class="uvm-kpi-val text-rose-600">—</p></div>
-                    <div class="uvm-kpi bg-slate-50">  <p class="uvm-kpi-label">Total Transactions</p>  <p id="sum-tx-count"       class="uvm-kpi-val text-slate-700">—</p></div>
-                    <div class="uvm-kpi border-emerald-300 bg-emerald-100">
+                    <div class="uvm-kpi bg-emerald-50">
+                      <p class="uvm-kpi-label">Total Contributed</p>
+                      <p id="sum-contrib" class="uvm-kpi-val text-emerald-700">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-rose-50">
+                      <p class="uvm-kpi-label">Total Withdrawn</p>
+                      <p id="sum-withdraw" class="uvm-kpi-val text-rose-600">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-orange-50">
+                      <p class="uvm-kpi-label">Expense Portion</p>
+                      <p id="sum-expense-share" class="uvm-kpi-val text-orange-700">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-amber-50">
+                      <p class="uvm-kpi-label">Interest Paid</p>
+                      <p id="sum-interest" class="uvm-kpi-val text-amber-600">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-lime-50">
+                      <p class="uvm-kpi-label">Interest Gained</p>
+                      <p id="sum-interest-gained" class="uvm-kpi-val text-lime-700">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-cyan-50">
+                      <p class="uvm-kpi-label">Contribution Base</p>
+                      <p id="sum-contribution-base" class="uvm-kpi-val text-cyan-700">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-blue-50">
+                      <p class="uvm-kpi-label">Principal Repaid</p>
+                      <p id="sum-principal-paid" class="uvm-kpi-val text-blue-600">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-slate-50">
+                      <p class="uvm-kpi-label">Active Loans</p>
+                      <p id="sum-active-loans" class="uvm-kpi-val text-slate-700">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-slate-50">
+                      <p class="uvm-kpi-label">Total Loan Principal</p>
+                      <p id="sum-loan-principal" class="uvm-kpi-val text-slate-700">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-rose-50">
+                      <p class="uvm-kpi-label">Unpaid Principal</p>
+                      <p id="sum-unpaid" class="uvm-kpi-val text-rose-700">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-violet-50">
+                      <p class="uvm-kpi-label">Guaranteed Amount</p>
+                      <p id="sum-guaranteed" class="uvm-kpi-val text-violet-700">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-emerald-50">
+                      <p class="uvm-kpi-label">Total Money IN</p>
+                      <p id="sum-tx-in" class="uvm-kpi-val text-emerald-700">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-rose-50">
+                      <p class="uvm-kpi-label">Total Money OUT</p>
+                      <p id="sum-tx-out" class="uvm-kpi-val text-rose-600">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-slate-50">
+                      <p class="uvm-kpi-label">Total Transactions</p>
+                      <p id="sum-tx-count" class="uvm-kpi-val text-slate-700">—</p>
+                    </div>
+
+                    <div class="uvm-kpi border border-emerald-300 bg-emerald-100">
                       <p class="uvm-kpi-label font-semibold text-emerald-700">Net Value</p>
                       <p id="sum-net" class="uvm-kpi-val text-emerald-800">—</p>
                     </div>
                   </div>
+
                   <div class="rounded-xl border border-slate-200 p-4">
-                    <p class="uvm-section-label mb-3">Recent Activity (last 6)</p>
+                    <p class="uvm-section-label mb-3">Recent Activity</p>
                     <div id="sum-recent" class="space-y-2"></div>
                   </div>
                 </div>
-
-              </div><!-- /scrollable body -->
+              </div>
 
               <!-- Footer -->
               <div class="flex shrink-0 justify-end border-t border-slate-200 bg-slate-50 px-6 py-3">
-                <button id="view-close" class="btn-ghost text-sm">Funga</button>
+                <button id="view-close" class="btn-ghost rounded-lg px-4 py-2 text-sm">Funga</button>
               </div>
             </div>
           </div>
-          <!-- /USER VIEW MODAL -->
 
-
-          <!-- ╔══════════════════════════════════════════════════════════════╗
-              ║  USER CREATE/EDIT MODAL                                     ║
-              ║  Also lives OUTSIDE #section-users for the same reason.     ║
-              ╚══════════════════════════════════════════════════════════════╝ -->
-          <div id="user-modal"
-              class="fixed inset-0 z-50 hidden h-full items-center justify-center bg-black/50 p-4">
-            <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
-              <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
-                <h2 id="modal-title" class="text-lg font-semibold text-primary-dark">Umunyamukoresha Mushya</h2>
-                <button id="modal-close" class="text-gray-500 hover:text-gray-700" title="Funga">
-                  <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                  </svg>
-                </button>
-              </div>
-              <div class="px-6 py-4">
-                <form id="user-form" class="space-y-6">
-                  <input type="hidden" name="id" id="user-id" />
-
-                  <div>
-                    <h3 class="mb-4 text-sm font-semibold text-primary-dark">Amakuru y'Umunyamuryango</h3>
-                    <div class="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label for="user-names" class="block text-xs font-medium text-slate-700">Amazina *</label>
-                        <input id="user-names" name="names" type="text" required
-                              class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                              placeholder="Izina ryombi" />
-                      </div>
-                      <div>
-                        <label for="user-nid" class="block text-xs font-medium text-slate-700">NID / Passport</label>
-                        <input id="user-nid" name="nid_passport" type="text"
-                              class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                              placeholder="1199080023975090" />
-                      </div>
-                      <div>
-                        <label for="user-email" class="block text-xs font-medium text-slate-700">Email</label>
-                        <input id="user-email" name="email" type="email"
-                              class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                              placeholder="email@example.com" />
-                      </div>
-                      <div>
-                        <label for="user-phone1" class="block text-xs font-medium text-slate-700">Telefoni ya Mbere *</label>
-                        <input id="user-phone1" name="phone1" type="text"
-                              class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                              placeholder="0784921483" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="border-t pt-4">
-                    <label class="flex items-center gap-2">
-                      <input id="has-phone2" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
-                      <span class="text-sm font-medium text-slate-700">Ifite Telefoni y'Kabiri?</span>
-                    </label>
-                    <div id="phone2-section" class="mt-4 hidden">
-                      <label class="block text-xs font-medium text-slate-700">Telefoni y'Kabiri</label>
-                      <input id="user-phone2" name="phone2" type="text"
-                            class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                            placeholder="0788 000 000" />
-                    </div>
-                  </div>
-
-                  <div class="border-t pt-4">
-                    <label class="block text-xs font-medium text-slate-700">Ijambo ry'ibanga *</label>
-                    <input id="user-password" name="password" type="password"
-                          class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                          placeholder="Shyiramo ijambo ry'ibanga" />
-                    <p class="mt-1 text-[11px] text-slate-500">(Ubwabo niba ushaka guhindura)</p>
-                  </div>
-
-                  <div class="border-t pt-4">
-                    <label class="flex items-center gap-2">
-                      <input id="has-guarantor" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
-                      <span class="text-sm font-medium text-slate-700">Ifite Umwishingira?</span>
-                    </label>
-                    <div id="guarantor-section" class="mt-4 hidden space-y-4">
-                      <h3 class="text-sm font-semibold text-primary-dark">Amakuru y'Umwishingira</h3>
-                      <div class="grid gap-4 md:grid-cols-2">
-                        <div>
-                          <label class="block text-xs font-medium text-slate-700">Izina ry'Umwishingira</label>
-                          <input id="user-guarantee-name" name="guarantee_name" type="text"
-                                class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                                placeholder="Izina ryombi" />
-                        </div>
-                        <div>
-                          <label class="block text-xs font-medium text-slate-700">NID / Passport y'Umwishingira</label>
-                          <input id="user-guarantee-nid" name="guarantee_nid_passport" type="text"
-                                class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                                placeholder="1199080023975090" />
-                        </div>
-                        <div>
-                          <label class="block text-xs font-medium text-slate-700">Email y'Umwishingira</label>
-                          <input id="user-guarantee-email" name="guarantee_email" type="email"
-                                class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                                placeholder="email@example.com" />
-                        </div>
-                        <div>
-                          <label class="block text-xs font-medium text-slate-700">Telefoni ya Mbere y'Umwishingira</label>
-                          <input id="user-guarantee-phone1" name="guarantee_phone1" type="text"
-                                class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                                placeholder="0784921483" />
-                        </div>
-                      </div>
-                      <div>
-                        <label class="flex items-center gap-2">
-                          <input id="has-guarantee-phone2" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
-                          <span class="text-xs font-medium text-slate-700">Telefoni y'Kabiri y'Umwishingira</span>
-                        </label>
-                        <div id="guarantee-phone2-section" class="mt-2 hidden">
-                          <input id="user-guarantee-phone2" name="guarantee_phone2" type="text"
-                                class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                                placeholder="0788 000 000" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="border-t pt-4">
-                    <label class="mb-3 block text-xs font-medium text-slate-700">Imiterere</label>
-                    <div class="flex flex-wrap gap-4">
-                      <label class="flex items-center gap-2">
-                        <input id="user-is-member" name="is_member" type="checkbox"
-                              class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
-                        <span class="text-sm text-slate-700">Umunyamuryango</span>
-                      </label>
-                      <label class="flex items-center gap-2">
-                        <input id="user-is-admin" name="is_admin" type="checkbox"
-                              class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
-                        <span class="text-sm text-slate-700">Admin</span>
-                      </label>
-                    </div>
-                  </div>
-                </form>
-              </div>
-              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
-                <button id="user-cancel" class="btn-ghost">Siba</button>
-                <button id="user-save"   class="btn-primary">Bika</button>
-              </div>
-            </div>
-          </div>
-          <!-- /USER CREATE/EDIT MODAL -->
-
-
-          <!-- ╔══════════════════════════════════════════════════════════════╗
-              ║  USERS SECTION  –  the actual page content                  ║
-              ║  Only the table + controls live here. Modals are above.     ║
-              ╚══════════════════════════════════════════════════════════════╝ -->
-          <div id="section-users" class="hidden space-y-4">
-            <p class="text-sm font-semibold text-primary-dark">Abanyamuryango</p>
-            <div class="card">
-              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <p class="text-xs text-slate-600">
-                  Hano umuyobozi ashobora kurema, guhindura no gusiba abanyamuryango n' abataribo.
-                </p>
-                <div class="flex gap-2">
-                  <button id="btn-new-user"      class="btn-secondary text-xs">Umunyamukoresha Mushya</button>
-                  <button id="btn-refresh-users" type="button" class="btn-primary text-xs">Refresh</button>
-                </div>
-              </div>
-
-              <div class="mt-4">
-                <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div class="flex items-center gap-2">
-                    <input id="users-search" type="search"
-                          placeholder="Shakisha amazina / email / telefoni"
-                          class="rounded-lg border px-3 py-2 text-sm" />
-                    <button id="users-search-btn" class="btn-secondary text-xs">Shakisha</button>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <button id="users-prev" class="btn-ghost text-xs">Prev</button>
-                    <span   id="users-page" class="text-sm">1</span>
-                    <button id="users-next" class="btn-ghost text-xs">Next</button>
-                  </div>
-                </div>
-
-                <div class="table-wrapper">
-                  <table class="table">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Amazina</th>
-                        <th>Email</th>
-                        <th>Telefoni</th>
-                        <th>Member</th>
-                        <th>Admin</th>
-                        <th>Ibikorwa</th>
-                      </tr>
-                    </thead>
-                    <tbody id="users-tbody">
-                      <!-- filled by JS -->
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-          <!-- /USERS SECTION -->
-
-
-          <!-- ── Scoped styles for the view modal ─────────────────────── -->
           <style>
           .uvm-tab          { padding:.55rem .85rem; font-size:.72rem; font-weight:500; color:#64748b; white-space:nowrap; border-bottom:2px solid transparent; background:transparent; cursor:pointer; transition:color .15s,border-color .15s; }
           .uvm-tab:hover    { color:#1e293b; }
           .uvm-tab-active   { color:#2F6B4F; border-bottom-color:#2F6B4F; font-weight:600; }
-
           .uvm-section-label { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#94a3b8; }
           .uvm-field-label   { font-size:.62rem; color:#94a3b8; margin-bottom:.1rem; }
           .uvm-field-val     { font-size:.85rem; font-weight:500; color:#1e293b; }
           .uvm-badge         { display:inline-block; padding:.15rem .6rem; border-radius:9999px; font-size:.7rem; font-weight:600; }
-
           .uvm-kpi           { border-radius:.75rem; border:1px solid #e2e8f0; padding:1rem; text-align:center; }
           .uvm-kpi-label     { font-size:.62rem; color:#94a3b8; }
           .uvm-kpi-val       { margin-top:.25rem; font-size:1.1rem; font-weight:700; }
-
           .uvm-tbl-wrap                  { overflow-x:auto; border-radius:.75rem; border:1px solid #e2e8f0; }
           .uvm-tbl-wrap table            { width:100%; border-collapse:collapse; font-size:.75rem; }
           .uvm-tbl-wrap thead tr         { background:#f8fafc; }
@@ -688,7 +803,6 @@
           .uvm-tbl-wrap td               { padding:.6rem .75rem; border-bottom:1px solid #f1f5f9; color:#334155; vertical-align:middle; }
           .uvm-tbl-wrap tr:last-child td { border-bottom:none; }
           .uvm-tbl-wrap tr:hover td      { background:#f8fafc; }
-
           .spill        { display:inline-block; padding:.12rem .5rem; border-radius:9999px; font-size:.62rem; font-weight:700; line-height:1.5; }
           .spill-green  { background:#dcfce7; color:#16a34a; }
           .spill-amber  { background:#fef3c7; color:#d97706; }
@@ -775,59 +889,6 @@
             </div>
           </div>
 
-          <!-- MEMBERS -->
-          <div id="section-members" class="hidden space-y-4">
-            <p class="text-sm font-semibold text-primary-dark">Abanyamuryango</p>
-            <div class="card">
-              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <p class="text-xs text-slate-600">
-                  Kurikirana abanyamuryango, kwemeza abashya no guhindura imiterere yabo.
-                </p>
-                <div class="flex gap-2">
-                  <button class="btn-secondary text-xs">Umunyamuryango mushya</button>
-                  <button class="btn-primary text-xs">Export Raporo</button>
-                </div>
-              </div>
-              <div class="mt-4 table-wrapper">
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th>Izina</th>
-                      <th>Telefoni</th>
-                      <th>Imigabane (Frw)</th>
-                      <th>Inguzanyo (Frw)</th>
-                      <th>Imiterere</th>
-                      <th>Ibikorwa</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Nzabonimpa Jean</td>
-                      <td>0788 000 111</td>
-                      <td>600,000</td>
-                      <td>200,000</td>
-                        <td><span class="badge badge-success">Akora neza</span></td>
-                        <td>
-                          <button class="btn-ghost">Hindura</button>
-                          <button class="btn-ghost-danger">Siba</button>
-                        </td>
-                    </tr>
-                    <tr>
-                      <td>Uwase Aline</td>
-                      <td>0722 333 444</td>
-                      <td>200,000</td>
-                      <td>0</td>
-                        <td><span class="badge badge-warning">Irategereje kwemezwa</span></td>
-                        <td>
-                          <button class="btn-ghost">Hindura</button>
-                          <button class="btn-ghost-danger">Siba</button>
-                        </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
           
           <!-- LOANS -->
           <div id="section-loans" class="hidden space-y-4">
@@ -1212,7 +1273,7 @@
                       <th class="p-3">#</th>
                       <th class="p-3">Itariki</th>
                       <th class="p-3">User</th>
-                      <th class="p-3">Konti</th>
+                      <!-- <th class="p-3">Konti</th> -->
                       <th class="p-3">Ubwoko</th>
                       <th class="p-3">Direction</th>
                       <th class="p-3 text-right">Igipimo (Frw)</th>

@@ -1,12 +1,3 @@
-
-    // ══════════════════════════════════════════════════════════════════
-//  USERS  –  complete script (global helpers + view modal + CRUD)
-//  Drop this in as a full replacement for the existing script block.
-// ══════════════════════════════════════════════════════════════════
-
-/* ─────────────────────────────────────────────────────────────
-   Global helpers (used by other tabs too via window.*)
-───────────────────────────────────────────────────────────── */
 const apiUrl = 'users_api.php';
 
 const globalEscapeHtml = (s) => {
@@ -37,57 +28,100 @@ const _pill = (s) => {
   return `<span class="${cls}">${globalEscapeHtml(s)}</span>`;
 };
 
+function userProfileImageUrl(id) {
+  return `${apiUrl}?id=${encodeURIComponent(id)}&image=profile&t=${Date.now()}`;
+}
+
+function userNidImageUrl(id) {
+  return `${apiUrl}?id=${encodeURIComponent(id)}&image=nid&t=${Date.now()}`;
+}
+
+function setImagePreview(imgEl, placeholderEl, url, showImage = true) {
+  if (!imgEl || !placeholderEl) return;
+
+  if (showImage && url) {
+    imgEl.src = url;
+    imgEl.classList.remove('hidden');
+    placeholderEl.classList.add('hidden');
+  } else {
+    imgEl.src = '';
+    imgEl.classList.add('hidden');
+    placeholderEl.classList.remove('hidden');
+  }
+}
+
+function clearFileInput(id) {
+  const el = document.getElementById(id);
+  if (el) el.value = '';
+}
+
 /* ─────────────────────────────────────────────────────────────
-   Tab switching (sidebar navigation)
+   Optional sidebar navigation
 ───────────────────────────────────────────────────────────── */
-const menu = document.getElementById('admin-menu');
-const sections = [
-  'overview','members','users','loans','accounts','shares',
-  'payments','expenses','transactions','assets','notifications','reports','settings',
-];
-const titles = {
-  overview    : "Isuzuma rusange ry'Ikimina",
-  members     : "Urutonde n'imicungire y'abanyamuryango",
-  users       : "Imicungire y'abakoresha (Create / Edit / Delete)",
-  accounts    : "Amafaranga (Accounts) - Imicungire y'ama konti",
-  loans       : "Inguzanyo zose z'Ikimina",
-  shares      : "Imigabane n'inyungu zayo",
-  payments    : "Kwishyura kw'inguzanyo",
-  expenses    : "Expenses z'Ikimina",
-  transactions: "Transactions - Izafari z'amafaranga",
-  assets      : "Imutungo (Assets) y'Ikimina",
-  notifications:"Notifications (Ubutumwa bwo kumenyesha)",
-  reports     : "Raporo z'ingenzi z'Ikimina",
-  settings    : "Igenamiterere (Settings) z'Ikimina",
-};
+(function () {
+  const menu = document.getElementById('admin-menu');
+  if (!menu) return;
 
-menu.querySelectorAll('button[data-section]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const key = btn.getAttribute('data-section');
-    menu.querySelectorAll('button[data-section]').forEach(b => b.classList.remove('sidebar-link-active'));
-    btn.classList.add('sidebar-link-active');
-    sections.forEach(s => {
-      const el = document.getElementById(`section-${s}`);
-      if (el) el.classList.toggle('hidden', s !== key);
+  const sections = [
+    'overview','members','users','loans','accounts','shares',
+    'payments','expenses','transactions','assets','notifications','reports','settings',
+  ];
+
+  const titles = {
+    overview    : "Isuzuma rusange ry'Ikimina",
+    members     : "Urutonde n'imicungire y'abanyamuryango",
+    users       : "Imicungire y'abakoresha (Create / Edit / Delete)",
+    accounts    : "Amafaranga (Accounts) - Imicungire y'ama konti",
+    loans       : "Inguzanyo zose z'Ikimina",
+    shares      : "Imigabane n'inyungu zayo",
+    payments    : "Kwishyura kw'inguzanyo",
+    expenses    : "Expenses z'Ikimina",
+    transactions: "Transactions - Izafari z'amafaranga",
+    assets      : "Imutungo (Assets) y'Ikimina",
+    notifications:"Notifications",
+    reports     : "Raporo z'ingenzi",
+    settings    : "Igenamiterere",
+  };
+
+  menu.querySelectorAll('button[data-section]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.getAttribute('data-section');
+
+      menu.querySelectorAll('button[data-section]').forEach(b => {
+        b.classList.remove('sidebar-link-active');
+      });
+      btn.classList.add('sidebar-link-active');
+
+      sections.forEach(s => {
+        const el = document.getElementById(`section-${s}`);
+        if (el) el.classList.toggle('hidden', s !== key);
+      });
+
+      const titleEl = document.getElementById('section-title');
+      if (titleEl && titles[key]) titleEl.textContent = titles[key];
     });
-    const titleEl = document.getElementById('section-title');
-    if (titleEl && titles[key]) titleEl.textContent = titles[key];
   });
-});
+})();
 
 /* ─────────────────────────────────────────────────────────────
-   USER VIEW MODAL  –  tabbed full profile
+   USER VIEW MODAL
 ───────────────────────────────────────────────────────────── */
 (function () {
   const uvModal = document.getElementById('user-view-modal');
-  const openUVM  = () => { uvModal.classList.remove('hidden'); uvModal.classList.add('flex'); };
-  const closeUVM = () => { uvModal.classList.add('hidden');    uvModal.classList.remove('flex'); };
+  if (!uvModal) return;
 
-  document.getElementById('view-modal-close').addEventListener('click', closeUVM);
-  document.getElementById('view-close').addEventListener('click', closeUVM);
+  let currentUserFullData = null;
+
+  const openUVM  = () => { uvModal.classList.remove('hidden'); uvModal.classList.add('flex'); };
+  const closeUVM = () => { uvModal.classList.add('hidden'); uvModal.classList.remove('flex'); };
+
+  const viewModalClose = document.getElementById('view-modal-close');
+  const viewClose = document.getElementById('view-close');
+
+  if (viewModalClose) viewModalClose.addEventListener('click', closeUVM);
+  if (viewClose) viewClose.addEventListener('click', closeUVM);
   uvModal.addEventListener('click', e => { if (e.target === uvModal) closeUVM(); });
 
-  /* Tab switching inside view modal */
   uvModal.querySelectorAll('.uvm-tab').forEach(btn => {
     btn.addEventListener('click', () => {
       uvModal.querySelectorAll('.uvm-tab').forEach(b => b.classList.remove('uvm-tab-active'));
@@ -98,7 +132,6 @@ menu.querySelectorAll('button[data-section]').forEach(btn => {
     });
   });
 
-  /* ── HTML helpers ─────────────────────────────────────── */
   function setHTML(id, html) {
     const el = document.getElementById(id);
     if (el) el.innerHTML = html;
@@ -117,32 +150,83 @@ menu.querySelectorAll('button[data-section]').forEach(btn => {
       </div>`;
   }
 
-  /* ── Fill: Profile tab ────────────────────────────────── */
   function fillProfile(d) {
-    const initials = (d.names || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
-    document.getElementById('uvm-avatar').textContent = initials;
-    document.getElementById('uvm-name').textContent   = d.names || '—';
-    document.getElementById('uvm-email').textContent  = d.email || '—';
-    document.getElementById('uvm-badge-member').classList.toggle('hidden', !d.is_member);
-    document.getElementById('uvm-badge-admin').classList.toggle('hidden',  !d.is_admin);
+    const initials = (d.names || '?')
+      .split(' ')
+      .map(w => w[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+
+    const avatarText = document.getElementById('uvm-avatar');
+    const avatarImg  = document.getElementById('uvm-avatar-img');
+    const nidImg     = document.getElementById('uvm-nid-img');
+    const nidWrap    = document.getElementById('uvm-nid-wrap');
+    const profileFullImg = document.getElementById('uvm-profile-full-img');
+    const profilePlaceholder = document.getElementById('uvm-profile-placeholder');
+
+    if (avatarText) avatarText.textContent = initials;
+
+    const nameEl = document.getElementById('uvm-name');
+    const emailEl = document.getElementById('uvm-email');
+    if (nameEl) nameEl.textContent = d.names || '—';
+    if (emailEl) emailEl.textContent = d.email || '—';
+
+    const memberBadge = document.getElementById('uvm-badge-member');
+    const adminBadge = document.getElementById('uvm-badge-admin');
+    if (memberBadge) memberBadge.classList.toggle('hidden', !d.is_member);
+    if (adminBadge) adminBadge.classList.toggle('hidden', !d.is_admin);
 
     setHTML('p-names',  _orDash(d.names));
     setHTML('p-nid',    _orDash(d.nid_passport));
     setHTML('p-email',  _orDash(d.email));
     setHTML('p-ph1',    _orDash(d.phone1));
     setHTML('p-ph2',    _orDash(d.phone2));
-    setHTML('p-roles',
+    setHTML(
+      'p-roles',
       (d.is_member ? '<span class="spill spill-green">Member</span> ' : '') +
-      (d.is_admin  ? '<span class="spill spill-blue">Admin</span>'   : '')
+      (d.is_admin  ? '<span class="spill spill-blue">Admin</span>' : '')
     );
     setHTML('p-gname',  _orDash(d.guarantee_name));
     setHTML('p-gnid',   _orDash(d.guarantee_nid_passport));
     setHTML('p-gemail', _orDash(d.guarantee_email));
     setHTML('p-gph1',   _orDash(d.guarantee_phone1));
     setHTML('p-gph2',   _orDash(d.guarantee_phone2));
+
+    if (d.has_profile_image && d.id) {
+      const profileUrl = userProfileImageUrl(d.id);
+      setImagePreview(avatarImg, avatarText, profileUrl, true);
+
+      if (profileFullImg) {
+        profileFullImg.src = profileUrl;
+        profileFullImg.classList.remove('hidden');
+      }
+      if (profilePlaceholder) {
+        profilePlaceholder.classList.add('hidden');
+      }
+    } else {
+      setImagePreview(avatarImg, avatarText, '', false);
+
+      if (profileFullImg) {
+        profileFullImg.src = '';
+        profileFullImg.classList.add('hidden');
+      }
+      if (profilePlaceholder) {
+        profilePlaceholder.classList.remove('hidden');
+      }
+    }
+
+    if (nidWrap && nidImg) {
+      if (d.has_nid_image && d.id) {
+        nidWrap.classList.remove('hidden');
+        nidImg.src = userNidImageUrl(d.id);
+      } else {
+        nidWrap.classList.add('hidden');
+        nidImg.src = '';
+      }
+    }
   }
 
-  /* ── Fill: Transactions tab ───────────────────────────── */
   function fillTransactions(items) {
     setHTML('uvm-tx-count', `${items.length} record${items.length !== 1 ? 's' : ''}`);
 
@@ -150,29 +234,34 @@ menu.querySelectorAll('button[data-section]').forEach(btn => {
       <tr>
         <td>${_orDash(t.tx_date)}</td>
         <td><span class="spill spill-slate">${globalEscapeHtml(t.type)}</span></td>
-        <td><span class="${t.direction === 'IN' ? 'spill spill-green' : 'spill spill-red'}">
-              ${globalEscapeHtml(t.direction)}</span></td>
+        <td><span class="${t.direction === 'IN' ? 'spill spill-green' : 'spill spill-red'}">${globalEscapeHtml(t.direction)}</span></td>
         <td class="text-right font-semibold ${t.direction === 'IN' ? 'text-emerald-700' : 'text-rose-600'}">
           ${t.direction === 'IN' ? '+' : '−'}${_money(t.amount)}</td>
+        <td class="text-right">${_money(t.running_balance || 0)}</td>
         <td>${_orDash(t.account_name)}</td>
         <td>${t.loan_id ? `<span class="font-mono text-xs">#LN-${globalEscapeHtml(t.loan_id)}</span>` : _orDash(null)}</td>
         <td class="max-w-[12rem] truncate">${_orDash(t.description)}</td>
       </tr>`);
 
     setHTML('uvm-tx-body', buildTable(
-      ['Date','Type','Dir','Amount','Account','Loan','Description'], rows
+      ['Date','Type','Dir','Amount','Balance','Account','Loan','Description'], rows
     ));
   }
 
-  /* ── Fill: Contributions tab ──────────────────────────── */
   function fillContributions(items) {
     const relevant = items.filter(t =>
       (t.type === 'contribution' && t.direction === 'IN') ||
-      (t.type === 'withdrawal'   && t.direction === 'OUT')
+      (t.type === 'loan_interest' && t.direction === 'IN') ||
+      (t.type === 'withdrawal' && t.direction === 'OUT') ||
+      (t.type === 'withdrawal_deduction' && t.direction === 'OUT') ||
+      (t.type === 'expense_share' && t.direction === 'OUT')
     );
+
     const net =
-      relevant.filter(t => t.type === 'contribution').reduce((s, t) => s + Number(t.amount || 0), 0) -
-      relevant.filter(t => t.type === 'withdrawal').reduce((s, t) => s + Number(t.amount || 0), 0);
+      relevant.filter(t => t.type === 'contribution').reduce((s, t) => s + Number(t.amount || 0), 0) +
+      relevant.filter(t => t.type === 'loan_interest').reduce((s, t) => s + Number(t.amount || 0), 0) -
+      relevant.filter(t => ['withdrawal', 'withdrawal_deduction', 'expense_share'].includes(t.type))
+              .reduce((s, t) => s + Number(t.amount || 0), 0);
 
     setHTML('uvm-contrib-total', 'Net: ' + _money(net));
 
@@ -180,20 +269,20 @@ menu.querySelectorAll('button[data-section]').forEach(btn => {
       <tr>
         <td>${_orDash(t.tx_date)}</td>
         <td><span class="spill spill-slate">${globalEscapeHtml(t.type)}</span></td>
-        <td><span class="${t.direction === 'IN' ? 'spill spill-green' : 'spill spill-red'}">
-              ${globalEscapeHtml(t.direction)}</span></td>
+        <td><span class="${t.direction === 'IN' ? 'spill spill-green' : 'spill spill-red'}">${globalEscapeHtml(t.direction)}</span></td>
         <td class="text-right font-semibold ${t.direction === 'IN' ? 'text-emerald-700' : 'text-rose-600'}">
           ${t.direction === 'IN' ? '+' : '−'}${_money(t.amount)}</td>
+        <td class="text-right">${_money(t.running_balance || 0)}</td>
         <td class="max-w-[12rem] truncate">${_orDash(t.description)}</td>
       </tr>`);
 
     setHTML('uvm-contrib-body', buildTable(
-      ['Date','Type','Direction','Amount','Description'], rows,
-      'Nta contributions/withdrawals abonetse'
+      ['Date','Type','Direction','Amount','Balance','Description'],
+      rows,
+      'Nta contribution history ibonetse'
     ));
   }
 
-  /* ── Fill: Loans tab ──────────────────────────────────── */
   function fillLoans(loans) {
     setHTML('uvm-loans-count', `${loans.length} loan${loans.length !== 1 ? 's' : ''}`);
 
@@ -208,13 +297,35 @@ menu.querySelectorAll('button[data-section]').forEach(btn => {
         <td>${_orDash(l.end_date)}</td>
       </tr>`);
 
-    setHTML('uvm-loans-body', buildTable(
-      ['Loan #','Principal','Unpaid','Status','Rate','Start','End'], rows,
-      'Nta loans abonetse'
-    ));
+    let paymentSections = '';
+    loans.forEach(l => {
+      const payments = l.payments || [];
+      paymentSections += `
+        <div class="mt-4 rounded-xl border border-slate-200 p-4">
+          <p class="mb-2 text-sm font-semibold text-slate-700">Loan #LN-${globalEscapeHtml(l.loan_id)} Payment History</p>
+          ${buildTable(
+            ['Date','Type','Direction','Amount','Description'],
+            payments.map(p => `
+              <tr>
+                <td>${_orDash(p.tx_date)}</td>
+                <td>${_orDash(p.type)}</td>
+                <td>${_orDash(p.direction)}</td>
+                <td class="text-right">${_money(p.amount)}</td>
+                <td>${_orDash(p.description)}</td>
+              </tr>
+            `),
+            'Nta payment history ibonetse'
+          )}
+        </div>
+      `;
+    });
+
+    setHTML('uvm-loans-body',
+      buildTable(['Loan #','Principal','Unpaid','Status','Rate','Start','End'], rows, 'Nta loans abonetse') +
+      paymentSections
+    );
   }
 
-  /* ── Fill: Guaranteed tab ─────────────────────────────── */
   function fillGuaranteed(items) {
     const total = items.reduce((s, g) => s + Number(g.guarantee_amount || 0), 0);
     setHTML('uvm-guar-total', 'Total: ' + _money(total));
@@ -232,11 +343,11 @@ menu.querySelectorAll('button[data-section]').forEach(btn => {
 
     setHTML('uvm-guar-body', buildTable(
       ['Loan #','Borrower','My Guarantee','Loan Principal','My Status','Loan Status','Since'],
-      rows, 'Ntacyo yishingiye'
+      rows,
+      'Ntacyo yishingiye'
     ));
   }
 
-  /* ── Fill: Assets tab ─────────────────────────────────── */
   function fillAssets(items) {
     const rows = items.map(a => `
       <tr>
@@ -251,47 +362,62 @@ menu.querySelectorAll('button[data-section]').forEach(btn => {
       </tr>`);
 
     setHTML('uvm-assets-body', buildTable(
-      ['Asset #','Name','Purchase Date','Value','Location','Sold'], rows,
+      ['Asset #','Name','Purchase Date','Value','Location','Sold'],
+      rows,
       'Nta assets abonetse'
     ));
   }
 
-  /* ── Fill: Summary tab ────────────────────────────────── */
-  function fillSummary(transactions, loans, guaranteed) {
-    const sum   = (arr) => arr.reduce((s, t) => s + Number(t.amount || 0), 0);
-    const contribs    = transactions.filter(t => t.type === 'contribution'   && t.direction === 'IN');
-    const withdrawals = transactions.filter(t => t.type === 'withdrawal'     && t.direction === 'OUT');
-    const interest    = transactions.filter(t => t.type === 'loan_interest'  && t.direction === 'IN');
-    const princPaid   = transactions.filter(t => t.type === 'loan_principal' && t.direction === 'IN');
-    const allIn       = transactions.filter(t => t.direction === 'IN');
-    const allOut      = transactions.filter(t => t.direction === 'OUT');
+  function fillSummary(transactions, loans, guaranteed, summaryData = {}) {
+    const sum = (arr) => arr.reduce((s, t) => s + Number(t.amount || 0), 0);
 
-    const totalContrib   = sum(contribs);
-    const totalWithdraw  = sum(withdrawals);
-    const totalInterest  = sum(interest);
-    const totalPrincPaid = sum(princPaid);
+    const contribs = transactions.filter(t => t.type === 'contribution' && t.direction === 'IN');
+    const withdrawals = transactions.filter(t =>
+      ['withdrawal', 'withdrawal_deduction'].includes(t.type) && t.direction === 'OUT'
+    );
+    const expenseShare = transactions.filter(t => t.type === 'expense_share' && t.direction === 'OUT');
+    const interestPaid = transactions.filter(t => t.type === 'loan_interest' && t.direction === 'IN');
+    const principalPaid = transactions.filter(t => t.type === 'loan_principal' && t.direction === 'IN');
+    const allIn = transactions.filter(t => t.direction === 'IN');
+    const allOut = transactions.filter(t => t.direction === 'OUT');
+
+    const totalContrib = Number(summaryData.total_contribution || sum(contribs));
+    const totalWithdraw = Number(summaryData.total_withdraw || sum(withdrawals));
+    const totalExpenseShare = Number(summaryData.expense_portion || sum(expenseShare));
+    const totalInterestPaid = sum(interestPaid);
+    const totalInterestGained = Number(summaryData.interest_gained || 0);
+    const contributionBase = Number(summaryData.contribution_base || 0);
+    const totalPrincipalPaid = sum(principalPaid);
     const totalPrincipal = loans.reduce((s, l) => s + Number(l.principal || 0), 0);
-    const totalUnpaid    = loans.reduce((s, l) => s + Number(l.unpaid_principal || 0), 0);
-    const totalGuar      = guaranteed.reduce((s, g) => s + Number(g.guarantee_amount || 0), 0);
-    const activeLoans    = loans.filter(l => ['approved','defaulted'].includes(l.status));
-    const netVal         = (totalContrib + totalInterest) - (totalWithdraw + totalUnpaid + totalGuar);
+    const totalUnpaid = loans.reduce((s, l) => s + Number(l.unpaid_principal || 0), 0);
+    const totalGuaranteed = guaranteed.reduce((s, g) => s + Number(g.guarantee_amount || 0), 0);
+    const activeLoans = loans.filter(l => ['approved', 'defaulted'].includes(l.status));
 
-    setHTML('sum-contrib',        _money(totalContrib));
-    setHTML('sum-withdraw',       _money(totalWithdraw));
-    setHTML('sum-interest',       _money(totalInterest));
-    setHTML('sum-principal-paid', _money(totalPrincPaid));
-    setHTML('sum-active-loans',   activeLoans.length + ' loan' + (activeLoans.length !== 1 ? 's' : ''));
+    const netVal = (contributionBase + totalInterestGained) - totalUnpaid - totalGuaranteed;
+
+    setHTML('sum-contrib', _money(totalContrib));
+    setHTML('sum-withdraw', _money(totalWithdraw));
+    setHTML('sum-expense-share', _money(totalExpenseShare));
+    setHTML('sum-interest', _money(totalInterestPaid));
+    setHTML('sum-interest-gained', _money(totalInterestGained));
+    setHTML('sum-contribution-base', _money(contributionBase));
+    setHTML('sum-principal-paid', _money(totalPrincipalPaid));
+    setHTML('sum-active-loans', activeLoans.length + ' loan' + (activeLoans.length !== 1 ? 's' : ''));
     setHTML('sum-loan-principal', _money(totalPrincipal));
-    setHTML('sum-unpaid',         _money(totalUnpaid));
-    setHTML('sum-guaranteed',     _money(totalGuar));
-    setHTML('sum-tx-in',          _money(sum(allIn)));
-    setHTML('sum-tx-out',         _money(sum(allOut)));
-    setHTML('sum-tx-count',       transactions.length + ' total');
-    setHTML('sum-net',            _money(Math.max(0, netVal)));
+    setHTML('sum-unpaid', _money(totalUnpaid));
+    setHTML('sum-guaranteed', _money(totalGuaranteed));
+    setHTML('sum-tx-in', _money(sum(allIn)));
+    setHTML('sum-tx-out', _money(sum(allOut)));
+    setHTML('sum-tx-count', transactions.length + ' total');
+    setHTML('sum-net', _money(Math.max(0, netVal)));
 
-    // Recent 6
     const recent = [...transactions]
-      .sort((a, b) => (b.tx_date || '').localeCompare(a.tx_date || ''))
+      .slice()
+      .sort((a, b) => {
+        const cmp = String(b.tx_date || '').localeCompare(String(a.tx_date || ''));
+        if (cmp !== 0) return cmp;
+        return Number(b.transaction_id || 0) - Number(a.transaction_id || 0);
+      })
       .slice(0, 6);
 
     setHTML('sum-recent', recent.length
@@ -312,47 +438,362 @@ menu.querySelectorAll('button[data-section]').forEach(btn => {
     );
   }
 
-  /* ── Main loader ──────────────────────────────────────── */
+  function downloadUserPdfReport() {
+    if (!currentUserFullData) {
+      alert('No user data loaded yet.');
+      return;
+    }
+
+    const d = currentUserFullData.user || {};
+    const s = currentUserFullData.summary || {};
+    const tx = currentUserFullData.transactions || [];
+    const loans = currentUserFullData.loans || [];
+    const guaranteed = currentUserFullData.guaranteed || [];
+    const assets = currentUserFullData.assets || [];
+
+    const contribTx = tx.filter(t => t.type === 'contribution' && t.direction === 'IN');
+    const withdrawTx = tx.filter(t =>
+      ['withdrawal', 'withdrawal_deduction'].includes(t.type) && t.direction === 'OUT'
+    );
+    const interestTx = tx.filter(t => t.type === 'loan_interest' && t.direction === 'IN');
+    const expenseTx = tx.filter(t => t.type === 'expense_share' && t.direction === 'OUT');
+
+    const printable = `
+      <html>
+      <head>
+        <title>User Report - ${globalEscapeHtml(d.names || 'User')}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 24px; color: #222; font-size: 12px; }
+          h1, h2, h3 { margin: 0 0 10px; }
+          h1 { font-size: 22px; margin-bottom: 6px; }
+          h2 { font-size: 16px; margin-top: 24px; border-bottom: 1px solid #ddd; padding-bottom: 6px; }
+          h3 { font-size: 13px; margin-top: 16px; }
+          p { margin: 4px 0; }
+          .muted { color: #666; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+          .box { border: 1px solid #ddd; padding: 10px; border-radius: 6px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+          th, td { border: 1px solid #ddd; padding: 6px; text-align: left; vertical-align: top; }
+          th { background: #f5f5f5; }
+          .right { text-align: right; }
+          .section-space { margin-top: 18px; }
+        </style>
+      </head>
+      <body>
+        <h1>User Detailed Financial Report</h1>
+        <p class="muted">Generated on ${new Date().toLocaleString()}</p>
+
+        <h2>Profile Information</h2>
+        <div class="grid">
+          <div class="box">
+            <p><strong>Name:</strong> ${globalEscapeHtml(d.names || '')}</p>
+            <p><strong>Email:</strong> ${globalEscapeHtml(d.email || '')}</p>
+            <p><strong>NID / Passport:</strong> ${globalEscapeHtml(d.nid_passport || '')}</p>
+            <p><strong>Phone 1:</strong> ${globalEscapeHtml(d.phone1 || '')}</p>
+            <p><strong>Phone 2:</strong> ${globalEscapeHtml(d.phone2 || '')}</p>
+          </div>
+          <div class="box">
+            <p><strong>Member:</strong> ${d.is_member ? 'Yes' : 'No'}</p>
+            <p><strong>Admin:</strong> ${d.is_admin ? 'Yes' : 'No'}</p>
+            <p><strong>Total Contribution:</strong> ${_money(s.total_contribution || 0)}</p>
+            <p><strong>Total Withdraw:</strong> ${_money(s.total_withdraw || 0)}</p>
+            <p><strong>Contribution Base:</strong> ${_money(s.contribution_base || 0)}</p>
+            <p><strong>Interest Gained:</strong> ${_money(s.interest_gained || 0)}</p>
+            <p><strong>Expense Portion:</strong> ${_money(s.expense_portion || 0)}</p>
+          </div>
+        </div>
+
+        <h2>Guarantor Information</h2>
+        <p><strong>Name:</strong> ${globalEscapeHtml(d.guarantee_name || '')}</p>
+        <p><strong>NID:</strong> ${globalEscapeHtml(d.guarantee_nid_passport || '')}</p>
+        <p><strong>Email:</strong> ${globalEscapeHtml(d.guarantee_email || '')}</p>
+        <p><strong>Phone 1:</strong> ${globalEscapeHtml(d.guarantee_phone1 || '')}</p>
+        <p><strong>Phone 2:</strong> ${globalEscapeHtml(d.guarantee_phone2 || '')}</p>
+
+        <h2>Summary</h2>
+        <div class="grid">
+          <div class="box"><strong>Total Contributions</strong><br>${_money((s.total_contribution || contribTx.reduce((a, t) => a + Number(t.amount || 0), 0)))}</div>
+          <div class="box"><strong>Total Withdrawals</strong><br>${_money((s.total_withdraw || withdrawTx.reduce((a, t) => a + Number(t.amount || 0), 0)))}</div>
+          <div class="box"><strong>Total Loan Interest Paid In</strong><br>${_money(interestTx.reduce((a, t) => a + Number(t.amount || 0), 0))}</div>
+          <div class="box"><strong>Total Expense Portion</strong><br>${_money(expenseTx.reduce((a, t) => a + Number(t.amount || 0), 0))}</div>
+          <div class="box"><strong>Contribution Base</strong><br>${_money(s.contribution_base || 0)}</div>
+          <div class="box"><strong>Interest Gained</strong><br>${_money(s.interest_gained || 0)}</div>
+        </div>
+
+        <h2>Client Statement / Running Balance History</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Direction</th>
+              <th>Description</th>
+              <th class="right">Amount</th>
+              <th class="right">Running Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tx.length ? tx.map(t => `
+              <tr>
+                <td>${globalEscapeHtml(t.tx_date || '')}</td>
+                <td>${globalEscapeHtml(t.type || '')}</td>
+                <td>${globalEscapeHtml(t.direction || '')}</td>
+                <td>${globalEscapeHtml(t.description || '')}</td>
+                <td class="right">${_money(t.amount || 0)}</td>
+                <td class="right">${_money(t.running_balance || 0)}</td>
+              </tr>
+            `).join('') : '<tr><td colspan="6">No transactions found</td></tr>'}
+          </tbody>
+        </table>
+
+        <h2>Contribution History</h2>
+        <table>
+          <thead><tr><th>Date</th><th>Description</th><th class="right">Amount</th></tr></thead>
+          <tbody>
+            ${contribTx.length ? contribTx.map(t => `
+              <tr>
+                <td>${globalEscapeHtml(t.tx_date || '')}</td>
+                <td>${globalEscapeHtml(t.description || '')}</td>
+                <td class="right">${_money(t.amount || 0)}</td>
+              </tr>
+            `).join('') : '<tr><td colspan="3">No contributions</td></tr>'}
+          </tbody>
+        </table>
+
+        <h2>Withdrawal History</h2>
+        <table>
+          <thead><tr><th>Date</th><th>Description</th><th class="right">Amount</th></tr></thead>
+          <tbody>
+            ${withdrawTx.length ? withdrawTx.map(t => `
+              <tr>
+                <td>${globalEscapeHtml(t.tx_date || '')}</td>
+                <td>${globalEscapeHtml(t.description || '')}</td>
+                <td class="right">${_money(t.amount || 0)}</td>
+              </tr>
+            `).join('') : '<tr><td colspan="3">No withdrawals</td></tr>'}
+          </tbody>
+        </table>
+
+        <h2>Interest History</h2>
+        <table>
+          <thead><tr><th>Date</th><th>Description</th><th class="right">Amount</th></tr></thead>
+          <tbody>
+            ${interestTx.length ? interestTx.map(t => `
+              <tr>
+                <td>${globalEscapeHtml(t.tx_date || '')}</td>
+                <td>${globalEscapeHtml(t.description || '')}</td>
+                <td class="right">${_money(t.amount || 0)}</td>
+              </tr>
+            `).join('') : '<tr><td colspan="3">No interest transactions</td></tr>'}
+          </tbody>
+        </table>
+
+        <h2>Expense Portion History</h2>
+        <table>
+          <thead><tr><th>Date</th><th>Description</th><th class="right">Amount</th></tr></thead>
+          <tbody>
+            ${expenseTx.length ? expenseTx.map(t => `
+              <tr>
+                <td>${globalEscapeHtml(t.tx_date || '')}</td>
+                <td>${globalEscapeHtml(t.description || '')}</td>
+                <td class="right">${_money(t.amount || 0)}</td>
+              </tr>
+            `).join('') : '<tr><td colspan="3">No expense portions</td></tr>'}
+          </tbody>
+        </table>
+
+        <h2>Loans and Payment History</h2>
+        ${loans.length ? loans.map(l => `
+          <div class="section-space">
+            <h3>Loan #LN-${globalEscapeHtml(l.loan_id)}</h3>
+            <p><strong>Principal:</strong> ${_money(l.principal || 0)}</p>
+            <p><strong>Interest Rate:</strong> ${globalEscapeHtml(l.interest_rate || '')}%</p>
+            <p><strong>Status:</strong> ${globalEscapeHtml(l.status || '')}</p>
+            <p><strong>Start:</strong> ${globalEscapeHtml(l.start_date || '')}</p>
+            <p><strong>End:</strong> ${globalEscapeHtml(l.end_date || '')}</p>
+            <p><strong>Unpaid Principal:</strong> ${_money(l.unpaid_principal || 0)}</p>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Direction</th>
+                  <th>Description</th>
+                  <th class="right">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(l.payments && l.payments.length) ? l.payments.map(p => `
+                  <tr>
+                    <td>${globalEscapeHtml(p.tx_date || '')}</td>
+                    <td>${globalEscapeHtml(p.type || '')}</td>
+                    <td>${globalEscapeHtml(p.direction || '')}</td>
+                    <td>${globalEscapeHtml(p.description || '')}</td>
+                    <td class="right">${_money(p.amount || 0)}</td>
+                  </tr>
+                `).join('') : '<tr><td colspan="5">No payment history</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        `).join('') : '<p>No loans found.</p>'}
+
+        <h2>Guaranteed Loans</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Loan #</th>
+              <th>Borrower</th>
+              <th class="right">Guarantee Amount</th>
+              <th>My Guarantee Status</th>
+              <th>Loan Status</th>
+              <th>Since</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${guaranteed.length ? guaranteed.map(g => `
+              <tr>
+                <td>#LN-${globalEscapeHtml(g.loan_id)}</td>
+                <td>${globalEscapeHtml(g.borrower_name || '')}</td>
+                <td class="right">${_money(g.guarantee_amount || 0)}</td>
+                <td>${globalEscapeHtml(g.status || '')}</td>
+                <td>${globalEscapeHtml(g.loan_status || '')}</td>
+                <td>${globalEscapeHtml(g.since || '')}</td>
+              </tr>
+            `).join('') : '<tr><td colspan="6">No active guaranteed loans</td></tr>'}
+          </tbody>
+        </table>
+
+        <h2>Assets</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Asset #</th>
+              <th>Name</th>
+              <th>Purchase Date</th>
+              <th class="right">Value</th>
+              <th>Location</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${assets.length ? assets.map(a => `
+              <tr>
+                <td>#AS-${globalEscapeHtml(a.asset_id)}</td>
+                <td>${globalEscapeHtml(a.name || '')}</td>
+                <td>${globalEscapeHtml(a.purchase_date || '')}</td>
+                <td class="right">${_money(a.purchase_value || 0)}</td>
+                <td>${globalEscapeHtml(a.location || '')}</td>
+              </tr>
+            `).join('') : '<tr><td colspan="5">No assets</td></tr>'}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const win = window.open('', '_blank');
+    if (!win) {
+      alert('Popup blocked. Please allow popups for PDF download.');
+      return;
+    }
+
+    win.document.open();
+    win.document.write(printable);
+    win.document.close();
+
+    win.onload = function () {
+      win.focus();
+      win.print();
+    };
+  }
+
+  document.addEventListener('click', function (e) {
+    const target = e.target.closest('#uvm-download-pdf');
+    if (target) {
+      downloadUserPdfReport();
+    }
+  });
+
   async function viewUserDetails(id) {
-    // Reset to Profile tab
     uvModal.querySelectorAll('.uvm-tab').forEach(b => b.classList.remove('uvm-tab-active'));
     uvModal.querySelectorAll('.uvm-panel').forEach(p => p.classList.add('hidden'));
     const firstTab = uvModal.querySelector('.uvm-tab[data-tab="profile"]');
     if (firstTab) firstTab.classList.add('uvm-tab-active');
 
-    // Clear header while loading
-    document.getElementById('uvm-avatar').textContent  = '…';
-    document.getElementById('uvm-name').textContent    = 'Loading…';
-    document.getElementById('uvm-email').textContent   = '';
-    document.getElementById('uvm-badge-member').classList.add('hidden');
-    document.getElementById('uvm-badge-admin').classList.add('hidden');
+    const avatarText = document.getElementById('uvm-avatar');
+    const nameEl = document.getElementById('uvm-name');
+    const emailEl = document.getElementById('uvm-email');
+    if (avatarText) avatarText.textContent = '…';
+    if (nameEl) nameEl.textContent = 'Loading…';
+    if (emailEl) emailEl.textContent = '';
 
-    document.getElementById('uvm-loading').classList.remove('hidden');
-    document.getElementById('uvm-error').classList.add('hidden');
+    const memberBadge = document.getElementById('uvm-badge-member');
+    const adminBadge = document.getElementById('uvm-badge-admin');
+    if (memberBadge) memberBadge.classList.add('hidden');
+    if (adminBadge) adminBadge.classList.add('hidden');
+
+    const avatarImg = document.getElementById('uvm-avatar-img');
+    const nidImg    = document.getElementById('uvm-nid-img');
+    const nidWrap   = document.getElementById('uvm-nid-wrap');
+    const profileFullImg = document.getElementById('uvm-profile-full-img');
+    const profilePlaceholder = document.getElementById('uvm-profile-placeholder');
+
+    if (avatarImg) {
+      avatarImg.src = '';
+      avatarImg.classList.add('hidden');
+    }
+    if (nidImg) nidImg.src = '';
+    if (nidWrap) nidWrap.classList.add('hidden');
+
+    if (profileFullImg) {
+      profileFullImg.src = '';
+      profileFullImg.classList.add('hidden');
+    }
+    if (profilePlaceholder) {
+      profilePlaceholder.classList.remove('hidden');
+    }
+
+    const loadingEl = document.getElementById('uvm-loading');
+    const errorEl = document.getElementById('uvm-error');
+    if (loadingEl) loadingEl.classList.remove('hidden');
+    if (errorEl) errorEl.classList.add('hidden');
+
     openUVM();
 
     try {
-      const res  = await fetch(`${apiUrl}?id=${encodeURIComponent(id)}&full=1`, {
-        cache: 'no-store', credentials: 'include',
+      const res = await fetch(`${apiUrl}?id=${encodeURIComponent(id)}&full=1`, {
+        cache: 'no-store',
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      const json = await res.json();
 
-      document.getElementById('uvm-loading').classList.add('hidden');
+      const json = await res.json();
+      console.log('USER FULL JSON:', json);
+
+      if (loadingEl) loadingEl.classList.add('hidden');
 
       if (!json.success || !json.data) {
-        const errEl = document.getElementById('uvm-error');
-        errEl.textContent = json.message || 'Failed to load user data.';
-        errEl.classList.remove('hidden');
+        if (errorEl) {
+          errorEl.textContent = json.message || 'Failed to load user data.';
+          errorEl.classList.remove('hidden');
+        }
         return;
       }
 
       const transactions = json.transactions || [];
-      const loans        = json.loans        || [];
-      const guaranteed   = json.guaranteed   || [];
-      const assets       = json.assets       || [];
+      const loans        = json.loans || [];
+      const guaranteed   = json.guaranteed || [];
+      const assets       = json.assets || [];
 
-      // Show profile panel
+      currentUserFullData = {
+        user: json.data,
+        transactions,
+        loans,
+        guaranteed,
+        assets,
+        summary: json.summary || {}
+      };
+
       const profilePanel = document.getElementById('uvm-tab-profile');
       if (profilePanel) profilePanel.classList.remove('hidden');
 
@@ -362,24 +803,23 @@ menu.querySelectorAll('button[data-section]').forEach(btn => {
       fillLoans(loans);
       fillGuaranteed(guaranteed);
       fillAssets(assets);
-      fillSummary(transactions, loans, guaranteed);
-
+      fillSummary(transactions, loans, guaranteed, json.summary || {});
     } catch (err) {
       console.error('[UVM]', err);
-      document.getElementById('uvm-loading').classList.add('hidden');
-      const errEl = document.getElementById('uvm-error');
-      errEl.textContent = 'Network error: ' + err.message;
-      errEl.classList.remove('hidden');
+      if (loadingEl) loadingEl.classList.add('hidden');
+      if (errorEl) {
+        errorEl.textContent = 'Network error: ' + err.message;
+        errorEl.classList.remove('hidden');
+      }
     }
   }
 
-  // Expose so CRUD table's event delegation can call it
   window.viewUserDetails = viewUserDetails;
 
-  // Global delegation: any .btn-view anywhere on page
   document.addEventListener('click', e => {
-    if (e.target.classList.contains('btn-view')) {
-      viewUserDetails(e.target.dataset.id);
+    const btn = e.target.closest('.btn-view');
+    if (btn) {
+      viewUserDetails(btn.dataset.id);
     }
   });
 })();
@@ -397,6 +837,8 @@ menu.querySelectorAll('button[data-section]').forEach(btn => {
   const modalTitle = document.getElementById('modal-title');
   const modalClose = document.getElementById('modal-close');
 
+  if (!form || !tbody || !modal) return;
+
   let currentPage  = 1;
   let perPage      = 10;
   let currentQuery = '';
@@ -404,27 +846,36 @@ menu.querySelectorAll('button[data-section]').forEach(btn => {
 
   const esc = globalEscapeHtml;
   function openModal()  { modal.classList.remove('hidden'); modal.classList.add('flex'); }
-  function closeModal() { modal.classList.add('hidden');    modal.classList.remove('flex'); }
+  function closeModal() { modal.classList.add('hidden'); modal.classList.remove('flex'); }
 
   async function fetchUsers(page = currentPage, q = currentQuery) {
     try {
       const url  = `${apiUrl}?page=${page}&per_page=${perPage}` + (q ? `&q=${encodeURIComponent(q)}` : '');
-      const res  = await fetch(url, { cache: 'no-store' });
+      const res  = await fetch(url, { cache: 'no-store', credentials: 'include' });
+
       if (!res.ok) {
-        if (res.status === 403) { alert('Unauthorized. Please log in as admin.'); return; }
-        alert('Error loading users: ' + res.status); return;
+        if (res.status === 403) {
+          alert('Unauthorized. Please log in as admin.');
+          return;
+        }
+        alert('Error loading users: ' + res.status);
+        return;
       }
+
       const json = await res.json();
       if (json.success) {
-        currentPage = json.page     || page;
+        currentPage = json.page || page;
         perPage     = json.per_page || perPage;
-        lastTotal   = json.total    || 0;
+        lastTotal   = json.total || 0;
         renderTable(json.data || []);
         updatePagination();
       } else {
         alert(json.message || 'Error loading users');
       }
-    } catch (e) { console.error(e); alert('Network error'); }
+    } catch (e) {
+      console.error(e);
+      alert('Network error');
+    }
   }
 
   function renderTable(users) {
@@ -438,154 +889,339 @@ menu.querySelectorAll('button[data-section]').forEach(btn => {
         <td>${esc(u.phone1 || '')}</td>
         <td>${u.is_member ? '<span class="spill spill-green">Yes</span>' : '<span class="spill spill-slate">No</span>'}</td>
         <td>${u.is_admin  ? '<span class="spill spill-blue">Yes</span>'  : '<span class="spill spill-slate">No</span>'}</td>
+        <td>${u.has_profile_image ? '<span class="spill spill-green">Profile</span>' : '<span class="spill spill-slate">No Profile</span>'}</td>
+        <td>${u.has_nid_image ? '<span class="spill spill-amber">NID</span>' : '<span class="spill spill-slate">No NID</span>'}</td>
         <td class="flex flex-wrap gap-1">
-          <button class="btn-ghost btn-view"         data-id="${u.id}">👁 Reba</button>
-          <button class="btn-ghost btn-edit"         data-id="${u.id}">✏ Hindura</button>
-          <button class="btn-ghost-danger btn-delete"data-id="${u.id}">🗑 Siba</button>
+          <button class="btn-ghost btn-view" data-id="${u.id}">👁 Reba</button>
+          <button class="btn-ghost btn-edit" data-id="${u.id}">✏ Hindura</button>
+          <button class="btn-ghost-danger btn-delete" data-id="${u.id}">🗑 Siba</button>
         </td>`;
       tbody.appendChild(tr);
     });
-    tbody.querySelectorAll('.btn-edit').forEach(b   => b.addEventListener('click', onEdit));
+
+    tbody.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', onEdit));
     tbody.querySelectorAll('.btn-delete').forEach(b => b.addEventListener('click', onDelete));
   }
 
   function updatePagination() {
     const totalPages = Math.max(1, Math.ceil(lastTotal / perPage));
-    document.getElementById('users-page').textContent = `${currentPage} / ${totalPages}`;
-    document.getElementById('users-prev').disabled    = currentPage <= 1;
-    document.getElementById('users-next').disabled    = currentPage >= totalPages;
+    const pageEl = document.getElementById('users-page');
+    const prevEl = document.getElementById('users-prev');
+    const nextEl = document.getElementById('users-next');
+
+    if (pageEl) pageEl.textContent = `${currentPage} / ${totalPages}`;
+    if (prevEl) prevEl.disabled = currentPage <= 1;
+    if (nextEl) nextEl.disabled = currentPage >= totalPages;
   }
 
   function clearForm() {
     form.reset();
+
     document.getElementById('user-id').value = '';
-    saveBtn.textContent    = 'Bika';
-    modalTitle.textContent = 'Umunyamukoresha Mushya';
-    document.getElementById('has-phone2').checked           = false;
-    document.getElementById('phone2-section').classList.add('hidden');
-    document.getElementById('has-guarantor').checked        = false;
-    document.getElementById('guarantor-section').classList.add('hidden');
-    document.getElementById('has-guarantee-phone2').checked = false;
-    document.getElementById('guarantee-phone2-section').classList.add('hidden');
+    if (saveBtn) saveBtn.textContent = 'Bika';
+    if (modalTitle) modalTitle.textContent = 'Umunyamukoresha Mushya';
+
+    const hasPhone2 = document.getElementById('has-phone2');
+    const phone2Section = document.getElementById('phone2-section');
+    if (hasPhone2) hasPhone2.checked = false;
+    if (phone2Section) phone2Section.classList.add('hidden');
+
+    const hasGuarantor = document.getElementById('has-guarantor');
+    const guarantorSection = document.getElementById('guarantor-section');
+    if (hasGuarantor) hasGuarantor.checked = false;
+    if (guarantorSection) guarantorSection.classList.add('hidden');
+
+    const hasGuaranteePhone2 = document.getElementById('has-guarantee-phone2');
+    const guaranteePhone2Section = document.getElementById('guarantee-phone2-section');
+    if (hasGuaranteePhone2) hasGuaranteePhone2.checked = false;
+    if (guaranteePhone2Section) guaranteePhone2Section.classList.add('hidden');
+
+    clearFileInput('user-profile-image');
+    clearFileInput('user-nid-image');
+
+    const profilePreview = document.getElementById('user-profile-preview');
+    const nidPreview     = document.getElementById('user-nid-preview');
+    const profileLink    = document.getElementById('user-current-profile-link');
+    const nidLink        = document.getElementById('user-current-nid-link');
+
+    if (profilePreview) {
+      profilePreview.src = '';
+      profilePreview.classList.add('hidden');
+    }
+    if (nidPreview) {
+      nidPreview.src = '';
+      nidPreview.classList.add('hidden');
+    }
+    if (profileLink) {
+      profileLink.href = '#';
+      profileLink.classList.add('hidden');
+    }
+    if (nidLink) {
+      nidLink.href = '#';
+      nidLink.classList.add('hidden');
+    }
   }
 
   function fillForm(u) {
-    document.getElementById('user-id').value               = u.id;
-    document.getElementById('user-names').value            = u.names            || '';
-    document.getElementById('user-nid').value              = u.nid_passport     || '';
-    document.getElementById('user-email').value            = u.email            || '';
-    document.getElementById('user-phone1').value           = u.phone1           || '';
-    document.getElementById('user-password').value         = '';
-    document.getElementById('user-is-member').checked      = !!u.is_member;
-    document.getElementById('user-is-admin').checked       = !!u.is_admin;
+    const setVal = (id, v) => {
+      const el = document.getElementById(id);
+      if (el) el.value = v || '';
+    };
+    const setChk = (id, v) => {
+      const el = document.getElementById(id);
+      if (el) el.checked = !!v;
+    };
+
+    setVal('user-id', u.id);
+    setVal('user-names', u.names);
+    setVal('user-nid', u.nid_passport);
+    setVal('user-email', u.email);
+    setVal('user-phone1', u.phone1);
+    setVal('user-password', '');
+    setChk('user-is-member', u.is_member);
+    setChk('user-is-admin', u.is_admin);
 
     const hasPhone2 = !!(u.phone2 && u.phone2.trim());
-    document.getElementById('has-phone2').checked          = hasPhone2;
-    document.getElementById('phone2-section').classList.toggle('hidden', !hasPhone2);
-    document.getElementById('user-phone2').value           = u.phone2           || '';
+    setChk('has-phone2', hasPhone2);
+    document.getElementById('phone2-section')?.classList.toggle('hidden', !hasPhone2);
+    setVal('user-phone2', u.phone2);
 
     const hasGuarantor = !!(u.guarantee_name && u.guarantee_name.trim());
-    document.getElementById('has-guarantor').checked       = hasGuarantor;
-    document.getElementById('guarantor-section').classList.toggle('hidden', !hasGuarantor);
-    document.getElementById('user-guarantee-name').value   = u.guarantee_name           || '';
-    document.getElementById('user-guarantee-nid').value    = u.guarantee_nid_passport   || '';
-    document.getElementById('user-guarantee-email').value  = u.guarantee_email          || '';
-    document.getElementById('user-guarantee-phone1').value = u.guarantee_phone1         || '';
+    setChk('has-guarantor', hasGuarantor);
+    document.getElementById('guarantor-section')?.classList.toggle('hidden', !hasGuarantor);
+    setVal('user-guarantee-name', u.guarantee_name);
+    setVal('user-guarantee-nid', u.guarantee_nid_passport);
+    setVal('user-guarantee-email', u.guarantee_email);
+    setVal('user-guarantee-phone1', u.guarantee_phone1);
 
     const hasGPh2 = !!(u.guarantee_phone2 && u.guarantee_phone2.trim());
-    document.getElementById('has-guarantee-phone2').checked  = hasGPh2;
-    document.getElementById('guarantee-phone2-section').classList.toggle('hidden', !hasGPh2);
-    document.getElementById('user-guarantee-phone2').value   = u.guarantee_phone2       || '';
+    setChk('has-guarantee-phone2', hasGPh2);
+    document.getElementById('guarantee-phone2-section')?.classList.toggle('hidden', !hasGPh2);
+    setVal('user-guarantee-phone2', u.guarantee_phone2);
 
-    saveBtn.textContent    = 'Hindura';
-    modalTitle.textContent = 'Guhindura Umukoresha';
+    clearFileInput('user-profile-image');
+    clearFileInput('user-nid-image');
+
+    const profilePreview = document.getElementById('user-profile-preview');
+    const nidPreview     = document.getElementById('user-nid-preview');
+    const profileLink    = document.getElementById('user-current-profile-link');
+    const nidLink        = document.getElementById('user-current-nid-link');
+
+    if (u.has_profile_image) {
+      const pUrl = userProfileImageUrl(u.id);
+      if (profilePreview) {
+        profilePreview.src = pUrl;
+        profilePreview.classList.remove('hidden');
+      }
+      if (profileLink) {
+        profileLink.href = pUrl;
+        profileLink.classList.remove('hidden');
+      }
+    } else {
+      if (profilePreview) {
+        profilePreview.src = '';
+        profilePreview.classList.add('hidden');
+      }
+      if (profileLink) {
+        profileLink.href = '#';
+        profileLink.classList.add('hidden');
+      }
+    }
+
+    if (u.has_nid_image) {
+      const nUrl = userNidImageUrl(u.id);
+      if (nidPreview) {
+        nidPreview.src = nUrl;
+        nidPreview.classList.remove('hidden');
+      }
+      if (nidLink) {
+        nidLink.href = nUrl;
+        nidLink.classList.remove('hidden');
+      }
+    } else {
+      if (nidPreview) {
+        nidPreview.src = '';
+        nidPreview.classList.add('hidden');
+      }
+      if (nidLink) {
+        nidLink.href = '#';
+        nidLink.classList.add('hidden');
+      }
+    }
+
+    if (saveBtn) saveBtn.textContent = 'Hindura';
+    if (modalTitle) modalTitle.textContent = 'Guhindura Umukoresha';
     openModal();
   }
 
   async function onEdit(e) {
     const id = e.currentTarget.dataset.id;
     try {
-      const res  = await fetch(`${apiUrl}?id=${encodeURIComponent(id)}`, { cache: 'no-store' });
+      const res = await fetch(`${apiUrl}?id=${encodeURIComponent(id)}`, {
+        cache: 'no-store',
+        credentials: 'include'
+      });
       const json = await res.json();
       if (json.success && json.data) fillForm(json.data);
-    } catch (err) { console.error(err); }
+      else alert(json.message || 'Failed to load user');
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    }
   }
 
   async function onDelete(e) {
     const id = e.currentTarget.dataset.id;
     if (!confirm('Urashaka koko gusiba uyu mukoresha?')) return;
+
     const fd = new FormData();
     fd.append('action', 'delete');
     fd.append('id', id);
+
     try {
-      const res  = await fetch(apiUrl, { method: 'POST', body: fd });
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        body: fd,
+        credentials: 'include'
+      });
       const json = await res.json();
-      if (json.success) fetchUsers(1);
+      if (json.success) fetchUsers(1, currentQuery);
       else alert(json.message || 'Error deleting');
-    } catch (err) { console.error(err); alert('Network error'); }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    }
   }
 
   form.addEventListener('submit', async ev => {
     ev.preventDefault();
-    const id     = document.getElementById('user-id').value;
-    const fd     = new FormData(form);
+
+    const id = document.getElementById('user-id')?.value || '';
+    const fd = new FormData(form);
     fd.append('action', id ? 'update' : 'create');
+
     try {
-      const res  = await fetch(apiUrl, { method: 'POST', body: fd });
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        body: fd,
+        credentials: 'include'
+      });
       const json = await res.json();
-      if (json.success) { fetchUsers(1); clearForm(); closeModal(); }
-      else alert(json.message || 'Error saving user');
-    } catch (e) { console.error(e); alert('Network error'); }
+
+      if (json.success) {
+        fetchUsers(1, currentQuery);
+        clearForm();
+        closeModal();
+      } else {
+        alert(json.message || 'Error saving user');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Network error');
+    }
   });
 
-  btnNew.addEventListener('click', () => { clearForm(); openModal(); document.getElementById('user-names').focus(); });
-  btnRefresh.addEventListener('click', () => fetchUsers(1));
-  document.getElementById('user-cancel').addEventListener('click', closeModal);
-  modalClose.addEventListener('click', closeModal);
+  if (btnNew) {
+    btnNew.addEventListener('click', () => {
+      clearForm();
+      openModal();
+      document.getElementById('user-names')?.focus();
+    });
+  }
+
+  if (btnRefresh) btnRefresh.addEventListener('click', () => fetchUsers(1, currentQuery));
+
+  const cancelBtn = document.getElementById('user-cancel');
+  if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+  if (modalClose) modalClose.addEventListener('click', closeModal);
   modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
-  saveBtn.addEventListener('click', () => {
-    if (typeof form.requestSubmit === 'function') form.requestSubmit();
-    else form.submit();
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      if (typeof form.requestSubmit === 'function') form.requestSubmit();
+      else form.submit();
+    });
+  }
+
+  document.getElementById('has-phone2')?.addEventListener('change', e => {
+    document.getElementById('phone2-section')?.classList.toggle('hidden', !e.target.checked);
   });
 
-  // Conditional toggles
-  document.getElementById('has-phone2').addEventListener('change', e =>
-    document.getElementById('phone2-section').classList.toggle('hidden', !e.target.checked));
-  document.getElementById('has-guarantor').addEventListener('change', e =>
-    document.getElementById('guarantor-section').classList.toggle('hidden', !e.target.checked));
-  document.getElementById('has-guarantee-phone2').addEventListener('change', e =>
-    document.getElementById('guarantee-phone2-section').classList.toggle('hidden', !e.target.checked));
+  document.getElementById('has-guarantor')?.addEventListener('change', e => {
+    document.getElementById('guarantor-section')?.classList.toggle('hidden', !e.target.checked);
+  });
 
-  // Search & pagination
+  document.getElementById('has-guarantee-phone2')?.addEventListener('change', e => {
+    document.getElementById('guarantee-phone2-section')?.classList.toggle('hidden', !e.target.checked);
+  });
+
+  const profileInput = document.getElementById('user-profile-image');
+  const nidInput     = document.getElementById('user-nid-image');
+
+  if (profileInput) {
+    profileInput.addEventListener('change', e => {
+      const file = e.target.files?.[0];
+      const preview = document.getElementById('user-profile-preview');
+      if (!preview) return;
+
+      if (file) {
+        preview.src = URL.createObjectURL(file);
+        preview.classList.remove('hidden');
+      } else {
+        preview.src = '';
+        preview.classList.add('hidden');
+      }
+    });
+  }
+
+  if (nidInput) {
+    nidInput.addEventListener('change', e => {
+      const file = e.target.files?.[0];
+      const preview = document.getElementById('user-nid-preview');
+      if (!preview) return;
+
+      if (file) {
+        preview.src = URL.createObjectURL(file);
+        preview.classList.remove('hidden');
+      } else {
+        preview.src = '';
+        preview.classList.add('hidden');
+      }
+    });
+  }
+
   const searchInput = document.getElementById('users-search');
   let searchTimer = null;
-  searchInput.addEventListener('input', e => {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => { currentQuery = e.target.value.trim(); fetchUsers(1, currentQuery); }, 300);
-  });
-  document.getElementById('users-search-btn').addEventListener('click', () => {
-    currentQuery = searchInput.value.trim(); fetchUsers(1, currentQuery);
-  });
-  document.getElementById('users-prev').addEventListener('click', () => {
-    if (currentPage > 1) { currentPage--; fetchUsers(currentPage, currentQuery); }
-  });
-  document.getElementById('users-next').addEventListener('click', () => {
-    const totalPages = Math.max(1, Math.ceil(lastTotal / perPage));
-    if (currentPage < totalPages) { currentPage++; fetchUsers(currentPage, currentQuery); }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', e => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        currentQuery = e.target.value.trim();
+        fetchUsers(1, currentQuery);
+      }, 300);
+    });
+  }
+
+  document.getElementById('users-search-btn')?.addEventListener('click', () => {
+    currentQuery = searchInput?.value.trim() || '';
+    fetchUsers(1, currentQuery);
   });
 
-  // Load admin name in header
-  (async function loadSession() {
-    try {
-      const resp = await fetch('../get_session.php', { cache: 'no-store' });
-      const js   = await resp.json();
-      if (js.success && js.data?.names) {
-        const el = document.getElementById('admin-name');
-        if (el) el.textContent = js.data.names;
-      }
-    } catch (e) { /* ignore */ }
-  })();
+  document.getElementById('users-prev')?.addEventListener('click', () => {
+    if (currentPage > 1) {
+      currentPage--;
+      fetchUsers(currentPage, currentQuery);
+    }
+  });
+
+  document.getElementById('users-next')?.addEventListener('click', () => {
+    const totalPages = Math.max(1, Math.ceil(lastTotal / perPage));
+    if (currentPage < totalPages) {
+      currentPage++;
+      fetchUsers(currentPage, currentQuery);
+    }
+  });
 
   fetchUsers(1);
 })();
@@ -3612,7 +4248,7 @@ menu.querySelectorAll('button[data-section]').forEach(btn => {
             <div class="font-bold text-slate-700">${Format.escape(r.user_name || "System")}</div>
             ${r.loan_id ? `<span class="text-[10px] bg-blue-100 text-blue-700 px-1 rounded">#LN-${r.loan_id}</span>` : ""}
           </td>
-          <td class="p-3 text-slate-600">${Format.escape(r.account_name || "N/A")}</td>
+          
           <td class="p-3">${Format.escape(Format.typeLabel(r.type))}</td>
           <td class="p-3">
             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
