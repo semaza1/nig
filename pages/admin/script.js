@@ -2101,622 +2101,876 @@ function clearFileInput(id) {
 })();
 
   // Assets management JS with holders
-  (function () {
-      const api = 'assets_api.php';
+(function () {
+  const api = 'assets_api.php';
 
-      const tbody = document.getElementById('assets-tbody');
-      const btnNew = document.getElementById('btn-new-asset');
-      const btnRefresh = document.getElementById('btn-refresh-assets');
-      const searchInput = document.getElementById('assets-search');
-      const searchBtn = document.getElementById('assets-search-btn');
-      const modal = document.getElementById('asset-modal');
-      const modalClose = document.getElementById('asset-modal-close');
-      const saveBtn = document.getElementById('asset-save');
-      const cancelBtn = document.getElementById('asset-cancel');
-      const form = document.getElementById('asset-form');
+  const tbody = document.getElementById('assets-tbody');
+  const btnNew = document.getElementById('btn-new-asset');
+  const btnRefresh = document.getElementById('btn-refresh-assets');
+  const searchInput = document.getElementById('assets-search');
+  const searchBtn = document.getElementById('assets-search-btn');
+  const modal = document.getElementById('asset-modal');
+  const modalClose = document.getElementById('asset-modal-close');
+  const saveBtn = document.getElementById('asset-save');
+  const cancelBtn = document.getElementById('asset-cancel');
+  const form = document.getElementById('asset-form');
 
-      const idInput = document.getElementById('asset-id');
-      const nameInput = document.getElementById('asset-name');
-      const purchaseDateInput = document.getElementById('asset-purchase-date');
-      const purchaseValueInput = document.getElementById('asset-purchase-value');
-      const locationInput = document.getElementById('asset-location');
-      const notesInput = document.getElementById('asset-notes');
-      const certificateNameInput = document.getElementById('asset-certificate-name');
-      const certificateFileInput = document.getElementById('asset-certificate-file');
-      const hasSoldCheckbox = document.getElementById('has-sold-date');
-      const soldSection = document.getElementById('sold-section');
-      const soldDateInput = document.getElementById('asset-sold-date');
-      const soldValueInput = document.getElementById('asset-sold-value');
+  const idInput = document.getElementById('asset-id');
+  const accountInput = document.getElementById('asset-account');
+  const nameInput = document.getElementById('asset-name');
+  const purchaseDateInput = document.getElementById('asset-purchase-date');
+  const purchaseValueInput = document.getElementById('asset-purchase-value');
+  const locationInput = document.getElementById('asset-location');
+  const notesInput = document.getElementById('asset-notes');
+  const certificateNameInput = document.getElementById('asset-certificate-name');
+  const certificateFileInput = document.getElementById('asset-certificate-file');
+  const certificateHint = document.getElementById('asset-certificate-hint');
+  const certificateExisting = document.getElementById('asset-certificate-existing');
+  const certificateLocalPreview = document.getElementById('asset-certificate-local-preview');
+  const certificateRemoveWrap = document.getElementById('asset-certificate-remove-wrap');
+  const removeCertificate = document.getElementById('asset-remove-certificate');
 
-      const holdersList = document.getElementById('asset-holders-list');
-      const btnAddHolder = document.getElementById('btn-add-holder');
-      const holdersTotalEl = document.getElementById('asset-holders-total');
-      const holdersRemainingEl = document.getElementById('asset-holders-remaining');
-      const holdersValidationEl = document.getElementById('asset-holders-validation');
+  const hasSoldCheckbox = document.getElementById('has-sold-date');
+  const soldSection = document.getElementById('sold-section');
+  const soldDateInput = document.getElementById('asset-sold-date');
+  const soldValueInput = document.getElementById('asset-sold-value');
 
-      const holdersViewModal = document.getElementById('asset-holders-view-modal');
-      const holdersViewClose = document.getElementById('asset-holders-view-close');
-      const holdersViewBody = document.getElementById('asset-holders-view-body');
+  const holdersList = document.getElementById('asset-holders-list');
+  const btnAddHolder = document.getElementById('btn-add-holder');
+  const holdersTotalEl = document.getElementById('asset-holders-total');
+  const holdersRemainingEl = document.getElementById('asset-holders-remaining');
+  const holdersValidationEl = document.getElementById('asset-holders-validation');
 
-      if (!tbody) return;
+  const holdersViewModal = document.getElementById('asset-holders-view-modal');
+  const holdersViewClose = document.getElementById('asset-holders-view-close');
+  const holdersViewBody = document.getElementById('asset-holders-view-body');
 
-      let currentQuery = '';
-      let searchTimer = null;
+  if (!tbody) return;
 
-      function esc(v) {
-        if (typeof globalEscapeHtml === 'function') return globalEscapeHtml(v ?? '');
-        return String(v ?? '')
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#039;');
-      }
+  let currentQuery = '';
+  let searchTimer = null;
 
-      function money(n) {
-        return `${Number(n || 0).toLocaleString('rw-RW', {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 2
-        })} Frw`;
-      }
+  const CONFIG = {
+    maxCertificateSize: 10 * 1024 * 1024,
+    allowedCertificateTypes: [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'application/pdf'
+    ]
+  };
 
-      function openModal() {
-        modal?.classList.remove('hidden');
-        modal?.classList.add('flex');
-      }
+  function esc(v) {
+    if (typeof globalEscapeHtml === 'function') return globalEscapeHtml(v ?? '');
+    return String(v ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
 
-      function closeModal() {
-        modal?.classList.add('hidden');
-        modal?.classList.remove('flex');
-      }
+  function money(n) {
+    return `${Number(n || 0).toLocaleString('rw-RW', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    })} Frw`;
+  }
 
-      function openHoldersView() {
-        holdersViewModal?.classList.remove('hidden');
-        holdersViewModal?.classList.add('flex');
-      }
+  function fileSize(bytes) {
+    const n = Number(bytes || 0);
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+  }
 
-      function closeHoldersView() {
-        holdersViewModal?.classList.add('hidden');
-        holdersViewModal?.classList.remove('flex');
-      }
+  function isImageType(mime) {
+    return /^image\//i.test(String(mime || ''));
+  }
 
-      function resetForm() {
-        form?.reset();
-        if (idInput) idInput.value = '';
-        if (hasSoldCheckbox) hasSoldCheckbox.checked = false;
-        if (soldSection) soldSection.classList.add('hidden');
-        if (soldDateInput) soldDateInput.value = '';
-        if (soldValueInput) soldValueInput.value = '';
-        if (holdersList) holdersList.innerHTML = '';
-        addHolderRow();
-        updateHolderTotals();
-      }
+  function isPdfType(mime) {
+    return String(mime || '').toLowerCase() === 'application/pdf';
+  }
 
-      function toggleSoldSection(force = null) {
-        if (!hasSoldCheckbox || !soldSection) return;
-        const show = force !== null ? !!force : !!hasSoldCheckbox.checked;
-        soldSection.classList.toggle('hidden', !show);
+  function resetFileInput(input) {
+    if (input) input.value = '';
+  }
 
-        if (!show) {
-          if (soldDateInput) soldDateInput.value = '';
-          if (soldValueInput) soldValueInput.value = '';
-        }
-      }
+  function openModal() {
+    modal?.classList.remove('hidden');
+    modal?.classList.add('flex');
+  }
 
-      async function readJsonResponse(res) {
-        const text = await res.text();
-        let json = null;
+  function closeModal() {
+    modal?.classList.add('hidden');
+    modal?.classList.remove('flex');
+  }
+
+  function openHoldersView() {
+    holdersViewModal?.classList.remove('hidden');
+    holdersViewModal?.classList.add('flex');
+  }
+
+  function closeHoldersView() {
+    holdersViewModal?.classList.add('hidden');
+    holdersViewModal?.classList.remove('flex');
+  }
+
+  function clearExistingCertificate() {
+    if (certificateExisting) {
+      certificateExisting.classList.add('hidden');
+      certificateExisting.innerHTML = '';
+    }
+    if (certificateRemoveWrap) {
+      certificateRemoveWrap.classList.add('hidden');
+      certificateRemoveWrap.classList.remove('flex');
+    }
+  }
+
+  function clearLocalCertificatePreview() {
+    if (certificateLocalPreview) {
+      certificateLocalPreview.classList.add('hidden');
+      certificateLocalPreview.innerHTML = '';
+    }
+  }
+
+  function showExistingCertificate(row) {
+    if (!certificateExisting) return;
+
+    const hasCertificate = Number(row?.has_certificate || 0) === 1;
+    if (!hasCertificate) {
+      clearExistingCertificate();
+      return;
+    }
+
+    const type = row.certificate_mime || '';
+    const name = row.certificate_name || 'certificate';
+    const viewUrl = row.certificate_view_url || `${api}?action=view_certificate&id=${row.asset_id}`;
+    const downloadUrl = row.certificate_download_url || `${api}?action=download_certificate&id=${row.asset_id}`;
+
+    let previewHtml = '';
+    if (isImageType(type)) {
+      previewHtml = `
+        <div class="mt-2">
+          <img
+            src="${esc(viewUrl)}"
+            alt="Certificate"
+            class="max-h-48 rounded border border-slate-200 object-contain bg-white"
+          >
+        </div>
+      `;
+    } else if (isPdfType(type)) {
+      previewHtml = `
+        <div class="mt-2">
+          <a href="${esc(viewUrl)}" target="_blank" class="text-blue-700 underline">
+            Fungura PDF
+          </a>
+        </div>
+      `;
+    }
+
+    certificateExisting.innerHTML = `
+      <div class="font-semibold text-slate-700">Certificate iriho</div>
+      <div class="mt-1 text-slate-600">
+        <div><b>File:</b> ${esc(name)}</div>
+        <div><b>Type:</b> ${esc(type || 'unknown')}</div>
+      </div>
+      <div class="mt-2 flex gap-3">
+        <a href="${esc(viewUrl)}" target="_blank" class="text-blue-700 underline">Reba</a>
+        <a href="${esc(downloadUrl)}" target="_blank" class="text-emerald-700 underline">Download</a>
+      </div>
+      ${previewHtml}
+    `;
+    certificateExisting.classList.remove('hidden');
+
+    if (certificateRemoveWrap) {
+      certificateRemoveWrap.classList.remove('hidden');
+      certificateRemoveWrap.classList.add('flex');
+    }
+  }
+
+  function previewSelectedCertificate() {
+    clearLocalCertificatePreview();
+
+    const file = certificateFileInput?.files?.[0];
+    if (!file || !certificateLocalPreview) return;
+
+    if (!CONFIG.allowedCertificateTypes.includes(file.type)) {
+      alert('Dosiye yemerewe ni JPG, PNG, GIF, WEBP cyangwa PDF.');
+      resetFileInput(certificateFileInput);
+      return;
+    }
+
+    if (file.size > CONFIG.maxCertificateSize) {
+      alert('Dosiye irarengeje 10 MB.');
+      resetFileInput(certificateFileInput);
+      return;
+    }
+
+    const metaHtml = `
+      <div class="text-xs text-slate-700 mb-2">
+        <div><b>Selected:</b> ${esc(file.name)}</div>
+        <div><b>Type:</b> ${esc(file.type || 'unknown')}</div>
+        <div><b>Size:</b> ${esc(fileSize(file.size))}</div>
+      </div>
+    `;
+
+    if (isImageType(file.type)) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        certificateLocalPreview.innerHTML = `
+          ${metaHtml}
+          <img
+            src="${reader.result}"
+            alt="Certificate Preview"
+            class="max-h-48 rounded border border-slate-200 object-contain bg-white"
+          >
+        `;
+        certificateLocalPreview.classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    } else if (isPdfType(file.type)) {
+      certificateLocalPreview.innerHTML = `
+        ${metaHtml}
+        <div class="text-blue-700">PDF yatoranyijwe neza.</div>
+      `;
+      certificateLocalPreview.classList.remove('hidden');
+    } else {
+      certificateLocalPreview.innerHTML = metaHtml;
+      certificateLocalPreview.classList.remove('hidden');
+    }
+
+    if (removeCertificate) removeCertificate.checked = false;
+  }
+
+  function resetForm() {
+    form?.reset();
+    if (idInput) idInput.value = '';
+    if (accountInput) accountInput.value = '';
+    if (hasSoldCheckbox) hasSoldCheckbox.checked = false;
+    if (soldSection) soldSection.classList.add('hidden');
+    if (soldDateInput) soldDateInput.value = '';
+    if (soldValueInput) soldValueInput.value = '';
+    if (holdersList) holdersList.innerHTML = '';
+    clearExistingCertificate();
+    clearLocalCertificatePreview();
+    resetFileInput(certificateFileInput);
+    if (removeCertificate) removeCertificate.checked = false;
+    if (certificateHint) certificateHint.textContent = 'Shyiraho certificate file niba ihari.';
+    addHolderRow();
+    updateHolderTotals();
+  }
+
+  function toggleSoldSection(force = null) {
+    if (!hasSoldCheckbox || !soldSection) return;
+    const show = force !== null ? !!force : !!hasSoldCheckbox.checked;
+    soldSection.classList.toggle('hidden', !show);
+
+    if (!show) {
+      if (soldDateInput) soldDateInput.value = '';
+      if (soldValueInput) soldValueInput.value = '';
+    }
+  }
+
+  async function readJsonResponse(res) {
+    const text = await res.text();
+    let json = null;
+    try {
+      json = text ? JSON.parse(text) : {};
+    } catch (e) {
+      console.error('Non-JSON response:', text);
+      throw new Error('Server returned non-JSON response.');
+    }
+    return json;
+  }
+
+  function buildCertificateHtml(row) {
+    const hasCertificate = Number(row?.has_certificate || 0) === 1;
+    if (!hasCertificate) {
+      return '<span class="text-xs text-slate-400">Nta certificate</span>';
+    }
+
+    const mimeType = row.certificate_mime || '';
+    const fileName = esc(row.certificate_name || 'Document');
+    const viewUrl = row.certificate_view_url || `${api}?action=view_certificate&id=${row.asset_id}`;
+    const downloadUrl = row.certificate_download_url || `${api}?action=download_certificate&id=${row.asset_id}`;
+
+    if (mimeType.startsWith('image/')) {
+      return `
+        <div class="flex flex-col items-center gap-2">
+          <a href="${esc(viewUrl)}" target="_blank" class="block">
+            <img src="${esc(viewUrl)}" alt="Certificate" class="h-16 w-auto rounded border bg-white" />
+          </a>
+          <div class="flex gap-2 text-xs">
+            <a href="${esc(viewUrl)}" target="_blank" class="text-blue-700 underline">Reba</a>
+            <a href="${esc(downloadUrl)}" target="_blank" class="text-emerald-700 underline">Download</a>
+          </div>
+        </div>
+      `;
+    }
+
+    if (mimeType === 'application/pdf') {
+      return `
+        <div class="flex flex-col items-center gap-2">
+          <a href="${esc(viewUrl)}" target="_blank" class="flex h-16 w-16 items-center justify-center rounded border bg-red-50 text-xs font-bold text-red-700">
+            PDF
+          </a>
+          <div class="flex gap-2 text-xs">
+            <a href="${esc(viewUrl)}" target="_blank" class="text-blue-700 underline">Reba</a>
+            <a href="${esc(downloadUrl)}" target="_blank" class="text-emerald-700 underline">Download</a>
+          </div>
+        </div>
+      `;
+    }
+
+    return `<span class="text-xs text-slate-500">📄 ${fileName}</span>`;
+  }
+
+  async function loadAccounts() {
+    if (!accountInput) return;
+    try {
+      const res = await fetch('accounts_api.php', { credentials: 'include' });
+      const json = await readJsonResponse(res);
+
+      if (!res.ok || !json.success) return;
+
+      accountInput.innerHTML = '<option value="">-- Hitamo Konto --</option>';
+      (json.data || []).forEach(acc => {
+        const opt = document.createElement('option');
+        opt.value = acc.account_id;
+        opt.textContent = acc.name;
+        accountInput.appendChild(opt);
+      });
+    } catch (err) {
+      console.error('loadAccounts error', err);
+    }
+  }
+
+  async function fetchAssets(q = currentQuery) {
+    try {
+      const url = `${api}?per_page=200` + (q ? `&q=${encodeURIComponent(q)}` : '');
+      const res = await fetch(url, { credentials: 'include' });
+      const json = await readJsonResponse(res);
+
+      if (!res.ok) return;
+      if (json.success) renderAssetsTable(json.data || []);
+    } catch (err) {
+      console.error('fetchAssets error', err);
+    }
+  }
+
+  function renderAssetsTable(rows) {
+    tbody.innerHTML = '';
+
+    if (!rows || rows.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="10" class="py-8 text-center text-sm text-slate-400">
+            Nta mitungo yabonetse
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    rows.forEach((r) => {
+      const tr = document.createElement('tr');
+      const certificateHtml = buildCertificateHtml(r);
+      const holdersCount = Number(r.holders_count || 0);
+
+      tr.innerHTML = `
+        <td>${r.asset_id}</td>
+        <td>${esc(r.name || '')}</td>
+        <td>${esc(r.account_name || '')}</td>
+        <td>${esc(r.purchase_date || '')}</td>
+        <td>${money(r.purchase_value || 0)}</td>
+        <td>${esc(r.location || '')}</td>
+        <td>${certificateHtml}</td>
+        <td>
+          <button class="text-blue-600 hover:underline btn-view-holders" data-id="${r.asset_id}">
+            ${holdersCount}
+          </button>
+        </td>
+        <td>${r.sold_value === null || r.sold_value === '' ? '-' : money(r.sold_value)}</td>
+        <td>
+          <button class="btn-ghost btn-edit-asset" data-id="${r.asset_id}">Hindura</button>
+          <button class="btn-ghost-danger btn-delete-asset" data-id="${r.asset_id}">Siba</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll('.btn-delete-asset').forEach((b) =>
+      b.addEventListener('click', async () => {
+        const id = b.getAttribute('data-id');
+        if (!confirm('Urashaka gusiba iyi Mutungo?')) return;
+
+        const fd = new FormData();
+        fd.append('action', 'delete');
+        fd.append('id', id);
+
         try {
-          json = text ? JSON.parse(text) : {};
-        } catch (e) {
-          console.error('Non-JSON response:', text);
-          throw new Error('Server returned non-JSON response.');
-        }
-        return json;
-      }
-
-      function hexToBase64(hexStr) {
-        if (!hexStr) return null;
-        const bytes = [];
-        for (let i = 0; i < hexStr.length; i += 2) {
-          bytes.push(parseInt(hexStr.substr(i, 2), 16));
-        }
-        const binStr = String.fromCharCode(...bytes);
-        return btoa(binStr);
-      }
-
-      function buildCertificateHtml(row) {
-        if (!row.certificate_file || !row.certificate_mime) {
-          return '<span class="text-xs text-slate-400">Nta certificate</span>';
-        }
-
-        const mimeType = row.certificate_mime;
-        const fileName = esc(row.certificate_name || 'Document');
-
-        if (mimeType.startsWith('image/')) {
-          try {
-            const b64 = hexToBase64(row.certificate_file);
-            return `<img src="data:${mimeType};base64,${b64}" alt="Certificate" class="h-16 w-auto rounded border" />`;
-          } catch (e) {
-            return `<span class="text-xs text-slate-500">📄 ${fileName}</span>`;
-          }
-        }
-
-        return `<span class="text-xs text-slate-500">📄 ${fileName}</span>`;
-      }
-
-      async function fetchAssets(q = currentQuery) {
-        try {
-          const url = `${api}?per_page=200` + (q ? `&q=${encodeURIComponent(q)}` : '');
-          const res = await fetch(url, { credentials: 'include' });
+          const res = await fetch(api, { method: 'POST', body: fd, credentials: 'include' });
           const json = await readJsonResponse(res);
 
-          if (!res.ok) return;
-          if (json.success) renderAssetsTable(json.data || []);
+          if (json.success) fetchAssets();
+          else alert(json.message || 'Error');
         } catch (err) {
-          console.error('fetchAssets error', err);
+          console.error(err);
+          alert('Network error');
         }
+      })
+    );
+
+    tbody.querySelectorAll('.btn-edit-asset').forEach((b) =>
+      b.addEventListener('click', async () => {
+        const id = b.getAttribute('data-id');
+
+        try {
+          const res = await fetch(`${api}?id=${encodeURIComponent(id)}`, { credentials: 'include' });
+          const json = await readJsonResponse(res);
+
+          if (json.success && json.data) {
+            const d = json.data;
+
+            idInput.value = d.asset_id || '';
+            if (accountInput) accountInput.value = d.account_id || '';
+            nameInput.value = d.name || '';
+            purchaseDateInput.value = d.purchase_date || '';
+            purchaseValueInput.value = d.purchase_value || '';
+            locationInput.value = d.location || '';
+            notesInput.value = d.notes || '';
+            certificateNameInput.value = d.certificate_name || '';
+
+            const hasSold = d.sold_value !== null && d.sold_value !== '';
+            hasSoldCheckbox.checked = hasSold;
+            toggleSoldSection(hasSold);
+
+            soldDateInput.value = d.sold_date || '';
+            soldValueInput.value = d.sold_value ?? '';
+
+            holdersList.innerHTML = '';
+            if (Array.isArray(d.holders) && d.holders.length) {
+              d.holders.forEach(h => addHolderRow({
+                user_id: h.user_id,
+                display: `${h.names || ''}${h.phone1 ? ' · ' + h.phone1 : ''}`,
+                net_value: h.net_value || 0,
+                expense_partition: h.expense_partition || 0,
+                participation_net: h.participation_net || 0,
+                contribution: h.contribution_amount || '',
+                notes: h.notes || ''
+              }));
+            } else {
+              addHolderRow();
+            }
+
+            showExistingCertificate(d);
+            clearLocalCertificatePreview();
+            resetFileInput(certificateFileInput);
+            if (removeCertificate) removeCertificate.checked = false;
+            if (certificateHint) certificateHint.textContent = 'Injiza dosiye nshya gusa niba ushaka kuyisimbuza.';
+
+            updateHolderTotals();
+            openModal();
+          } else {
+            alert(json.message || 'Not found');
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Failed to load asset');
+        }
+      })
+    );
+
+    tbody.querySelectorAll('.btn-view-holders').forEach((b) =>
+      b.addEventListener('click', async () => {
+        const id = b.getAttribute('data-id');
+        holdersViewBody.innerHTML = 'Loading...';
+
+        try {
+          const res = await fetch(`${api}?id=${encodeURIComponent(id)}`, { credentials: 'include' });
+          const json = await readJsonResponse(res);
+
+          if (!json.success || !json.data) {
+            holdersViewBody.innerHTML = 'Not found';
+            openHoldersView();
+            return;
+          }
+
+          const d = json.data;
+          const rows = (d.holders || []).map((h, idx) => `
+            <tr>
+              <td>${idx + 1}</td>
+              <td>${esc(h.names || '')}</td>
+              <td>${esc(h.phone1 || h.phone2 || '')}</td>
+              <td>${money(h.net_value || 0)}</td>
+              <td>${money(h.expense_partition || 0)}</td>
+              <td>${money(h.contribution_amount || 0)}</td>
+            </tr>
+          `).join('');
+
+          holdersViewBody.innerHTML = `
+            <div class="space-y-3">
+              <div><b>Asset:</b> ${esc(d.name || '')}</div>
+              <div><b>Account:</b> ${esc(d.account_name || '')}</div>
+              <div><b>Holders:</b> ${Number(d.holders_count || 0)}</div>
+              <div class="table-wrapper">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Name</th>
+                      <th>Phone</th>
+                      <th>Net</th>
+                      <th>Expense Partition</th>
+                      <th>Contribution</th>
+                    </tr>
+                  </thead>
+                  <tbody>${rows || `<tr><td colspan="6" class="text-sm text-slate-500">Nta holders</td></tr>`}</tbody>
+                </table>
+              </div>
+            </div>
+          `;
+          openHoldersView();
+        } catch (err) {
+          console.error(err);
+          holdersViewBody.innerHTML = 'Failed to load holders';
+          openHoldersView();
+        }
+      })
+    );
+  }
+
+  function getHolderRows() {
+    return [...holdersList.querySelectorAll('.asset-holder-row')];
+  }
+
+  function updateHolderTotals() {
+    const price = Number(purchaseValueInput?.value || 0);
+    let total = 0;
+
+    getHolderRows().forEach(row => {
+      const v = Number(row.querySelector('.holder-contribution')?.value || 0);
+      total += v;
+    });
+
+    const remaining = price - total;
+
+    if (holdersTotalEl) holdersTotalEl.textContent = money(total);
+    if (holdersRemainingEl) holdersRemainingEl.textContent = money(remaining);
+
+    let msg = '';
+    if (price <= 0) {
+      msg = 'Shyiramo purchase value mbere.';
+    } else if (getHolderRows().length === 0) {
+      msg = 'Ongeramo nibura holder umwe.';
+    } else if (Math.abs(remaining) > 0.009) {
+      msg = 'Contributions za holders zigomba kungana n’agaciro k’umutungo.';
+    }
+
+    if (holdersValidationEl) {
+      holdersValidationEl.textContent = msg;
+      holdersValidationEl.classList.toggle('hidden', !msg);
+    }
+  }
+
+  function addHolderRow(pref = null) {
+    const row = document.createElement('div');
+    row.className = 'asset-holder-row rounded-lg border p-3 space-y-2';
+
+    row.innerHTML = `
+      <div class="flex gap-2 items-start">
+        <div class="flex-1">
+          <label class="block text-xs font-medium text-slate-700">Shakisha Holder</label>
+          <input type="text" class="holder-search mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Andika izina cyangwa phone..." />
+          <div class="holder-results mt-1 hidden max-h-48 overflow-auto rounded-lg border bg-white shadow-sm"></div>
+
+          <input type="hidden" class="holder-user-id" />
+          <div class="mt-1 text-xs text-slate-600">
+            Watoranyije: <span class="holder-selected font-semibold">Ntawe</span>
+          </div>
+          <div class="mt-1 text-xs">
+            Net: <span class="holder-net font-semibold">-</span>
+          </div>
+          <div class="mt-1 text-xs">
+            Expense Partition: <span class="holder-expense font-semibold">-</span>
+          </div>
+        </div>
+
+        <div class="w-40">
+          <label class="block text-xs font-medium text-slate-700">Contribution</label>
+          <input type="number" step="0.01" min="0" class="holder-contribution mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Frw" />
+        </div>
+
+        <div class="w-48">
+          <label class="block text-xs font-medium text-slate-700">Notes</label>
+          <input type="text" class="holder-notes mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Optional" />
+        </div>
+
+        <div class="pt-6">
+          <button type="button" class="btn-ghost-danger text-xs btn-remove-holder">Siba</button>
+        </div>
+      </div>
+    `;
+
+    holdersList.appendChild(row);
+
+    const holderSearchInput = row.querySelector('.holder-search');
+    const resultsBox = row.querySelector('.holder-results');
+    const hiddenInput = row.querySelector('.holder-user-id');
+    const selectedEl = row.querySelector('.holder-selected');
+    const netEl = row.querySelector('.holder-net');
+    const expenseEl = row.querySelector('.holder-expense');
+    const contributionInput = row.querySelector('.holder-contribution');
+    const notesField = row.querySelector('.holder-notes');
+    const removeBtn = row.querySelector('.btn-remove-holder');
+
+    let timer = null;
+
+    removeBtn.addEventListener('click', () => {
+      row.remove();
+      updateHolderTotals();
+    });
+
+    contributionInput.addEventListener('input', updateHolderTotals);
+
+    holderSearchInput.addEventListener('input', () => {
+      clearTimeout(timer);
+      const q = holderSearchInput.value.trim();
+
+      timer = setTimeout(async () => {
+        resultsBox.innerHTML = '';
+        resultsBox.classList.add('hidden');
+        if (q.length < 2) return;
+
+        try {
+          const res = await fetch(`${api}?action=search_members&q=${encodeURIComponent(q)}`, { credentials: 'include' });
+          const json = await readJsonResponse(res);
+          if (!json.success) return;
+
+          resultsBox.classList.remove('hidden');
+
+          (json.data || []).forEach(u => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'w-full px-3 py-2 text-left hover:bg-slate-50 text-sm';
+            btn.textContent = `${u.names}${u.phone1 ? ' · ' + u.phone1 : ''} · net: ${money(u.net_value || 0)} · exp: ${money(u.expense_partition || 0)}`;
+            btn.addEventListener('click', () => {
+              hiddenInput.value = u.id;
+              selectedEl.textContent = `${u.names}${u.phone1 ? ' · ' + u.phone1 : ''}`;
+              netEl.textContent = money(u.net_value || 0);
+              expenseEl.textContent = money(u.expense_partition || 0);
+              holderSearchInput.value = '';
+              resultsBox.innerHTML = '';
+              resultsBox.classList.add('hidden');
+              updateHolderTotals();
+            });
+            resultsBox.appendChild(btn);
+          });
+        } catch (err) {
+          console.error(err);
+        }
+      }, 250);
+    });
+
+    if (pref) {
+      hiddenInput.value = pref.user_id || '';
+      selectedEl.textContent = pref.display || 'Ntawe';
+      netEl.textContent = money(pref.net_value || 0);
+      expenseEl.textContent = money(pref.expense_partition || 0);
+      contributionInput.value = pref.contribution || '';
+      notesField.value = pref.notes || '';
+    }
+
+    updateHolderTotals();
+  }
+
+  if (btnAddHolder) {
+    btnAddHolder.addEventListener('click', (e) => {
+      e.preventDefault();
+      addHolderRow();
+    });
+  }
+
+  if (btnNew) {
+    btnNew.addEventListener('click', () => {
+      resetForm();
+      openModal();
+      nameInput?.focus();
+    });
+  }
+
+  if (btnRefresh) {
+    btnRefresh.addEventListener('click', () => {
+      currentQuery = '';
+      if (searchInput) searchInput.value = '';
+      fetchAssets();
+    });
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        currentQuery = e.target.value.trim();
+        fetchAssets(currentQuery);
+      }, 300);
+    });
+  }
+
+  if (searchBtn) {
+    searchBtn.addEventListener('click', () => {
+      currentQuery = searchInput ? searchInput.value.trim() : '';
+      fetchAssets(currentQuery);
+    });
+  }
+
+  modalClose?.addEventListener('click', closeModal);
+  cancelBtn?.addEventListener('click', closeModal);
+  modal?.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+  holdersViewClose?.addEventListener('click', closeHoldersView);
+  holdersViewModal?.addEventListener('click', (e) => { if (e.target === holdersViewModal) closeHoldersView(); });
+
+  hasSoldCheckbox?.addEventListener('change', () => toggleSoldSection());
+  purchaseValueInput?.addEventListener('input', updateHolderTotals);
+
+  certificateFileInput?.addEventListener('change', () => {
+    previewSelectedCertificate();
+  });
+
+  removeCertificate?.addEventListener('change', () => {
+    if (removeCertificate.checked) {
+      resetFileInput(certificateFileInput);
+      clearLocalCertificatePreview();
+    }
+  });
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const id = idInput?.value || '';
+      const hasSold = hasSoldCheckbox?.checked || false;
+
+      if (!accountInput?.value) {
+        alert('Hitamo konti.');
+        return;
+      }
+      if (!nameInput?.value.trim()) {
+        alert('Shyiramo izina ry’umutungo.');
+        return;
+      }
+      if (!purchaseDateInput?.value) {
+        alert('Shyiramo itariki yaguriweho.');
+        return;
+      }
+      if (!purchaseValueInput?.value || Number(purchaseValueInput.value) <= 0) {
+        alert('Shyiramo purchase value irenze zero.');
+        return;
       }
 
-      function renderAssetsTable(rows) {
-        tbody.innerHTML = '';
+      if (hasSold && !soldDateInput?.value) {
+        alert('Shyiramo sold date.');
+        return;
+      }
 
-        if (!rows || rows.length === 0) {
-          tbody.innerHTML = `
-            <tr>
-              <td colspan="9" class="py-8 text-center text-sm text-slate-400">
-                Nta mitungo yabonetse
-              </td>
-            </tr>
-          `;
+      if (!hasSold) {
+        soldDateInput.value = '';
+        soldValueInput.value = '';
+      }
+
+      const certFile = certificateFileInput?.files?.[0];
+      if (certFile) {
+        if (!CONFIG.allowedCertificateTypes.includes(certFile.type)) {
+          alert('Certificate yemerewe ni JPG, PNG, GIF, WEBP cyangwa PDF.');
           return;
         }
-
-        rows.forEach((r) => {
-          const tr = document.createElement('tr');
-          const certificateHtml = buildCertificateHtml(r);
-          const holdersCount = Number(r.holders_count || 0);
-
-          tr.innerHTML = `
-            <td>${r.asset_id}</td>
-            <td>${esc(r.name || '')}</td>
-            <td>${esc(r.purchase_date || '')}</td>
-            <td>${money(r.purchase_value || 0)}</td>
-            <td>${esc(r.location || '')}</td>
-            <td>${certificateHtml}</td>
-            <td>
-              <button class="text-blue-600 hover:underline btn-view-holders" data-id="${r.asset_id}">
-                ${holdersCount}
-              </button>
-            </td>
-            <td>${r.sold_value === null || r.sold_value === '' ? '-' : money(r.sold_value)}</td>
-            <td>
-              <button class="btn-ghost btn-edit-asset" data-id="${r.asset_id}">Hindura</button>
-              <button class="btn-ghost-danger btn-delete-asset" data-id="${r.asset_id}">Siba</button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-
-        tbody.querySelectorAll('.btn-delete-asset').forEach((b) =>
-          b.addEventListener('click', async () => {
-            const id = b.getAttribute('data-id');
-            if (!confirm('Urashaka gusiba iyi Mutungo?')) return;
-
-            const fd = new FormData();
-            fd.append('action', 'delete');
-            fd.append('id', id);
-
-            try {
-              const res = await fetch(api, { method: 'POST', body: fd, credentials: 'include' });
-              const json = await readJsonResponse(res);
-
-              if (json.success) fetchAssets();
-              else alert(json.message || 'Error');
-            } catch (err) {
-              console.error(err);
-              alert('Network error');
-            }
-          })
-        );
-
-        tbody.querySelectorAll('.btn-edit-asset').forEach((b) =>
-          b.addEventListener('click', async () => {
-            const id = b.getAttribute('data-id');
-
-            try {
-              const res = await fetch(`${api}?id=${encodeURIComponent(id)}`, { credentials: 'include' });
-              const json = await readJsonResponse(res);
-
-              if (json.success && json.data) {
-                const d = json.data;
-
-                idInput.value = d.asset_id || '';
-                nameInput.value = d.name || '';
-                purchaseDateInput.value = d.purchase_date || '';
-                purchaseValueInput.value = d.purchase_value || '';
-                locationInput.value = d.location || '';
-                notesInput.value = d.notes || '';
-                certificateNameInput.value = d.certificate_name || '';
-
-                const hasSold = d.sold_value !== null && d.sold_value !== '';
-                hasSoldCheckbox.checked = hasSold;
-                toggleSoldSection(hasSold);
-
-                soldDateInput.value = d.sold_date || '';
-                soldValueInput.value = d.sold_value ?? '';
-
-                holdersList.innerHTML = '';
-                if (Array.isArray(d.holders) && d.holders.length) {
-                  d.holders.forEach(h => addHolderRow({
-                    user_id: h.user_id,
-                    display: `${h.names || ''}${h.phone1 ? ' · ' + h.phone1 : ''}`,
-                    net_value: h.net_value || 0,
-                    contribution: h.contribution_amount || '',
-                    notes: h.notes || ''
-                  }));
-                } else {
-                  addHolderRow();
-                }
-
-                updateHolderTotals();
-                openModal();
-              } else {
-                alert(json.message || 'Not found');
-              }
-            } catch (err) {
-              console.error(err);
-              alert('Failed to load asset');
-            }
-          })
-        );
-
-        tbody.querySelectorAll('.btn-view-holders').forEach((b) =>
-          b.addEventListener('click', async () => {
-            const id = b.getAttribute('data-id');
-            holdersViewBody.innerHTML = 'Loading...';
-
-            try {
-              const res = await fetch(`${api}?id=${encodeURIComponent(id)}`, { credentials: 'include' });
-              const json = await readJsonResponse(res);
-
-              if (!json.success || !json.data) {
-                holdersViewBody.innerHTML = 'Not found';
-                openHoldersView();
-                return;
-              }
-
-              const d = json.data;
-              const rows = (d.holders || []).map((h, idx) => `
-                <tr>
-                  <td>${idx + 1}</td>
-                  <td>${esc(h.names || '')}</td>
-                  <td>${esc(h.phone1 || h.phone2 || '')}</td>
-                  <td>${money(h.net_value || 0)}</td>
-                  <td>${money(h.contribution_amount || 0)}</td>
-                </tr>
-              `).join('');
-
-              holdersViewBody.innerHTML = `
-                <div class="space-y-3">
-                  <div><b>Asset:</b> ${esc(d.name || '')}</div>
-                  <div><b>Holders:</b> ${Number(d.holders_count || 0)}</div>
-                  <div class="table-wrapper">
-                    <table class="table">
-                      <thead>
-                        <tr>
-                          <th>#</th>
-                          <th>Name</th>
-                          <th>Phone</th>
-                          <th>Net</th>
-                          <th>Contribution</th>
-                        </tr>
-                      </thead>
-                      <tbody>${rows || `<tr><td colspan="5" class="text-sm text-slate-500">Nta holders</td></tr>`}</tbody>
-                    </table>
-                  </div>
-                </div>
-              `;
-              openHoldersView();
-            } catch (err) {
-              console.error(err);
-              holdersViewBody.innerHTML = 'Failed to load holders';
-              openHoldersView();
-            }
-          })
-        );
-      }
-
-      function getHolderRows() {
-        return [...holdersList.querySelectorAll('.asset-holder-row')];
-      }
-
-      function updateHolderTotals() {
-        const price = Number(purchaseValueInput?.value || 0);
-        let total = 0;
-
-        getHolderRows().forEach(row => {
-          const v = Number(row.querySelector('.holder-contribution')?.value || 0);
-          total += v;
-        });
-
-        const remaining = price - total;
-
-        if (holdersTotalEl) holdersTotalEl.textContent = money(total);
-        if (holdersRemainingEl) holdersRemainingEl.textContent = money(remaining);
-
-        let msg = '';
-        if (price <= 0) {
-          msg = 'Shyiramo purchase value mbere.';
-        } else if (getHolderRows().length === 0) {
-          msg = 'Ongeramo nibura holder umwe.';
-        } else if (Math.abs(remaining) > 0.009) {
-          msg = 'Contributions za holders zigomba kungana n’agaciro k’umutungo.';
-        }
-
-        if (holdersValidationEl) {
-          holdersValidationEl.textContent = msg;
-          holdersValidationEl.classList.toggle('hidden', !msg);
+        if (certFile.size > CONFIG.maxCertificateSize) {
+          alert('Certificate file ntigomba kurenga 10 MB.');
+          return;
         }
       }
 
-      function addHolderRow(pref = null) {
-        const row = document.createElement('div');
-        row.className = 'asset-holder-row rounded-lg border p-3 space-y-2';
+      const holders = [];
+      let total = 0;
+      const seen = new Set();
 
-        row.innerHTML = `
-          <div class="flex gap-2 items-start">
-            <div class="flex-1">
-              <label class="block text-xs font-medium text-slate-700">Shakisha Holder</label>
-              <input type="text" class="holder-search mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Andika izina cyangwa phone..." />
-              <div class="holder-results mt-1 hidden max-h-48 overflow-auto rounded-lg border bg-white shadow-sm"></div>
+      for (const row of getHolderRows()) {
+        const userId = row.querySelector('.holder-user-id')?.value || '';
+        const contribution = Number(row.querySelector('.holder-contribution')?.value || 0);
+        const notes = row.querySelector('.holder-notes')?.value || '';
 
-              <input type="hidden" class="holder-user-id" />
-              <div class="mt-1 text-xs text-slate-600">
-                Watoranyije: <span class="holder-selected font-semibold">Ntawe</span>
-              </div>
-              <div class="mt-1 text-xs">
-                Net: <span class="holder-net font-semibold">-</span>
-              </div>
-            </div>
+        if (!userId || contribution <= 0) continue;
 
-            <div class="w-40">
-              <label class="block text-xs font-medium text-slate-700">Contribution</label>
-              <input type="number" step="0.01" min="0" class="holder-contribution mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Frw" />
-            </div>
-
-            <div class="w-48">
-              <label class="block text-xs font-medium text-slate-700">Notes</label>
-              <input type="text" class="holder-notes mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Optional" />
-            </div>
-
-            <div class="pt-6">
-              <button type="button" class="btn-ghost-danger text-xs btn-remove-holder">Siba</button>
-            </div>
-          </div>
-        `;
-
-        holdersList.appendChild(row);
-
-        const holderSearchInput = row.querySelector('.holder-search');
-        const resultsBox = row.querySelector('.holder-results');
-        const hiddenInput = row.querySelector('.holder-user-id');
-        const selectedEl = row.querySelector('.holder-selected');
-        const netEl = row.querySelector('.holder-net');
-        const contributionInput = row.querySelector('.holder-contribution');
-        const notesField = row.querySelector('.holder-notes');
-        const removeBtn = row.querySelector('.btn-remove-holder');
-
-        let timer = null;
-
-        removeBtn.addEventListener('click', () => {
-          row.remove();
-          updateHolderTotals();
-        });
-
-        contributionInput.addEventListener('input', updateHolderTotals);
-
-        holderSearchInput.addEventListener('input', () => {
-          clearTimeout(timer);
-          const q = holderSearchInput.value.trim();
-
-          timer = setTimeout(async () => {
-            resultsBox.innerHTML = '';
-            resultsBox.classList.add('hidden');
-            if (q.length < 2) return;
-
-            try {
-              const res = await fetch(`${api}?action=search_members&q=${encodeURIComponent(q)}`, { credentials: 'include' });
-              const json = await readJsonResponse(res);
-              if (!json.success) return;
-
-              resultsBox.classList.remove('hidden');
-
-              (json.data || []).forEach(u => {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'w-full px-3 py-2 text-left hover:bg-slate-50 text-sm';
-                btn.textContent = `${u.names}${u.phone1 ? ' · ' + u.phone1 : ''} · net: ${money(u.net_value || 0)}`;
-                btn.addEventListener('click', () => {
-                  hiddenInput.value = u.id;
-                  selectedEl.textContent = `${u.names}${u.phone1 ? ' · ' + u.phone1 : ''}`;
-                  netEl.textContent = money(u.net_value || 0);
-                  holderSearchInput.value = '';
-                  resultsBox.innerHTML = '';
-                  resultsBox.classList.add('hidden');
-                  updateHolderTotals();
-                });
-                resultsBox.appendChild(btn);
-              });
-            } catch (err) {
-              console.error(err);
-            }
-          }, 250);
-        });
-
-        if (pref) {
-          hiddenInput.value = pref.user_id || '';
-          selectedEl.textContent = pref.display || 'Ntawe';
-          netEl.textContent = money(pref.net_value || 0);
-          contributionInput.value = pref.contribution || '';
-          notesField.value = pref.notes || '';
+        if (seen.has(userId)) {
+          alert('Hari holder washyizwemo kabiri.');
+          return;
         }
+        seen.add(userId);
 
-        updateHolderTotals();
-      }
-
-      if (btnAddHolder) {
-        btnAddHolder.addEventListener('click', (e) => {
-          e.preventDefault();
-          addHolderRow();
+        holders.push({
+          user_id: userId,
+          contribution,
+          notes
         });
+        total += contribution;
       }
 
-      if (btnNew) {
-        btnNew.addEventListener('click', () => {
-          resetForm();
-          openModal();
-          nameInput?.focus();
-        });
+      const price = Number(purchaseValueInput.value || 0);
+      if (!holders.length) {
+        alert('Ongeramo nibura holder umwe.');
+        return;
+      }
+      if (Math.abs(total - price) > 0.009) {
+        alert(`Contribution za holders zigomba kungana na ${money(price)}. Ubu ni ${money(total)}.`);
+        return;
       }
 
-      if (btnRefresh) {
-        btnRefresh.addEventListener('click', () => {
-          currentQuery = '';
-          if (searchInput) searchInput.value = '';
+      const fd = new FormData();
+      fd.append('action', id ? 'update' : 'create');
+      if (id) fd.append('id', id);
+
+      fd.append('account_id', accountInput?.value || '');
+      fd.append('name', nameInput?.value || '');
+      fd.append('purchase_date', purchaseDateInput?.value || '');
+      fd.append('purchase_value', purchaseValueInput?.value || '');
+      fd.append('location', locationInput?.value || '');
+      fd.append('notes', notesInput?.value || '');
+      fd.append('certificate_name', certificateNameInput?.value || '');
+
+      if (certFile) {
+        fd.append('certificate_file', certFile);
+      }
+
+      if (id && removeCertificate?.checked) {
+        fd.append('remove_certificate', '1');
+      }
+
+      fd.append('sold_date', hasSold ? (soldDateInput?.value || '') : '');
+      fd.append('sold_value', hasSold ? (soldValueInput?.value || '') : '');
+      fd.append('holders', JSON.stringify(holders));
+
+      try {
+        const res = await fetch(api, { method: 'POST', body: fd, credentials: 'include' });
+        const json = await readJsonResponse(res);
+
+        if (json.success) {
+          closeModal();
           fetchAssets();
-        });
+        } else {
+          alert(json.message || 'Error saving');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Network error: ' + err.message);
       }
+    });
+  }
 
-      if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-          clearTimeout(searchTimer);
-          searchTimer = setTimeout(() => {
-            currentQuery = e.target.value.trim();
-            fetchAssets(currentQuery);
-          }, 300);
-        });
-      }
-
-      if (searchBtn) {
-        searchBtn.addEventListener('click', () => {
-          currentQuery = searchInput ? searchInput.value.trim() : '';
-          fetchAssets(currentQuery);
-        });
-      }
-
-      modalClose?.addEventListener('click', closeModal);
-      cancelBtn?.addEventListener('click', closeModal);
-      modal?.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-
-      holdersViewClose?.addEventListener('click', closeHoldersView);
-      holdersViewModal?.addEventListener('click', (e) => { if (e.target === holdersViewModal) closeHoldersView(); });
-
-      hasSoldCheckbox?.addEventListener('change', () => toggleSoldSection());
-      purchaseValueInput?.addEventListener('input', updateHolderTotals);
-
-      if (saveBtn) {
-        saveBtn.addEventListener('click', async () => {
-          const id = idInput?.value || '';
-          const hasSold = hasSoldCheckbox?.checked || false;
-
-          if (!nameInput?.value.trim()) {
-            alert('Shyiramo izina ry’umutungo.');
-            return;
-          }
-          if (!purchaseDateInput?.value) {
-            alert('Shyiramo itariki yaguriweho.');
-            return;
-          }
-          if (!purchaseValueInput?.value || Number(purchaseValueInput.value) <= 0) {
-            alert('Shyiramo purchase value irenze zero.');
-            return;
-          }
-
-          if (hasSold && !soldDateInput?.value) {
-            alert('Shyiramo sold date.');
-            return;
-          }
-
-          if (!hasSold) {
-            soldDateInput.value = '';
-            soldValueInput.value = '';
-          }
-
-          const holders = [];
-          let total = 0;
-          const seen = new Set();
-
-          for (const row of getHolderRows()) {
-            const userId = row.querySelector('.holder-user-id')?.value || '';
-            const contribution = Number(row.querySelector('.holder-contribution')?.value || 0);
-            const notes = row.querySelector('.holder-notes')?.value || '';
-
-            if (!userId || contribution <= 0) continue;
-
-            if (seen.has(userId)) {
-              alert('Hari holder washyizwemo kabiri.');
-              return;
-            }
-            seen.add(userId);
-
-            holders.push({
-              user_id: userId,
-              contribution,
-              notes
-            });
-            total += contribution;
-          }
-
-          const price = Number(purchaseValueInput.value || 0);
-          if (!holders.length) {
-            alert('Ongeramo nibura holder umwe.');
-            return;
-          }
-          if (Math.abs(total - price) > 0.009) {
-            alert(`Contribution za holders zigomba kungana na ${money(price)}. Ubu ni ${money(total)}.`);
-            return;
-          }
-
-          const fd = new FormData();
-          fd.append('action', id ? 'update' : 'create');
-          if (id) fd.append('id', id);
-
-          fd.append('name', nameInput?.value || '');
-          fd.append('purchase_date', purchaseDateInput?.value || '');
-          fd.append('purchase_value', purchaseValueInput?.value || '');
-          fd.append('location', locationInput?.value || '');
-          fd.append('notes', notesInput?.value || '');
-          fd.append('certificate_name', certificateNameInput?.value || '');
-
-          if (certificateFileInput?.files?.[0]) {
-            fd.append('certificate_file', certificateFileInput.files[0]);
-          }
-
-          fd.append('sold_date', hasSold ? (soldDateInput?.value || '') : '');
-          fd.append('sold_value', hasSold ? (soldValueInput?.value || '') : '');
-          fd.append('holders', JSON.stringify(holders));
-
-          try {
-            const res = await fetch(api, { method: 'POST', body: fd, credentials: 'include' });
-            const json = await readJsonResponse(res);
-
-            if (json.success) {
-              closeModal();
-              fetchAssets();
-            } else {
-              alert(json.message || 'Error saving');
-            }
-          } catch (err) {
-            console.error(err);
-            alert('Network error: ' + err.message);
-          }
-        });
-      }
-
-      resetForm();
-      fetchAssets();
-    })();
+  resetForm();
+  loadAccounts();
+  fetchAssets();
+})();
 
     // Notifications management JS
     // Notifications management JS - FIXED VERSION

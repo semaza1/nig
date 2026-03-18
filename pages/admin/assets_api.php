@@ -35,6 +35,8 @@ register_shutdown_function(function () {
     }
 
     if ($err) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
             'success' => false,
             'message' => 'Fatal error',
@@ -44,6 +46,8 @@ register_shutdown_function(function () {
     }
 
     if (trim($buf) !== '') {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
             'success' => false,
             'message' => 'Unexpected output detected. See assets_debug.log'
@@ -89,6 +93,80 @@ function money($x): float {
     return (float)number_format((float)$x, 2, '.', '');
 }
 
+function allowed_certificate_mimes(): array {
+    return [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'application/pdf'
+    ];
+}
+
+function get_uploaded_certificate(string $field = 'certificate_file', bool $required = false): array {
+    if (!isset($_FILES[$field])) {
+        if ($required) return [false, null, 'Certificate file is required'];
+        return [true, null, null];
+    }
+
+    $file = $_FILES[$field];
+    $errCode = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+
+    if ($errCode === UPLOAD_ERR_NO_FILE) {
+        if ($required) return [false, null, 'Certificate file is required'];
+        return [true, null, null];
+    }
+
+    if ($errCode !== UPLOAD_ERR_OK) {
+        $msg = match ($errCode) {
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Uploaded certificate file is too large',
+            UPLOAD_ERR_PARTIAL => 'Certificate upload was incomplete',
+            UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary upload folder',
+            UPLOAD_ERR_CANT_WRITE => 'Server failed to write uploaded certificate file',
+            UPLOAD_ERR_EXTENSION => 'Certificate upload stopped by server extension',
+            default => 'Certificate upload failed'
+        };
+        return [false, null, $msg];
+    }
+
+    if (!is_uploaded_file($file['tmp_name'])) {
+        return [false, null, 'Invalid uploaded certificate file'];
+    }
+
+    $tmp  = $file['tmp_name'];
+    $name = mb_substr(trim((string)($file['name'] ?? 'certificate')), 0, 255);
+    $size = (int)($file['size'] ?? 0);
+
+    if ($size <= 0) {
+        return [false, null, 'Uploaded certificate file is empty'];
+    }
+
+    $maxSize = 10 * 1024 * 1024;
+    if ($size > $maxSize) {
+        return [false, null, 'Certificate file too large. Maximum allowed is 10 MB'];
+    }
+
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime = $finfo ? (finfo_file($finfo, $tmp) ?: 'application/octet-stream') : 'application/octet-stream';
+    if ($finfo) finfo_close($finfo);
+
+    if (!in_array($mime, allowed_certificate_mimes(), true)) {
+        return [false, null, 'Only JPG, PNG, GIF, WEBP, or PDF files are allowed'];
+    }
+
+    $blob = file_get_contents($tmp);
+    if ($blob === false || $blob === '') {
+        return [false, null, 'Could not read uploaded certificate file'];
+    }
+
+    return [true, [
+        'name' => $name,
+        'type' => $mime,
+        'size' => $size,
+        'blob' => $blob,
+    ], null];
+}
+
 function update_asset_blob(mysqli $mysqli, int $asset_id, string $blob): void {
     $stmt = $mysqli->prepare("UPDATE assets SET certificate_file = ? WHERE asset_id = ?");
     if (!$stmt) {
@@ -103,6 +181,29 @@ function update_asset_blob(mysqli $mysqli, int $asset_id, string $blob): void {
         $err = $stmt->error ?: $mysqli->error;
         $stmt->close();
         throw new Exception('Failed to save certificate file: ' . $err);
+    }
+
+    $stmt->close();
+}
+
+function clear_asset_blob(mysqli $mysqli, int $asset_id): void {
+    $stmt = $mysqli->prepare("
+        UPDATE assets
+        SET certificate_name = NULL,
+            certificate_mime = NULL,
+            certificate_file = NULL
+        WHERE asset_id = ?
+    ");
+    if (!$stmt) {
+        throw new Exception('Prepare failed: ' . $mysqli->error);
+    }
+
+    $stmt->bind_param('i', $asset_id);
+
+    if (!$stmt->execute()) {
+        $err = $stmt->error ?: $mysqli->error;
+        $stmt->close();
+        throw new Exception('Failed clearing certificate file: ' . $err);
     }
 
     $stmt->close();
@@ -130,7 +231,9 @@ function parse_holders_json($raw): array {
 }
 
 /* =========================================================
-   Member net calculations
+   Member net calculations with:
+   - dynamic interest share
+   - dynamic expense partition
 ========================================================= */
 
 function get_loan_unpaid_principal(mysqli $mysqli, int $loan_id): float {
@@ -143,7 +246,7 @@ function get_loan_unpaid_principal(mysqli $mysqli, int $loan_id): float {
     $st->close();
 
     if (!$loan) return 0.0;
-    if (!in_array((string)($loan['status'] ?? ''), ['approved', 'defaulted'], true)) return 0.0;
+    if (!in_array((string)($loan['status'] ?? ''), ['approved', 'defaulted', 'closed'], true)) return 0.0;
 
     $principal = (float)($loan['principal'] ?? 0);
 
@@ -170,7 +273,7 @@ function get_user_unpaid_loans(mysqli $mysqli, int $user_id): float {
         SELECT loan_id
         FROM loans
         WHERE borrower_user_id = ?
-          AND status IN ('approved','defaulted')
+          AND status IN ('approved','defaulted','closed')
     ");
     if (!$st) return 0.0;
 
@@ -184,6 +287,62 @@ function get_user_unpaid_loans(mysqli $mysqli, int $user_id): float {
     }
     $st->close();
 
+    return money($sum);
+}
+
+function get_user_unpaid_interest_total(mysqli $mysqli, int $user_id): float {
+    $st = $mysqli->prepare("
+        SELECT l.loan_id
+        FROM loans l
+        WHERE l.borrower_user_id = ?
+          AND l.status IN ('approved','defaulted','closed')
+    ");
+    if (!$st) return 0.0;
+
+    $st->bind_param('i', $user_id);
+    $st->execute();
+    $rs = $st->get_result();
+
+    $sum = 0.0;
+    while ($row = $rs->fetch_assoc()) {
+        $loan_id = (int)$row['loan_id'];
+
+        $loanSt = $mysqli->prepare("
+            SELECT principal, monthly_interest_rate
+            FROM loans
+            WHERE loan_id = ?
+            LIMIT 1
+        ");
+        if (!$loanSt) continue;
+
+        $loanSt->bind_param('i', $loan_id);
+        $loanSt->execute();
+        $loan = $loanSt->get_result()->fetch_assoc();
+        $loanSt->close();
+
+        if (!$loan) continue;
+
+        $due = ((float)($loan['principal'] ?? 0) * (float)($loan['monthly_interest_rate'] ?? 0)) / 100;
+
+        $paidSt = $mysqli->prepare("
+            SELECT COALESCE(SUM(amount),0) AS paid_interest
+            FROM transactions
+            WHERE loan_id = ?
+              AND type = 'loan_interest'
+              AND direction = 'IN'
+        ");
+        if (!$paidSt) continue;
+
+        $paidSt->bind_param('i', $loan_id);
+        $paidSt->execute();
+        $paidRow = $paidSt->get_result()->fetch_assoc();
+        $paidSt->close();
+
+        $paid = (float)($paidRow['paid_interest'] ?? 0);
+        $sum += max(0.0, $due - $paid);
+    }
+
+    $st->close();
     return money($sum);
 }
 
@@ -206,16 +365,137 @@ function get_user_locked_guarantees(mysqli $mysqli, int $user_id): float {
     return money((float)($row['total_guaranteed'] ?? 0));
 }
 
+function get_member_base_contributions(mysqli $mysqli, int $user_id): float {
+    $st = $mysqli->prepare("
+        SELECT
+            COALESCE(SUM(CASE
+                WHEN type='contribution' AND direction='IN' THEN amount
+                ELSE 0
+            END), 0) AS contrib_in,
+            COALESCE(SUM(CASE
+                WHEN type='withdrawal' AND direction='OUT' THEN amount
+                ELSE 0
+            END), 0) AS withdraw_out
+        FROM transactions
+        WHERE user_id=?
+    ");
+    if (!$st) return 0.0;
+
+    $st->bind_param('i', $user_id);
+    $st->execute();
+    $row = $st->get_result()->fetch_assoc();
+    $st->close();
+
+    $base = (float)($row['contrib_in'] ?? 0) - (float)($row['withdraw_out'] ?? 0);
+    return max(0.0, money($base));
+}
+
+function calculate_member_financial_shares(mysqli $mysqli): array {
+    $members = [];
+
+    $memberRes = $mysqli->query("
+        SELECT id
+        FROM users
+        WHERE is_member = 1
+        ORDER BY id ASC
+    ");
+    if (!$memberRes) return [];
+
+    while ($m = $memberRes->fetch_assoc()) {
+        $uid = (int)$m['id'];
+        $base = get_member_base_contributions($mysqli, $uid);
+
+        $members[$uid] = [
+            'base'             => $base,
+            'earned_interest'  => 0.0,
+            'expense_share'    => 0.0,
+            'current_weight'   => $base,
+        ];
+    }
+
+    if (empty($members)) return [];
+
+    $eventSql = "
+        SELECT transaction_id, tx_date, type, amount
+        FROM transactions
+        WHERE (
+            (type='loan_interest' AND direction='IN')
+            OR
+            (type='expense' AND direction='OUT')
+        )
+        ORDER BY tx_date ASC, transaction_id ASC
+    ";
+    $eventRes = $mysqli->query($eventSql);
+    if (!$eventRes) return $members;
+
+    while ($ev = $eventRes->fetch_assoc()) {
+        $type   = (string)($ev['type'] ?? '');
+        $amount = (float)($ev['amount'] ?? 0);
+
+        if ($amount <= 0) continue;
+
+        $totalWeight = 0.0;
+
+        foreach ($members as $uid => $m) {
+            $weight = max(
+                0.0,
+                (float)$m['base']
+                + (float)$m['earned_interest']
+                - (float)$m['expense_share']
+            );
+            $members[$uid]['current_weight'] = money($weight);
+            $totalWeight += $weight;
+        }
+
+        if ($totalWeight <= 0) continue;
+
+        if ($type === 'loan_interest') {
+            foreach ($members as $uid => $m) {
+                $share = ($m['current_weight'] / $totalWeight) * $amount;
+                $members[$uid]['earned_interest'] = money($members[$uid]['earned_interest'] + $share);
+            }
+        }
+
+        if ($type === 'expense') {
+            foreach ($members as $uid => $m) {
+                $share = ($m['current_weight'] / $totalWeight) * $amount;
+                $members[$uid]['expense_share'] = money($members[$uid]['expense_share'] + $share);
+            }
+        }
+    }
+
+    foreach ($members as $uid => $m) {
+        $members[$uid]['net_participation'] = money(
+            max(
+                0.0,
+                (float)$m['base']
+                + (float)$m['earned_interest']
+                - (float)$m['expense_share']
+            )
+        );
+    }
+
+    return $members;
+}
+
+function get_member_calculated_interest(mysqli $mysqli, int $user_id): float {
+    $all = calculate_member_financial_shares($mysqli);
+    return money((float)($all[$user_id]['earned_interest'] ?? 0.0));
+}
+
+function get_member_expense_partition(mysqli $mysqli, int $user_id): float {
+    $all = calculate_member_financial_shares($mysqli);
+    return money((float)($all[$user_id]['expense_share'] ?? 0.0));
+}
+
 function get_user_net(mysqli $mysqli, int $user_id): array {
     $contrib = 0.0;
     $withdraw = 0.0;
-    $interest = 0.0;
 
     $st = $mysqli->prepare("
         SELECT
           COALESCE(SUM(CASE WHEN type='contribution' AND direction='IN' THEN amount ELSE 0 END),0) AS c_in,
-          COALESCE(SUM(CASE WHEN type='withdrawal'   AND direction='OUT' THEN amount ELSE 0 END),0) AS w_out,
-          COALESCE(SUM(CASE WHEN type='loan_interest' AND direction='IN' THEN amount ELSE 0 END),0) AS i_in
+          COALESCE(SUM(CASE WHEN type='withdrawal'   AND direction='OUT' THEN amount ELSE 0 END),0) AS w_out
         FROM transactions
         WHERE user_id = ?
     ");
@@ -227,21 +507,28 @@ function get_user_net(mysqli $mysqli, int $user_id): array {
 
         $contrib = (float)($row['c_in'] ?? 0);
         $withdraw = (float)($row['w_out'] ?? 0);
-        $interest = (float)($row['i_in'] ?? 0);
     }
 
+    $interest = get_member_calculated_interest($mysqli, $user_id);
+    $expense_partition = get_member_expense_partition($mysqli, $user_id);
+
     $loans_unpaid = get_user_unpaid_loans($mysqli, $user_id);
+    $interest_unpaid = get_user_unpaid_interest_total($mysqli, $user_id);
     $guaranteed = get_user_locked_guarantees($mysqli, $user_id);
     $reserve = 120000.0;
 
-    $net_raw = ($contrib + $interest) - ($withdraw + $loans_unpaid + $guaranteed + $reserve);
+    $participation_net = ($contrib + $interest) - ($withdraw + $expense_partition);
+    $net_raw = $participation_net - ($loans_unpaid + $interest_unpaid + $guaranteed + $reserve);
     $net = max(0.0, $net_raw);
 
     return [
         'contrib' => money($contrib),
         'interest_received' => money($interest),
+        'expense_partition' => money($expense_partition),
         'withdrawals' => money($withdraw),
+        'participation_net' => money($participation_net),
         'loans_unpaid' => money($loans_unpaid),
+        'interest_unpaid' => money($interest_unpaid),
         'locked_guarantees' => money($guaranteed),
         'reserve' => money($reserve),
         'net_raw' => money($net_raw),
@@ -277,6 +564,8 @@ function fetch_asset_holders(mysqli $mysqli, int $asset_id): array {
     while ($r = $rs->fetch_assoc()) {
         $net = get_user_net($mysqli, (int)$r['user_id']);
         $r['net_value'] = $net['net'];
+        $r['expense_partition'] = $net['expense_partition'];
+        $r['participation_net'] = $net['participation_net'];
         $rows[] = $r;
     }
     $stmt->close();
@@ -288,6 +577,8 @@ function fetch_asset(mysqli $mysqli, int $id): ?array {
     $stmt = $mysqli->prepare("
         SELECT
             a.asset_id,
+            a.account_id,
+            ac.name AS account_name,
             a.name,
             a.purchase_date,
             a.purchase_value,
@@ -297,7 +588,7 @@ function fetch_asset(mysqli $mysqli, int $id): ?array {
             a.created_at,
             a.certificate_name,
             a.certificate_mime,
-            IF(a.certificate_file IS NOT NULL, HEX(a.certificate_file), NULL) AS certificate_file,
+            CASE WHEN a.certificate_file IS NOT NULL THEN 1 ELSE 0 END AS has_certificate,
             a.sold_value,
             a.sold_date,
             (
@@ -306,6 +597,7 @@ function fetch_asset(mysqli $mysqli, int $id): ?array {
               WHERE ah.asset_id = a.asset_id
             ) AS holders_count
         FROM assets a
+        LEFT JOIN accounts ac ON ac.account_id = a.account_id
         WHERE a.asset_id = ?
         LIMIT 1
     ");
@@ -317,6 +609,11 @@ function fetch_asset(mysqli $mysqli, int $id): ?array {
     $stmt->close();
 
     if (!$row) return null;
+
+    if ((int)($row['has_certificate'] ?? 0) === 1) {
+        $row['certificate_view_url'] = 'assets_api.php?action=view_certificate&id=' . $id;
+        $row['certificate_download_url'] = 'assets_api.php?action=download_certificate&id=' . $id;
+    }
 
     $row['holders'] = fetch_asset_holders($mysqli, $id);
     return $row;
@@ -344,7 +641,11 @@ function delete_linked_asset_holder_transactions(mysqli $mysqli, int $asset_id):
     $stmt->close();
 }
 
-function save_asset_holders(mysqli $mysqli, int $asset_id, string $asset_name, float $purchase_value, array $holders, int $admin_id): void {
+function save_asset_holders(mysqli $mysqli, int $asset_id, int $account_id, string $asset_name, float $purchase_value, array $holders, int $admin_id): void {
+    if ($account_id <= 0) {
+        throw new Exception('Account is required for asset holder transactions');
+    }
+
     if (empty($holders)) {
         throw new Exception('Add at least one holder');
     }
@@ -407,7 +708,7 @@ function save_asset_holders(mysqli $mysqli, int $asset_id, string $asset_name, f
         INSERT INTO transactions
           (tx_date, user_id, loan_id, account_id, type, direction, amount, description, created_by)
         VALUES
-          (NOW(), ?, NULL, NULL, 'withdrawal', 'OUT', ?, ?, ?)
+          (NOW(), ?, NULL, ?, 'withdrawal', 'OUT', ?, ?, ?)
     ");
     if (!$insTx) throw new Exception($mysqli->error);
 
@@ -429,7 +730,7 @@ function save_asset_holders(mysqli $mysqli, int $asset_id, string $asset_name, f
             $desc .= " | " . $notes;
         }
 
-        $insTx->bind_param('idsi', $uid, $amt, $desc, $admin_id);
+        $insTx->bind_param('iidsi', $uid, $account_id, $amt, $desc, $admin_id);
         if (!$insTx->execute()) {
             $err = $insTx->error ?: $mysqli->error;
             $insHolder->close();
@@ -440,6 +741,72 @@ function save_asset_holders(mysqli $mysqli, int $asset_id, string $asset_name, f
 
     $insHolder->close();
     $insTx->close();
+}
+
+/* =========================================================
+   FILE VIEW / DOWNLOAD
+========================================================= */
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && (($_GET['action'] ?? '') === 'view_certificate')) {
+    $id = (int)($_GET['id'] ?? 0);
+    if ($id <= 0) send_json(['success' => false, 'message' => 'Invalid asset id'], 400);
+
+    $stmt = $mysqli->prepare("
+        SELECT certificate_name, certificate_mime, certificate_file
+        FROM assets
+        WHERE asset_id = ?
+        LIMIT 1
+    ");
+    if (!$stmt) send_json(['success' => false, 'message' => 'Prepare failed'], 500);
+
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$row || empty($row['certificate_file'])) {
+        send_json(['success' => false, 'message' => 'No certificate found'], 404);
+    }
+
+    while (ob_get_level() > 0) { @ob_end_clean(); }
+
+    $mime = $row['certificate_mime'] ?: 'application/octet-stream';
+    header('Content-Type: ' . $mime);
+    header('Content-Disposition: inline; filename="' . str_replace('"', '', ($row['certificate_name'] ?: 'certificate')) . '"');
+    echo $row['certificate_file'];
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && (($_GET['action'] ?? '') === 'download_certificate')) {
+    $id = (int)($_GET['id'] ?? 0);
+    if ($id <= 0) send_json(['success' => false, 'message' => 'Invalid asset id'], 400);
+
+    $stmt = $mysqli->prepare("
+        SELECT certificate_name, certificate_mime, certificate_file
+        FROM assets
+        WHERE asset_id = ?
+        LIMIT 1
+    ");
+    if (!$stmt) send_json(['success' => false, 'message' => 'Prepare failed'], 500);
+
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$row || empty($row['certificate_file'])) {
+        send_json(['success' => false, 'message' => 'No certificate found'], 404);
+    }
+
+    while (ob_get_level() > 0) { @ob_end_clean(); }
+
+    $fname = $row['certificate_name'] ?: ("asset_certificate_" . $id);
+    $mime  = $row['certificate_mime'] ?: 'application/octet-stream';
+
+    header('Content-Type: ' . $mime);
+    header('Content-Disposition: attachment; filename="' . str_replace('"', '', $fname) . '"');
+    echo $row['certificate_file'];
+    exit;
 }
 
 /* =========================================================
@@ -474,6 +841,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         while ($r = $rs->fetch_assoc()) {
             $net = get_user_net($mysqli, (int)$r['id']);
             $r['net_value'] = $net['net'];
+            $r['expense_partition'] = $net['expense_partition'];
+            $r['participation_net'] = $net['participation_net'];
             $rows[] = $r;
         }
         $stmt->close();
@@ -512,6 +881,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $sql = "
         SELECT
             a.asset_id,
+            a.account_id,
+            ac.name AS account_name,
             a.name,
             a.purchase_date,
             a.purchase_value,
@@ -521,7 +892,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             a.created_at,
             a.certificate_name,
             a.certificate_mime,
-            IF(a.certificate_file IS NOT NULL, HEX(a.certificate_file), NULL) AS certificate_file,
+            CASE WHEN a.certificate_file IS NOT NULL THEN 1 ELSE 0 END AS has_certificate,
             a.sold_value,
             a.sold_date,
             (
@@ -530,6 +901,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
               WHERE ah.asset_id = a.asset_id
             ) AS holders_count
         FROM assets a
+        LEFT JOIN accounts ac ON ac.account_id = a.account_id
         $where
         ORDER BY a.asset_id DESC
         LIMIT $offset, $per_page
@@ -540,6 +912,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     $rows = [];
     while ($r = $res->fetch_assoc()) {
+        if ((int)($r['has_certificate'] ?? 0) === 1) {
+            $r['certificate_view_url'] = 'assets_api.php?action=view_certificate&id=' . $r['asset_id'];
+            $r['certificate_download_url'] = 'assets_api.php?action=download_certificate&id=' . $r['asset_id'];
+        }
         $rows[] = $r;
     }
 
@@ -559,6 +935,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 $action = $_POST['action'] ?? '';
 
 if ($action === 'create') {
+    $account_id = (int)($_POST['account_id'] ?? 0);
     $name = trim((string)($_POST['name'] ?? ''));
     $purchase_date = valid_date_or_null($_POST['purchase_date'] ?? null);
     $purchase_value = (float)($_POST['purchase_value'] ?? 0);
@@ -572,7 +949,7 @@ if ($action === 'create') {
 
     $holders = parse_holders_json($_POST['holders'] ?? '[]');
 
-    if ($name === '' || $purchase_date === null || $purchase_value <= 0) {
+    if ($account_id <= 0 || $name === '' || $purchase_date === null || $purchase_value <= 0) {
         send_json(['success' => false, 'message' => 'Missing or invalid required fields'], 400);
     }
 
@@ -584,32 +961,29 @@ if ($action === 'create') {
         send_json(['success' => false, 'message' => 'sold_value is required if sold_date is provided'], 400);
     }
 
-    $certificate_name = null;
-    $certificate_mime = null;
-    $certificate_blob = null;
-
-    if (isset($_FILES['certificate_file']) && $_FILES['certificate_file']['error'] === UPLOAD_ERR_OK) {
-        $file = $_FILES['certificate_file'];
-        $certificate_blob = @file_get_contents($file['tmp_name']);
-        $certificate_name = clean_str($file['name'] ?? null);
-        $certificate_mime = clean_str($file['type'] ?? null);
-    } else {
-        $certificate_name = clean_str($_POST['certificate_name'] ?? null);
+    [$certOk, $certData, $certErr] = get_uploaded_certificate('certificate_file', false);
+    if (!$certOk) {
+        send_json(['success' => false, 'message' => $certErr], 400);
     }
+
+    $certificate_name = $certData['name'] ?? clean_str($_POST['certificate_name'] ?? null);
+    $certificate_mime = $certData['type'] ?? null;
+    $certificate_blob = $certData['blob'] ?? null;
 
     $mysqli->begin_transaction();
 
     try {
         $stmt = $mysqli->prepare("
             INSERT INTO assets
-                (name, purchase_date, purchase_value, location, notes, certificate_name, certificate_mime, sold_value, sold_date, created_by)
+                (account_id, name, purchase_date, purchase_value, location, notes, certificate_name, certificate_mime, sold_value, sold_date, created_by)
             VALUES
-                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         if (!$stmt) throw new Exception($mysqli->error);
 
         $stmt->bind_param(
-            'ssdssssssi',
+            'issdssssssi',
+            $account_id,
             $name,
             $purchase_date,
             $purchase_value,
@@ -635,7 +1009,7 @@ if ($action === 'create') {
             update_asset_blob($mysqli, $id, $certificate_blob);
         }
 
-        save_asset_holders($mysqli, $id, $name, $purchase_value, $holders, $admin_id);
+        save_asset_holders($mysqli, $id, $account_id, $name, $purchase_value, $holders, $admin_id);
 
         $mysqli->commit();
 
@@ -657,6 +1031,7 @@ if ($action === 'update') {
     $existing = fetch_asset($mysqli, $id);
     if (!$existing) send_json(['success' => false, 'message' => 'Asset not found'], 404);
 
+    $account_id = (int)($_POST['account_id'] ?? 0);
     $name = trim((string)($_POST['name'] ?? ''));
     $purchase_date = valid_date_or_null($_POST['purchase_date'] ?? null);
     $purchase_value = (float)($_POST['purchase_value'] ?? 0);
@@ -667,10 +1042,11 @@ if ($action === 'update') {
     $sold_value_raw = clean_str($_POST['sold_value'] ?? null);
     $sold_value = ($sold_value_raw === null) ? null : (float)$sold_value_raw;
     $sold_date = valid_date_or_null($_POST['sold_date'] ?? null);
+    $remove_certificate = (int)($_POST['remove_certificate'] ?? 0) === 1;
 
     $holders = parse_holders_json($_POST['holders'] ?? '[]');
 
-    if ($name === '' || $purchase_date === null || $purchase_value <= 0) {
+    if ($account_id <= 0 || $name === '' || $purchase_date === null || $purchase_value <= 0) {
         send_json(['success' => false, 'message' => 'Missing or invalid required fields'], 400);
     }
 
@@ -682,18 +1058,15 @@ if ($action === 'update') {
         send_json(['success' => false, 'message' => 'sold_value is required if sold_date is provided'], 400);
     }
 
-    $certificate_name = clean_str($_POST['certificate_name'] ?? null);
-    $certificate_mime = null;
-    $certificate_blob = null;
-    $hasNewFile = false;
-
-    if (isset($_FILES['certificate_file']) && $_FILES['certificate_file']['error'] === UPLOAD_ERR_OK) {
-        $file = $_FILES['certificate_file'];
-        $certificate_blob = @file_get_contents($file['tmp_name']);
-        $certificate_name = clean_str($file['name'] ?? null);
-        $certificate_mime = clean_str($file['type'] ?? null);
-        $hasNewFile = true;
+    [$certOk, $certData, $certErr] = get_uploaded_certificate('certificate_file', false);
+    if (!$certOk) {
+        send_json(['success' => false, 'message' => $certErr], 400);
     }
+
+    $hasNewFile = !!$certData;
+    $certificate_name = $certData['name'] ?? clean_str($_POST['certificate_name'] ?? null);
+    $certificate_mime = $certData['type'] ?? null;
+    $certificate_blob = $certData['blob'] ?? null;
 
     $mysqli->begin_transaction();
 
@@ -702,6 +1075,7 @@ if ($action === 'update') {
             $stmt = $mysqli->prepare("
                 UPDATE assets
                 SET
+                    account_id = ?,
                     name = ?,
                     purchase_date = ?,
                     purchase_value = ?,
@@ -716,7 +1090,8 @@ if ($action === 'update') {
             if (!$stmt) throw new Exception($mysqli->error);
 
             $stmt->bind_param(
-                'ssdssssssi',
+                'issdssssssi',
+                $account_id,
                 $name,
                 $purchase_date,
                 $purchase_value,
@@ -732,6 +1107,7 @@ if ($action === 'update') {
             $stmt = $mysqli->prepare("
                 UPDATE assets
                 SET
+                    account_id = ?,
                     name = ?,
                     purchase_date = ?,
                     purchase_value = ?,
@@ -745,7 +1121,8 @@ if ($action === 'update') {
             if (!$stmt) throw new Exception($mysqli->error);
 
             $stmt->bind_param(
-                'ssdsssssi',
+                'issdsssssi',
+                $account_id,
                 $name,
                 $purchase_date,
                 $purchase_value,
@@ -765,11 +1142,15 @@ if ($action === 'update') {
         }
         $stmt->close();
 
+        if ($remove_certificate) {
+            clear_asset_blob($mysqli, $id);
+        }
+
         if ($hasNewFile && $certificate_blob !== null) {
             update_asset_blob($mysqli, $id, $certificate_blob);
         }
 
-        save_asset_holders($mysqli, $id, $name, $purchase_value, $holders, $admin_id);
+        save_asset_holders($mysqli, $id, $account_id, $name, $purchase_value, $holders, $admin_id);
 
         $mysqli->commit();
 
