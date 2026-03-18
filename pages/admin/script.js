@@ -2991,361 +2991,647 @@ function clearFileInput(id) {
     fetchNotifications(1);
     })();
     
-    // SCRIPTS: Expenses management (expense-only backend)
+    /**
+ * Expense Management Module
+ * Final version
+ * Supports:
+ * - expense CRUD
+ * - proof image/pdf upload to DB
+ * - proof preview before save
+ * - existing proof preview/download on edit
+ * - image thumbnail in table view
+ * - remove existing proof on update
+ */
 (function () {
+  const CONFIG = {
+    api: "expenses_api.php",
+    currency: "Frw",
+    locale: "rw-RW",
+    debounceTime: 250,
+    maxProofSize: 10 * 1024 * 1024,
+    allowedProofTypes: [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "application/pdf"
+    ]
+  };
 
-  const api = 'expenses_api.php';
-  const tbody = document.getElementById('expenses-tbody');
-  const btnNew = document.getElementById('btn-new-expense');
-  const btnRefresh = document.getElementById('btn-refresh-expenses');
-  const searchInput = document.getElementById('expenses-search');
-  const searchBtn = document.getElementById('expenses-search-btn');
-  const modal = document.getElementById('expense-modal');
-  const modalClose = document.getElementById('expense-modal-close');
-  const saveBtn = document.getElementById('expense-save');
-  const cancelBtn = document.getElementById('expense-cancel');
-  const form = document.getElementById('expense-form');
-  const accountSelect = document.getElementById('expense-account');
+  const STATE = {
+    accounts: [],
+    saving: false
+  };
 
-  const idInput = document.getElementById('expense-id');
-  const dateInput = document.getElementById('expense-date');
-  const categoryInput = document.getElementById('expense-category');
-  const amountInput = document.getElementById('expense-amount');
-  const descriptionInput = document.getElementById('expense-description');
+  const DOM = {
+    tbody: document.getElementById("expenses-tbody"),
+    modal: document.getElementById("expense-modal"),
+    form: document.getElementById("expense-form"),
+    id: document.getElementById("expense-id"),
+    date: document.getElementById("expense-date"),
+    account: document.getElementById("expense-account"),
+    amount: document.getElementById("expense-amount"),
+    desc: document.getElementById("expense-description"),
+    proof: document.getElementById("expense-proof"),
+    hint: document.getElementById("expense-proof-hint"),
+    infoBox: document.getElementById("expense-info-box"),
+    btnNew: document.getElementById("btn-new-expense"),
+    btnRefresh: document.getElementById("btn-refresh-expenses"),
+    btnSave: document.getElementById("expense-save"),
+    btnCancel: document.getElementById("expense-cancel"),
+    btnClose: document.getElementById("expense-modal-close"),
+    modalTitle: document.getElementById("expense-modal-title"),
+    q: document.getElementById("expense-search"),
+    filterAccount: document.getElementById("expense-filter-account"),
+    proofExisting: document.getElementById("expense-proof-existing"),
+    proofLocalPreview: document.getElementById("expense-proof-local-preview"),
+    proofRemoveWrap: document.getElementById("expense-proof-remove-wrap"),
+    removeProof: document.getElementById("expense-remove-proof"),
+    proofRequiredStar: document.getElementById("expense-proof-required-star")
+  };
 
-  if (!tbody) return;
+  const Format = {
+    money(n) {
+      return `${Number(n || 0).toLocaleString(CONFIG.locale)} ${CONFIG.currency}`;
+    },
 
-  let currentQuery = '';
-  let searchTimer = null;
+    toDTL(mysqlDt) {
+      return mysqlDt ? mysqlDt.replace(" ", "T").slice(0, 16) : "";
+    },
 
-  function esc(v) {
-    if (typeof globalEscapeHtml === 'function') return globalEscapeHtml(v ?? '');
-    return String(v ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
+    escape(s) {
+      return String(s ?? "").replace(/[&<>"']/g, (m) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[m]));
+    },
 
-  function money(n) {
-    return `${Number(n || 0).toLocaleString('rw-RW', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Frw`;
-  }
-
-  function toDatetimeLocal(mysqlDt) {
-    if (!mysqlDt) return '';
-    return String(mysqlDt).replace(' ', 'T').slice(0, 16);
-  }
-
-  function openModal() {
-    if (!modal) return;
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-  }
-
-  function closeModal() {
-    if (!modal) return;
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-  }
-
-  function resetForm() {
-    if (form) form.reset();
-    if (idInput) idInput.value = '';
-    if (dateInput && !dateInput.value) {
-      dateInput.value = new Date().toISOString().slice(0, 16);
+    fileSize(bytes) {
+      const n = Number(bytes || 0);
+      if (n < 1024) return `${n} B`;
+      if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+      return `${(n / (1024 * 1024)).toFixed(2)} MB`;
     }
-  }
+  };
 
-  // Store category + notes inside description as: "CATEGORY :: notes"
-  function packDesc(category, notes) {
-    const c = String(category || '').trim();
-    const n = String(notes || '').trim();
-    return n ? `${c} :: ${n}` : c;
-  }
-
-  function unpackDesc(desc) {
-    const s = String(desc || '');
-    const parts = s.split('::');
-    if (parts.length >= 2) {
-      return {
-        category: parts[0].trim(),
-        notes: parts.slice(1).join('::').trim()
+  const Utils = {
+    debounce(fn, wait = CONFIG.debounceTime) {
+      let t;
+      return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn(...args), wait);
       };
-    }
-    return { category: s.trim(), notes: '' };
-  }
+    },
 
-  async function readJsonResponse(res) {
-    const text = await res.text();
-    let json = null;
-    try {
-      json = text ? JSON.parse(text) : {};
-    } catch (e) {
-      console.error('Non-JSON response:', text);
-      throw new Error('Server returned non-JSON response.');
+    isImageType(mime) {
+      return /^image\//i.test(String(mime || ""));
+    },
+
+    isPdfType(mime) {
+      return String(mime || "").toLowerCase() === "application/pdf";
+    },
+
+    resetFileInput(input) {
+      if (!input) return;
+      input.value = "";
+    },
+
+    getLocalDateTimeValue() {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    }
+  };
+
+  async function apiRequest(url, options = {}) {
+    const res = await fetch(url, {
+      credentials: "include",
+      ...options
+    });
+
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || `HTTP Error ${res.status}`);
     }
     return json;
   }
 
-  async function loadAccounts() {
-    if (!accountSelect) return;
+  const UI = {
+    setSaveState(enabled, reason = "") {
+      const disabled = !enabled || STATE.saving;
+      if (DOM.btnSave) {
+        DOM.btnSave.disabled = disabled;
+        DOM.btnSave.classList.toggle("opacity-50", disabled);
+        DOM.btnSave.classList.toggle("cursor-not-allowed", disabled);
+      }
+      if (DOM.hint) {
+        DOM.hint.textContent = reason || "Itegeko kuri expense nshya.";
+      }
+    },
 
-    try {
-      const res = await fetch(`${api}?accounts=1`, { credentials: 'include' });
-      const json = await readJsonResponse(res);
+    setProofRequiredUi(required) {
+      if (DOM.proof) {
+        if (required) DOM.proof.setAttribute("required", "required");
+        else DOM.proof.removeAttribute("required");
+      }
+      if (DOM.proofRequiredStar) {
+        DOM.proofRequiredStar.classList.toggle("hidden", !required);
+      }
+    },
 
-      if (!res.ok) {
-        alert(json.message || ('HTTP ' + res.status));
+    toggleModal(show = true) {
+      if (!DOM.modal) return;
+
+      DOM.modal.classList.toggle("hidden", !show);
+      DOM.modal.classList.toggle("flex", show);
+
+      if (!show) {
+        DOM.form?.reset();
+        UI.updateInfoBox("");
+        UI.clearExistingProof();
+        UI.clearLocalProofPreview();
+        if (DOM.removeProof) DOM.removeProof.checked = false;
+        UI.setProofRequiredUi(false);
+      }
+    },
+
+    updateInfoBox(html) {
+      if (DOM.infoBox) DOM.infoBox.innerHTML = html || "";
+    },
+
+    clearExistingProof() {
+      if (!DOM.proofExisting) return;
+      DOM.proofExisting.classList.add("hidden");
+      DOM.proofExisting.innerHTML = "";
+      if (DOM.proofRemoveWrap) {
+        DOM.proofRemoveWrap.classList.add("hidden");
+        DOM.proofRemoveWrap.classList.remove("flex");
+      }
+    },
+
+    showExistingProof(row) {
+      if (!DOM.proofExisting) return;
+
+      const hasProof = Number(row?.has_proof || 0) === 1;
+      if (!hasProof) {
+        UI.clearExistingProof();
         return;
       }
 
-      if (json.success) {
-        accountSelect.innerHTML = '<option value="">-- Hitamo Konto --</option>';
-        (json.data || []).forEach(acc => {
-          const opt = document.createElement('option');
-          opt.value = acc.account_id;
-          opt.textContent = `${acc.name}${acc.balance !== undefined ? ` (${money(acc.balance)})` : ''}`;
-          accountSelect.appendChild(opt);
-        });
-      } else {
-        alert(json.message || 'Failed to load accounts');
+      const type = row.proof_type || "";
+      const name = row.proof_name || "proof";
+      const size = row.proof_size || 0;
+      const viewUrl = row.proof_view_url || `${CONFIG.api}?action=view_proof&id=${row.transaction_id}`;
+      const downloadUrl = row.proof_download_url || `${CONFIG.api}?action=download_proof&id=${row.transaction_id}`;
+
+      let previewHtml = "";
+      if (Utils.isImageType(type)) {
+        previewHtml = `
+          <div class="mt-2">
+            <img
+              src="${Format.escape(viewUrl)}"
+              alt="Proof"
+              class="max-h-48 rounded border border-slate-200 object-contain bg-white"
+            >
+          </div>
+        `;
+      } else if (Utils.isPdfType(type)) {
+        previewHtml = `
+          <div class="mt-2">
+            <a href="${Format.escape(viewUrl)}" target="_blank" class="text-blue-700 underline">
+              Fungura PDF
+            </a>
+          </div>
+        `;
       }
 
-    } catch (err) {
-      console.error(err);
-      alert('Failed to load accounts: ' + err.message);
-    }
-  }
+      DOM.proofExisting.innerHTML = `
+        <div class="font-semibold text-slate-700">Proof iriho</div>
+        <div class="mt-1 text-slate-600">
+          <div><b>File:</b> ${Format.escape(name)}</div>
+          <div><b>Type:</b> ${Format.escape(type || "unknown")}</div>
+          <div><b>Size:</b> ${Format.escape(Format.fileSize(size))}</div>
+        </div>
+        <div class="mt-2 flex gap-3">
+          <a href="${Format.escape(viewUrl)}" target="_blank" class="text-blue-700 underline">Reba</a>
+          <a href="${Format.escape(downloadUrl)}" target="_blank" class="text-emerald-700 underline">Download</a>
+        </div>
+        ${previewHtml}
+      `;
+      DOM.proofExisting.classList.remove("hidden");
 
-  async function fetchExpenses(q = currentQuery) {
-    try {
-      const url = `${api}?per_page=200` + (q ? `&q=${encodeURIComponent(q)}` : '');
-      const res = await fetch(url, { credentials: 'include' });
-      const json = await readJsonResponse(res);
+      if (DOM.proofRemoveWrap) {
+        DOM.proofRemoveWrap.classList.remove("hidden");
+        DOM.proofRemoveWrap.classList.add("flex");
+      }
+    },
 
-      if (!res.ok) {
-        console.error('fetchExpenses', res.status, json);
-        tbody.innerHTML = `
+    clearLocalProofPreview() {
+      if (!DOM.proofLocalPreview) return;
+      DOM.proofLocalPreview.classList.add("hidden");
+      DOM.proofLocalPreview.innerHTML = "";
+    },
+
+    previewSelectedProof() {
+      UI.clearLocalProofPreview();
+
+      const file = DOM.proof?.files?.[0];
+      if (!file || !DOM.proofLocalPreview) return;
+
+      if (!CONFIG.allowedProofTypes.includes(file.type)) {
+        alert("Dosiye yemerewe ni JPG, PNG, GIF, WEBP cyangwa PDF.");
+        Utils.resetFileInput(DOM.proof);
+        UI.validateAll();
+        return;
+      }
+
+      if (file.size > CONFIG.maxProofSize) {
+        alert("Dosiye irarengeje 10 MB.");
+        Utils.resetFileInput(DOM.proof);
+        UI.validateAll();
+        return;
+      }
+
+      const metaHtml = `
+        <div class="text-xs text-slate-700 mb-2">
+          <div><b>Selected:</b> ${Format.escape(file.name)}</div>
+          <div><b>Type:</b> ${Format.escape(file.type || "unknown")}</div>
+          <div><b>Size:</b> ${Format.escape(Format.fileSize(file.size))}</div>
+        </div>
+      `;
+
+      if (Utils.isImageType(file.type)) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          DOM.proofLocalPreview.innerHTML = `
+            ${metaHtml}
+            <img
+              src="${reader.result}"
+              alt="Preview"
+              class="max-h-48 rounded border border-slate-200 object-contain bg-white"
+            >
+          `;
+          DOM.proofLocalPreview.classList.remove("hidden");
+        };
+        reader.readAsDataURL(file);
+      } else if (Utils.isPdfType(file.type)) {
+        DOM.proofLocalPreview.innerHTML = `
+          ${metaHtml}
+          <div class="text-blue-700">PDF yatoranyijwe neza.</div>
+        `;
+        DOM.proofLocalPreview.classList.remove("hidden");
+      } else {
+        DOM.proofLocalPreview.innerHTML = metaHtml;
+        DOM.proofLocalPreview.classList.remove("hidden");
+      }
+
+      if (DOM.removeProof) DOM.removeProof.checked = false;
+    },
+
+    renderProofCell(r) {
+      const hasProof = Number(r.has_proof || 0) === 1;
+      if (!hasProof) {
+        return `<span class="text-slate-400 text-xs">Nta proof</span>`;
+      }
+
+      const viewUrl = r.proof_view_url || `${CONFIG.api}?action=view_proof&id=${r.transaction_id}`;
+      const downloadUrl = r.proof_download_url || `${CONFIG.api}?action=download_proof&id=${r.transaction_id}`;
+      const proofType = String(r.proof_type || "").toLowerCase();
+
+      if (proofType.startsWith("image/")) {
+        return `
+          <div class="flex flex-col items-center gap-2">
+            <a href="${Format.escape(viewUrl)}" target="_blank" class="block">
+              <img
+                src="${Format.escape(viewUrl)}"
+                alt="Proof"
+                class="h-20 w-20 rounded-lg border border-slate-200 object-cover bg-white shadow-sm hover:scale-105 transition-transform"
+              >
+            </a>
+            <div class="flex flex-wrap justify-center gap-2 text-xs">
+              <a class="text-blue-700 underline" target="_blank" href="${Format.escape(viewUrl)}">Reba</a>
+              <a class="text-emerald-700 underline" target="_blank" href="${Format.escape(downloadUrl)}">Download</a>
+            </div>
+          </div>
+        `;
+      }
+
+      if (proofType === "application/pdf") {
+        return `
+          <div class="flex flex-col items-center gap-2">
+            <a
+              href="${Format.escape(viewUrl)}"
+              target="_blank"
+              class="flex h-20 w-20 items-center justify-center rounded-lg border border-slate-200 bg-red-50 text-xs font-bold text-red-700 shadow-sm"
+            >
+              PDF
+            </a>
+            <div class="flex flex-wrap justify-center gap-2 text-xs">
+              <a class="text-blue-700 underline" target="_blank" href="${Format.escape(viewUrl)}">Reba</a>
+              <a class="text-emerald-700 underline" target="_blank" href="${Format.escape(downloadUrl)}">Download</a>
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="flex flex-col items-center gap-2">
+          <a class="text-blue-700 underline text-xs" target="_blank" href="${Format.escape(viewUrl)}">Reba proof</a>
+          <a class="text-emerald-700 underline text-xs" target="_blank" href="${Format.escape(downloadUrl)}">Download</a>
+        </div>
+      `;
+    },
+
+    renderRows(rows) {
+      if (!DOM.tbody) return;
+
+      if (!rows || rows.length === 0) {
+        DOM.tbody.innerHTML = `
           <tr>
-            <td colspan="7" class="text-center py-8 text-red-500 text-sm">
-              Error loading expenses
+            <td colspan="7" class="text-center py-8 text-slate-400 text-sm">
+              Nta expenses zibonetse
             </td>
           </tr>
         `;
         return;
       }
 
-      if (json.success) {
-        renderExpensesTable(json.data || []);
-      } else {
-        console.error('expenses load', json);
-      }
-
-    } catch (err) {
-      console.error('fetchExpenses error', err);
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="7" class="text-center py-8 text-red-500 text-sm">
-            Network error while loading expenses
+      DOM.tbody.innerHTML = rows.map((r, i) => `
+        <tr class="border-b hover:bg-gray-50 text-sm">
+          <td class="p-3">${i + 1}</td>
+          <td class="p-3 whitespace-nowrap">${Format.escape(Format.toDTL(r.tx_date).replace("T", " "))}</td>
+          <td class="p-3 font-medium">${Format.escape(r.account_name || "-")}</td>
+          <td class="p-3">${Format.escape(r.description || "-")}</td>
+          <td class="p-3 font-mono font-bold">${Format.money(r.amount)}</td>
+          <td class="p-3 text-center">${UI.renderProofCell(r)}</td>
+          <td class="p-3 space-x-1">
+            <button class="text-emerald-600 hover:underline btn-edit" data-id="${r.transaction_id}" type="button">Hindura</button>
+            <button class="text-red-600 hover:underline btn-delete" data-id="${r.transaction_id}" type="button">Siba</button>
           </td>
         </tr>
-      `;
+      `).join("");
+
+      DOM.tbody.querySelectorAll(".btn-edit").forEach((btn) => {
+        btn.onclick = () => openEdit(Number(btn.dataset.id));
+      });
+
+      DOM.tbody.querySelectorAll(".btn-delete").forEach((btn) => {
+        btn.onclick = () => deleteExpense(Number(btn.dataset.id));
+      });
+    },
+
+    validateAll() {
+      const amount = Number(DOM.amount?.value || 0);
+      const accId = Number(DOM.account?.value || 0);
+      const isEdit = !!DOM.id?.value;
+      const file = DOM.proof?.files?.[0];
+
+      let valid = true;
+      let reason = "";
+
+      if (!accId) {
+        valid = false;
+        reason = "Hitamo konti.";
+      } else if (amount <= 0) {
+        valid = false;
+        reason = "Umubare ugomba kuba > 0.";
+      }
+
+      if (valid) {
+        const acc = STATE.accounts.find((a) => Number(a.account_id) === accId);
+        if (acc && amount > Number(acc.balance || 0)) {
+          valid = false;
+          reason = `Amafaranga ari kuri konti ntahagije (${Format.money(acc.balance)}).`;
+        }
+      }
+
+      if (valid && !isEdit && !file) {
+        valid = false;
+        reason = "Shyiraho proof file.";
+      }
+
+      if (valid && file) {
+        if (!CONFIG.allowedProofTypes.includes(file.type)) {
+          valid = false;
+          reason = "Proof yemerewe ni JPG, PNG, GIF, WEBP cyangwa PDF.";
+        } else if (file.size > CONFIG.maxProofSize) {
+          valid = false;
+          reason = "Proof file ntigomba kurenga 10 MB.";
+        }
+      }
+
+      UI.setSaveState(valid, reason || "Itegeko kuri expense nshya.");
+      return valid;
+    }
+  };
+
+  async function openEdit(id) {
+    try {
+      const json = await apiRequest(`${CONFIG.api}?id=${id}`);
+      const r = json.data || {};
+
+      UI.toggleModal(true);
+
+      if (DOM.modalTitle) DOM.modalTitle.textContent = "Hindura Expense";
+      if (DOM.id) DOM.id.value = r.transaction_id || "";
+      if (DOM.date) DOM.date.value = Format.toDTL(r.tx_date);
+      if (DOM.account) DOM.account.value = r.account_id || "";
+      if (DOM.amount) DOM.amount.value = r.amount || "";
+      if (DOM.desc) DOM.desc.value = r.description || "";
+
+      UI.setProofRequiredUi(false);
+      if (DOM.hint) DOM.hint.textContent = "Injiza dosiye nshya gusa niba ushaka kuyisimbuza.";
+      if (DOM.removeProof) DOM.removeProof.checked = false;
+
+      UI.showExistingProof(r);
+      UI.clearLocalProofPreview();
+      Utils.resetFileInput(DOM.proof);
+      UI.validateAll();
+    } catch (e) {
+      alert("Kugerageza gufungura expense byanze: " + e.message);
     }
   }
 
-  function renderExpensesTable(rows) {
-    tbody.innerHTML = '';
+  async function deleteExpense(id) {
+    if (!confirm(`Uremeza gusiba expense #${id}?`)) return;
 
-    if (!rows || rows.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="7" class="text-center py-8 text-slate-400 text-sm">
-            Nta expenses zagaragaye
-          </td>
-        </tr>
-      `;
-      return;
-    }
-
-    rows.forEach((r, idx) => {
-      const listNo = idx + 1; // newest first -> #1 is latest
-      const { category, notes } = unpackDesc(r.description || '');
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${listNo}</td>
-        <td>${esc(r.account_name || '')}</td>
-        <td>${esc((r.tx_date || '').replace('T', ' ').replace(/:00$/, ''))}</td>
-        <td>${esc(category || '')}</td>
-        <td>${money(r.amount || 0)}</td>
-        <td>${esc(notes || '')}</td>
-        <td>
-          <button class="btn-ghost btn-edit-expense" data-id="${r.transaction_id}">Hindura</button>
-          <button class="btn-ghost-danger btn-delete-expense" data-id="${r.transaction_id}">Siba</button>
-        </td>
-      `;
-
-      tbody.appendChild(tr);
-    });
-
-    tbody.querySelectorAll('.btn-delete-expense').forEach(b =>
-      b.addEventListener('click', async () => {
-        const id = b.getAttribute('data-id');
-        if (!confirm("Urashaka gusiba iyi Expense?")) return;
-
-        const fd = new FormData();
-        fd.append('action', 'delete');
-        fd.append('id', id);
-
-        try {
-          const res = await fetch(api, { method: 'POST', body: fd, credentials: 'include' });
-          const json = await readJsonResponse(res);
-
-          if (json.success) {
-            fetchExpenses();
-          } else {
-            alert(json.message || 'Error');
-          }
-        } catch (err) {
-          console.error(err);
-          alert('Network error');
-        }
-      })
-    );
-
-    tbody.querySelectorAll('.btn-edit-expense').forEach(b =>
-      b.addEventListener('click', async () => {
-        const id = b.getAttribute('data-id');
-
-        try {
-          const res = await fetch(`${api}?id=${encodeURIComponent(id)}`, { credentials: 'include' });
-          const json = await readJsonResponse(res);
-
-          if (json.success && json.data) {
-            const d = json.data;
-            const { category, notes } = unpackDesc(d.description || '');
-
-            if (idInput) idInput.value = d.transaction_id || '';
-            if (accountSelect) accountSelect.value = d.account_id || '';
-            if (dateInput) dateInput.value = toDatetimeLocal(d.tx_date || '');
-            if (categoryInput) categoryInput.value = category || '';
-            if (amountInput) amountInput.value = d.amount || '';
-            if (descriptionInput) descriptionInput.value = notes || '';
-
-            openModal();
-          } else {
-            alert(json.message || 'Not found');
-          }
-
-        } catch (err) {
-          console.error(err);
-          alert('Failed to load expense');
-        }
-      })
-    );
-  }
-
-  if (btnNew) {
-    btnNew.addEventListener('click', () => {
-      resetForm();
-      openModal();
-      if (accountSelect) accountSelect.focus();
-    });
-  }
-
-  if (btnRefresh) {
-    btnRefresh.addEventListener('click', () => {
-      currentQuery = '';
-      if (searchInput) searchInput.value = '';
-      fetchExpenses();
-    });
-  }
-
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      clearTimeout(searchTimer);
-      searchTimer = setTimeout(() => {
-        currentQuery = e.target.value.trim();
-        fetchExpenses(currentQuery);
-      }, 300);
-    });
-  }
-
-  if (searchBtn) {
-    searchBtn.addEventListener('click', () => {
-      currentQuery = searchInput ? searchInput.value.trim() : '';
-      fetchExpenses(currentQuery);
-    });
-  }
-
-  if (modalClose) modalClose.addEventListener('click', closeModal);
-  if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-  if (modal) {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeModal();
-    });
-  }
-
-  if (saveBtn) {
-    saveBtn.addEventListener('click', async () => {
-      const id = idInput ? idInput.value : '';
-      const account_id = accountSelect ? accountSelect.value : '';
-      const tx_date = dateInput ? dateInput.value : '';
-      const category = categoryInput ? categoryInput.value : '';
-      const amount = amountInput ? amountInput.value : '';
-      const notes = descriptionInput ? descriptionInput.value : '';
-
-      if (!account_id) {
-        alert('Hitamo konto.');
-        return;
-      }
-      if (!tx_date) {
-        alert('Shyiramo itariki n’igihe.');
-        return;
-      }
-      if (!amount || Number(amount) <= 0) {
-        alert('Shyiramo amount irenze zero.');
-        return;
-      }
-
+    try {
       const fd = new FormData();
-      fd.append('action', id ? 'update' : 'create');
-      if (id) fd.append('id', id);
-      fd.append('account_id', account_id);
-      fd.append('tx_date', tx_date);
-      fd.append('amount', amount);
-      fd.append('description', packDesc(category, notes));
+      fd.set("action", "delete");
+      fd.set("id", id);
 
-      try {
-        const res = await fetch(api, { method: 'POST', body: fd, credentials: 'include' });
-        const json = await readJsonResponse(res);
+      await apiRequest(CONFIG.api, {
+        method: "POST",
+        body: fd
+      });
 
-        if (!res.ok) {
-          alert(`HTTP ${res.status}: ${json.message || 'Error'}`);
-          return;
-        }
-
-        if (json.success) {
-          closeModal();
-          fetchExpenses();
-        } else {
-          alert(json.message || 'Error saving');
-        }
-
-      } catch (err) {
-        console.error(err);
-        alert('Network error: ' + err.message);
-      }
-    });
+      await loadList();
+    } catch (e) {
+      alert("Gusiba byanze: " + e.message);
+    }
   }
 
-  loadAccounts();
-  fetchExpenses();
+  async function loadAccounts() {
+    const json = await apiRequest(`${CONFIG.api}?accounts=1`);
+    STATE.accounts = json.data || [];
 
+    const opts = '<option value="">-- Hitamo Konti --</option>' +
+      STATE.accounts.map((a) =>
+        `<option value="${a.account_id}">${Format.escape(a.name)} (${Format.money(a.balance)})</option>`
+      ).join("");
+
+    if (DOM.account) DOM.account.innerHTML = opts;
+
+    if (DOM.filterAccount) {
+      DOM.filterAccount.innerHTML =
+        '<option value="">-- Konti zose --</option>' +
+        STATE.accounts.map((a) =>
+          `<option value="${a.account_id}">${Format.escape(a.name)}</option>`
+        ).join("");
+    }
+  }
+
+  async function loadList() {
+    try {
+      if (DOM.tbody) {
+        DOM.tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center py-6 text-slate-400 text-sm">
+              <i class="fas fa-spinner fa-spin mr-2"></i>Gutegura...
+            </td>
+          </tr>
+        `;
+      }
+
+      const q = DOM.q?.value?.trim() || "";
+      const accountId = DOM.filterAccount?.value || "";
+      const params = new URLSearchParams({ per_page: "100" });
+      if (q) params.set("q", q);
+      if (accountId) params.set("account_id", accountId);
+
+      const json = await apiRequest(`${CONFIG.api}?${params.toString()}`);
+      UI.renderRows(json.data || []);
+    } catch (e) {
+      console.error("loadList failed:", e.message);
+      if (DOM.tbody) {
+        DOM.tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center py-6 text-red-500 text-sm">
+              Gufungura urutonde byanze: ${Format.escape(e.message)}
+            </td>
+          </tr>
+        `;
+      }
+    }
+  }
+
+  function bindEvents() {
+    if (DOM.btnNew) {
+      DOM.btnNew.onclick = () => {
+        if (DOM.modalTitle) DOM.modalTitle.textContent = "Ongeza Expense";
+
+        UI.toggleModal(true);
+
+        if (DOM.date) DOM.date.value = Utils.getLocalDateTimeValue();
+        if (DOM.id) DOM.id.value = "";
+        if (DOM.hint) DOM.hint.textContent = "Itegeko kuri expense nshya.";
+        if (DOM.removeProof) DOM.removeProof.checked = false;
+
+        UI.setProofRequiredUi(true);
+        UI.clearExistingProof();
+        UI.clearLocalProofPreview();
+        Utils.resetFileInput(DOM.proof);
+        UI.validateAll();
+      };
+    }
+
+    if (DOM.btnClose) DOM.btnClose.onclick = () => UI.toggleModal(false);
+    if (DOM.btnCancel) DOM.btnCancel.onclick = () => UI.toggleModal(false);
+    if (DOM.btnRefresh) DOM.btnRefresh.onclick = loadList;
+
+    [DOM.amount, DOM.account, DOM.date, DOM.desc].forEach((el) => {
+      if (el) {
+        el.onchange = () => UI.validateAll();
+        el.oninput = () => UI.validateAll();
+      }
+    });
+
+    if (DOM.q) DOM.q.oninput = Utils.debounce(loadList, CONFIG.debounceTime);
+    if (DOM.filterAccount) DOM.filterAccount.onchange = loadList;
+
+    if (DOM.proof) {
+      DOM.proof.onchange = () => {
+        UI.previewSelectedProof();
+        UI.validateAll();
+      };
+    }
+
+    if (DOM.removeProof) {
+      DOM.removeProof.onchange = () => {
+        if (DOM.removeProof.checked && DOM.proof) {
+          Utils.resetFileInput(DOM.proof);
+          UI.clearLocalProofPreview();
+        }
+        UI.validateAll();
+      };
+    }
+
+    if (DOM.btnSave) {
+      DOM.btnSave.onclick = async () => {
+        if (!UI.validateAll()) return;
+
+        STATE.saving = true;
+        UI.setSaveState(false, "Kubika...");
+
+        try {
+          const fd = new FormData(DOM.form);
+          const isEdit = !!DOM.id?.value;
+          fd.set("action", isEdit ? "update" : "create");
+
+          if (!isEdit) fd.delete("remove_proof");
+
+          await apiRequest(CONFIG.api, {
+            method: "POST",
+            body: fd
+          });
+
+          UI.toggleModal(false);
+          await loadAccounts();
+          await loadList();
+        } catch (e) {
+          alert("Kubika byanze: " + e.message);
+        } finally {
+          STATE.saving = false;
+          UI.validateAll();
+        }
+      };
+    }
+  }
+
+  (async function init() {
+    try {
+      await loadAccounts();
+      bindEvents();
+      await loadList();
+    } catch (e) {
+      console.error("Expense module init failed:", e);
+      if (DOM.tbody) {
+        DOM.tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center py-6 text-red-500 text-sm">
+              Module yanze gutangira: ${Format.escape(e.message)}
+            </td>
+          </tr>
+        `;
+      }
+    }
+  })();
 })();
 
-/// SCRIPTS: loans.js
+// SCRIPTS: loans.js
 (function(){
   const api = 'loans_api.php';
   const tbodySelector = '#section-loans table tbody';
@@ -3376,6 +3662,14 @@ function clearFileInput(id) {
   const rateInput = document.getElementById('loan-rate');
   const termInput = document.getElementById('loan-term');
 
+  const referenceInput = document.getElementById('loan-reference-file');
+  const referenceHint = document.getElementById('loan-reference-hint');
+  const referenceExisting = document.getElementById('loan-reference-existing');
+  const referenceLocalPreview = document.getElementById('loan-reference-local-preview');
+  const referenceRemoveWrap = document.getElementById('loan-reference-remove-wrap');
+  const removeReference = document.getElementById('loan-remove-reference');
+  const referenceRequiredStar = document.getElementById('loan-reference-required-star');
+
   const INTEREST_METHOD = 'reducing';
 
   const guarantorsListEl = document.getElementById('loan-guarantors-list');
@@ -3399,6 +3693,17 @@ function clearFileInput(id) {
 
   let guarantorCounter = 0;
   let borrowerSummary = null;
+
+  const CONFIG = {
+    maxReferenceSize: 10 * 1024 * 1024,
+    allowedReferenceTypes: [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'application/pdf'
+    ]
+  };
 
   function openModal(){ if(modal){ modal.classList.remove('hidden'); modal.classList.add('flex'); } }
   function closeModal(){ if(modal){ modal.classList.add('hidden'); modal.classList.remove('flex'); } }
@@ -3425,6 +3730,163 @@ function clearFileInput(id) {
 
   function setText(el, value){
     if(el) el.textContent = value;
+  }
+
+  function fileSize(bytes){
+    const n = Number(bytes || 0);
+    if(n < 1024) return `${n} B`;
+    if(n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+  }
+
+  function isImageType(mime){
+    return /^image\//i.test(String(mime || ''));
+  }
+
+  function isPdfType(mime){
+    return String(mime || '').toLowerCase() === 'application/pdf';
+  }
+
+  function resetFileInput(input){
+    if(input) input.value = '';
+  }
+
+  function clearExistingReference(){
+    if(referenceExisting){
+      referenceExisting.classList.add('hidden');
+      referenceExisting.innerHTML = '';
+    }
+    if(referenceRemoveWrap){
+      referenceRemoveWrap.classList.add('hidden');
+      referenceRemoveWrap.classList.remove('flex');
+    }
+  }
+
+  function clearLocalReferencePreview(){
+    if(referenceLocalPreview){
+      referenceLocalPreview.classList.add('hidden');
+      referenceLocalPreview.innerHTML = '';
+    }
+  }
+
+  function setReferenceRequiredUi(required){
+    if(referenceInput){
+      if(required) referenceInput.setAttribute('required', 'required');
+      else referenceInput.removeAttribute('required');
+    }
+    if(referenceRequiredStar){
+      referenceRequiredStar.classList.toggle('hidden', !required);
+    }
+  }
+
+  function showExistingReference(d){
+    if(!referenceExisting) return;
+
+    const hasReference = Number(d?.has_reference || 0) === 1;
+    if(!hasReference){
+      clearExistingReference();
+      return;
+    }
+
+    const type = d.reference_mime || '';
+    const name = d.reference_name || 'reference';
+    const viewUrl = d.reference_view_url || `${api}?action=view_reference&id=${d.loan_id}`;
+    const downloadUrl = d.reference_download_url || `${api}?action=download_reference&id=${d.loan_id}`;
+
+    let previewHtml = '';
+    if(isImageType(type)){
+      previewHtml = `
+        <div class="mt-2">
+          <img
+            src="${esc(viewUrl)}"
+            alt="Reference"
+            class="max-h-48 rounded border border-slate-200 object-contain bg-white"
+          >
+        </div>
+      `;
+    } else if(isPdfType(type)){
+      previewHtml = `
+        <div class="mt-2">
+          <a href="${esc(viewUrl)}" target="_blank" class="text-blue-700 underline">
+            Fungura PDF
+          </a>
+        </div>
+      `;
+    }
+
+    referenceExisting.innerHTML = `
+      <div class="font-semibold text-slate-700">Reference iriho</div>
+      <div class="mt-1 text-slate-600">
+        <div><b>File:</b> ${esc(name)}</div>
+        <div><b>Type:</b> ${esc(type || 'unknown')}</div>
+      </div>
+      <div class="mt-2 flex gap-3">
+        <a href="${esc(viewUrl)}" target="_blank" class="text-blue-700 underline">Reba</a>
+        <a href="${esc(downloadUrl)}" target="_blank" class="text-emerald-700 underline">Download</a>
+      </div>
+      ${previewHtml}
+    `;
+    referenceExisting.classList.remove('hidden');
+
+    if(referenceRemoveWrap){
+      referenceRemoveWrap.classList.remove('hidden');
+      referenceRemoveWrap.classList.add('flex');
+    }
+  }
+
+  function previewSelectedReference(){
+    clearLocalReferencePreview();
+    const file = referenceInput?.files?.[0];
+    if(!file || !referenceLocalPreview) return;
+
+    if(!CONFIG.allowedReferenceTypes.includes(file.type)){
+      alert('Dosiye yemerewe ni JPG, PNG, GIF, WEBP cyangwa PDF.');
+      resetFileInput(referenceInput);
+      validateFormRules();
+      return;
+    }
+
+    if(file.size > CONFIG.maxReferenceSize){
+      alert('Dosiye irarengeje 10 MB.');
+      resetFileInput(referenceInput);
+      validateFormRules();
+      return;
+    }
+
+    const metaHtml = `
+      <div class="text-xs text-slate-700 mb-2">
+        <div><b>Selected:</b> ${esc(file.name)}</div>
+        <div><b>Type:</b> ${esc(file.type || 'unknown')}</div>
+        <div><b>Size:</b> ${esc(fileSize(file.size))}</div>
+      </div>
+    `;
+
+    if(isImageType(file.type)){
+      const reader = new FileReader();
+      reader.onload = () => {
+        referenceLocalPreview.innerHTML = `
+          ${metaHtml}
+          <img
+            src="${reader.result}"
+            alt="Reference Preview"
+            class="max-h-48 rounded border border-slate-200 object-contain bg-white"
+          >
+        `;
+        referenceLocalPreview.classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    } else if(isPdfType(file.type)){
+      referenceLocalPreview.innerHTML = `
+        ${metaHtml}
+        <div class="text-blue-700">PDF yatoranyijwe neza.</div>
+      `;
+      referenceLocalPreview.classList.remove('hidden');
+    } else {
+      referenceLocalPreview.innerHTML = metaHtml;
+      referenceLocalPreview.classList.remove('hidden');
+    }
+
+    if(removeReference) removeReference.checked = false;
   }
 
   async function readJsonResponse(res){
@@ -3550,7 +4012,9 @@ function clearFileInput(id) {
           <div class="text-xs text-slate-600 mt-1 space-y-1">
             <div>Contrib: <b>${money(b.contrib)}</b></div>
             <div>Interest Share: <b>${money(b.calculated_interest || 0)}</b></div>
+            <div>Expense Partition: <b>${money(b.expense_partition || 0)}</b></div>
             <div>Withdrawals: <b>${money(b.withdrawals)}</b></div>
+            <div>Participation Net: <b>${money(b.participation_net || 0)}</b></div>
             <div>Loans Principal (unpaid): <b>${money(b.loans_principal)}</b></div>
             <div>Loans Interest (unpaid): <b>${money(b.loans_interest || 0)}</b></div>
             <div>Guaranteed: <b>${money(b.guaranteed_to_others)}</b></div>
@@ -3685,7 +4149,7 @@ function clearFileInput(id) {
           const item = document.createElement('button');
           item.type = 'button';
           item.className = 'w-full text-left px-3 py-2 hover:bg-slate-50 text-sm';
-          item.textContent = `${g.names}${g.phone ? ' · ' + g.phone : ''} · net: ${money(g.net_value)}${Number(g.calculated_interest || 0) > 0 ? ' · int: ' + money(g.calculated_interest) : ''}`;
+          item.textContent = `${g.names}${g.phone ? ' · ' + g.phone : ''} · net: ${money(g.net_value)}${Number(g.calculated_interest || 0) > 0 ? ' · int: ' + money(g.calculated_interest) : ''}${Number(g.expense_partition || 0) > 0 ? ' · exp: ' + money(g.expense_partition) : ''}`;
           item.addEventListener('click', async ()=>{
             await setGuarantorForRow(row, g.id, `${g.names}${g.phone ? ' · ' + g.phone : ''}`, g.net_value);
             resultsBox.innerHTML = '';
@@ -3714,6 +4178,8 @@ function clearFileInput(id) {
   function validateFormRules(){
     const borrowerId = borrowerHidden?.value || '';
     const principal = parseFloat(principalInput?.value || 0) || 0;
+    const isEdit = !!(document.getElementById('loan-id')?.value || '');
+    const refFile = referenceInput?.files?.[0];
 
     let ok = true;
     let msg = '';
@@ -3766,9 +4232,28 @@ function clearFileInput(id) {
       }
     }
 
+    if(ok && !isEdit && !refFile){
+      ok = false;
+      msg = 'Shyiraho reference file.';
+    }
+
+    if(ok && refFile){
+      if(!CONFIG.allowedReferenceTypes.includes(refFile.type)){
+        ok = false;
+        msg = 'Reference yemerewe ni JPG, PNG, GIF, WEBP cyangwa PDF.';
+      } else if(refFile.size > CONFIG.maxReferenceSize){
+        ok = false;
+        msg = 'Reference file ntigomba kurenga 10 MB.';
+      }
+    }
+
     if(validationMsgEl){
       validationMsgEl.textContent = msg;
       validationMsgEl.classList.toggle('hidden', !msg);
+    }
+
+    if(referenceHint && msg){
+      referenceHint.textContent = msg;
     }
 
     if(saveBtn){
@@ -3779,6 +4264,23 @@ function clearFileInput(id) {
   }
 
   if(principalInput) principalInput.addEventListener('input', validateFormRules);
+
+  if(referenceInput){
+    referenceInput.addEventListener('change', ()=>{
+      previewSelectedReference();
+      validateFormRules();
+    });
+  }
+
+  if(removeReference){
+    removeReference.addEventListener('change', ()=>{
+      if(removeReference.checked && referenceInput){
+        resetFileInput(referenceInput);
+        clearLocalReferencePreview();
+      }
+      validateFormRules();
+    });
+  }
 
   // ---------------------------
   // Loans list
@@ -3812,6 +4314,58 @@ function clearFileInput(id) {
     return '<span class="badge badge-warning">requested</span>';
   }
 
+  function renderReferenceCell(r){
+    const hasRef = Number(r.has_reference || 0) === 1;
+    if(!hasRef) return `<span class="text-slate-400 text-xs">Nta file</span>`;
+
+    const viewUrl = r.reference_view_url || `${api}?action=view_reference&id=${r.loan_id}`;
+    const downloadUrl = r.reference_download_url || `${api}?action=download_reference&id=${r.loan_id}`;
+    const mime = String(r.reference_mime || '').toLowerCase();
+
+    if(mime.startsWith('image/')){
+      return `
+        <div class="flex flex-col items-center gap-2">
+          <a href="${esc(viewUrl)}" target="_blank" class="block">
+            <img
+              src="${esc(viewUrl)}"
+              alt="Reference"
+              class="h-16 w-16 rounded-lg border border-slate-200 object-cover bg-white shadow-sm hover:scale-105 transition-transform"
+            >
+          </a>
+          <div class="flex flex-wrap justify-center gap-2 text-xs">
+            <a class="text-blue-700 underline" target="_blank" href="${esc(viewUrl)}">Reba</a>
+            <a class="text-emerald-700 underline" target="_blank" href="${esc(downloadUrl)}">Download</a>
+          </div>
+        </div>
+      `;
+    }
+
+    if(mime === 'application/pdf'){
+      return `
+        <div class="flex flex-col items-center gap-2">
+          <a
+            href="${esc(viewUrl)}"
+            target="_blank"
+            class="flex h-16 w-16 items-center justify-center rounded-lg border border-slate-200 bg-red-50 text-xs font-bold text-red-700 shadow-sm"
+          >
+            PDF
+          </a>
+          <div class="flex flex-wrap justify-center gap-2 text-xs">
+            <a class="text-blue-700 underline" target="_blank" href="${esc(viewUrl)}">Reba</a>
+            <a class="text-emerald-700 underline" target="_blank" href="${esc(downloadUrl)}">Download</a>
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="flex flex-col items-center gap-2">
+        <a class="text-blue-700 underline text-xs" target="_blank" href="${esc(viewUrl)}">Reba file</a>
+        <a class="text-emerald-700 underline text-xs" target="_blank" href="${esc(downloadUrl)}">Download</a>
+      </div>
+    `;
+  }
+
   function renderLoans(rows){
     const tbody = document.querySelector(tbodySelector);
     if(!tbody) return;
@@ -3835,6 +4389,7 @@ function clearFileInput(id) {
         <td>${esc(r.start_date || '')}</td>
         <td>${statusBadge(r.status || 'requested')}</td>
         <td>${esc(r.end_date || 'Not Yet')}</td>
+        <td class="text-center">${renderReferenceCell(r)}</td>
         <td class="space-x-1">
           <button class="btn-ghost text-xs btn-view-loan" data-id="${r.loan_id}">Reba</button>
           <button class="btn-ghost text-xs btn-edit-loan" data-id="${r.loan_id}">Hindura</button>
@@ -3911,6 +4466,42 @@ function clearFileInput(id) {
         </tr>
       `).join('');
 
+      let refHtml = '<div class="text-sm text-slate-500">Nta reference file</div>';
+      if(Number(d.has_reference || 0) === 1){
+        const viewUrl = d.reference_view_url || `${api}?action=view_reference&id=${d.loan_id}`;
+        const downloadUrl = d.reference_download_url || `${api}?action=download_reference&id=${d.loan_id}`;
+        const mime = String(d.reference_mime || '').toLowerCase();
+
+        if(mime.startsWith('image/')){
+          refHtml = `
+            <div class="space-y-2">
+              <img src="${esc(viewUrl)}" alt="Reference" class="max-h-56 rounded border border-slate-200 bg-white">
+              <div class="flex gap-3 text-sm">
+                <a href="${esc(viewUrl)}" target="_blank" class="text-blue-700 underline">Reba</a>
+                <a href="${esc(downloadUrl)}" target="_blank" class="text-emerald-700 underline">Download</a>
+              </div>
+            </div>
+          `;
+        } else if(mime === 'application/pdf'){
+          refHtml = `
+            <div class="space-y-2">
+              <a href="${esc(viewUrl)}" target="_blank" class="text-blue-700 underline">Fungura PDF</a>
+              <div class="flex gap-3 text-sm">
+                <a href="${esc(viewUrl)}" target="_blank" class="text-blue-700 underline">Reba</a>
+                <a href="${esc(downloadUrl)}" target="_blank" class="text-emerald-700 underline">Download</a>
+              </div>
+            </div>
+          `;
+        } else {
+          refHtml = `
+            <div class="flex gap-3 text-sm">
+              <a href="${esc(viewUrl)}" target="_blank" class="text-blue-700 underline">Reba file</a>
+              <a href="${esc(downloadUrl)}" target="_blank" class="text-emerald-700 underline">Download</a>
+            </div>
+          `;
+        }
+      }
+
       if(viewBody){
         viewBody.innerHTML = `
           <div class="space-y-2">
@@ -3932,6 +4523,11 @@ function clearFileInput(id) {
               <div><b>Paid Interest:</b> ${money(d.paid_interest || 0)}</div>
               <div><b>Unpaid Interest:</b> ${money(d.unpaid_interest || 0)}</div>
               <div class="font-semibold"><b>Total Due:</b> ${money(d.total_due || 0)}</div>
+            </div>
+
+            <div class="mt-3">
+              <b>Reference File</b>
+              <div class="mt-2">${refHtml}</div>
             </div>
 
             <div class="mt-3">
@@ -4004,6 +4600,13 @@ function clearFileInput(id) {
         await addGuarantorRow();
       }
 
+      setReferenceRequiredUi(false);
+      if(referenceHint) referenceHint.textContent = 'Injiza dosiye nshya gusa niba ushaka kuyisimbuza.';
+      if(removeReference) removeReference.checked = false;
+      showExistingReference(d);
+      clearLocalReferencePreview();
+      resetFileInput(referenceInput);
+
       validateFormRules();
       openModal();
     }catch(err){
@@ -4075,6 +4678,12 @@ function clearFileInput(id) {
       guarantorCounter = 0;
       await addGuarantorRow();
 
+      setReferenceRequiredUi(true);
+      clearExistingReference();
+      clearLocalReferencePreview();
+      resetFileInput(referenceInput);
+      if(removeReference) removeReference.checked = false;
+      if(referenceHint) referenceHint.textContent = 'Shyiraho reference file.';
       validateFormRules();
       openModal();
     });
@@ -4098,17 +4707,21 @@ function clearFileInput(id) {
         const id = document.getElementById('loan-id')?.value || '';
         const notesEl = document.getElementById('loan-notes');
 
-        const fd = new FormData();
-        fd.append('action', id ? 'update' : 'create');
-        if(id) fd.append('id', id);
+        const fd = new FormData(form || undefined);
+        fd.set('action', id ? 'update' : 'create');
+        if(id) fd.set('id', id);
 
-        fd.append('account_id', accountSelect?.value || '');
-        fd.append('borrower_user_id', borrowerHidden?.value || '');
-        fd.append('principal', principalInput?.value || '');
-        fd.append('monthly_interest_rate', rateInput?.value || '');
-        fd.append('interest_method', INTEREST_METHOD);
-        fd.append('term_months', termInput?.value || '');
-        fd.append('notes', notesEl?.value || '');
+        fd.set('account_id', accountSelect?.value || '');
+        fd.set('borrower_user_id', borrowerHidden?.value || '');
+        fd.set('principal', principalInput?.value || '');
+        fd.set('monthly_interest_rate', rateInput?.value || '');
+        fd.set('interest_method', INTEREST_METHOD);
+        fd.set('term_months', termInput?.value || '');
+        fd.set('notes', notesEl?.value || '');
+
+        if(!id){
+          fd.delete('remove_reference');
+        }
 
         const guarantorsArray = [];
         document.querySelectorAll('.guarantor-row').forEach(row=>{
@@ -4116,7 +4729,7 @@ function clearFileInput(id) {
           const amt = row.querySelector('.guarantee-amount')?.value || '';
           if(gid && amt) guarantorsArray.push({user_id: gid, amount: amt});
         });
-        fd.append('guarantors', JSON.stringify(guarantorsArray));
+        fd.set('guarantors', JSON.stringify(guarantorsArray));
 
         const res = await fetch(api, {method:'POST', body: fd, credentials:'include'});
         const json = await readJsonResponse(res);
@@ -4149,126 +4762,398 @@ function clearFileInput(id) {
 
 /**
  * Transaction Management Module
- * Architecture: Module Pattern with State-Management
+ * Final version
+ * Supports:
+ * - proof image/pdf upload to DB
+ * - proof preview before save
+ * - existing proof preview/download on edit
+ * - image thumbnail in table view
+ * - remove existing proof on update
+ * - borrower-wide loan payment handling
+ * - safer create/update flow
  */
 (function () {
-  // --- 1. Configuration & Constants ---
   const CONFIG = {
     api: "transactions_api.php",
+    loansApi: "loans_api.php",
+    usersApi: "users_api.php",
+    accountsApi: "accounts_api.php",
     currency: "Frw",
     locale: "rw-RW",
-    reserveMin: 120000,
-    debounceTime: 250
+    debounceTime: 250,
+    maxProofSize: 10 * 1024 * 1024,
+    allowedProofTypes: [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "application/pdf"
+    ]
   };
 
-  // --- 2. Application State ---
   const STATE = {
     accounts: [],
-    selectedUser: null,
     userLoans: [],
-    loanSummary: null,
     saving: false
   };
 
-  // --- 3. DOM Cache ---
   const DOM = {
-    tbody:      document.getElementById("transactions-tbody"),
-    modal:      document.getElementById("transaction-modal"),
-    form:       document.getElementById("transaction-form"),
-    id:         document.getElementById("transaction-id"),
-    date:       document.getElementById("transaction-date"),
-    user:       document.getElementById("transaction-user"),
+    tbody: document.getElementById("transactions-tbody"),
+    modal: document.getElementById("transaction-modal"),
+    form: document.getElementById("transaction-form"),
+    id: document.getElementById("transaction-id"),
+    date: document.getElementById("transaction-date"),
+    user: document.getElementById("transaction-user"),
     userSearch: document.getElementById("transaction-user-search"),
-    account:    document.getElementById("transaction-account"),
-    typeWrap:   document.getElementById("transaction-type-wrapper"),
-    type:       document.getElementById("transaction-type"),
-    direction:  document.getElementById("transaction-direction"),
-    loanWrap:   document.getElementById("loan-id-wrapper"),
-    loanId:     document.getElementById("transaction-loan-id"),
-    amount:     document.getElementById("transaction-amount"),
-    desc:       document.getElementById("transaction-description"),
-    proof:      document.getElementById("transaction-proof"),
-    hint:       document.getElementById("transaction-proof-hint"),
-    infoBox:    document.getElementById("transaction-info-box"),
-    btnNew:     document.getElementById("btn-new-transaction"),
+    account: document.getElementById("transaction-account"),
+    typeWrap: document.getElementById("transaction-type-wrapper"),
+    type: document.getElementById("transaction-type"),
+    direction: document.getElementById("transaction-direction"),
+    loanWrap: document.getElementById("loan-id-wrapper"),
+    loanId: document.getElementById("transaction-loan-id"),
+    amount: document.getElementById("transaction-amount"),
+    desc: document.getElementById("transaction-description"),
+    proof: document.getElementById("transaction-proof"),
+    hint: document.getElementById("transaction-proof-hint"),
+    infoBox: document.getElementById("transaction-info-box"),
+    btnNew: document.getElementById("btn-new-transaction"),
     btnRefresh: document.getElementById("btn-refresh-transactions"),
-    btnSave:    document.getElementById("transaction-save"),
-    btnCancel:  document.getElementById("transaction-cancel"),
-    btnClose:   document.getElementById("transaction-modal-close")
+    btnSave: document.getElementById("transaction-save"),
+    btnCancel: document.getElementById("transaction-cancel"),
+    btnClose: document.getElementById("transaction-modal-close"),
+    modalTitle: document.getElementById("transaction-modal-title"),
+    proofExisting: document.getElementById("transaction-proof-existing"),
+    proofLocalPreview: document.getElementById("transaction-proof-local-preview"),
+    proofRemoveWrap: document.getElementById("transaction-proof-remove-wrap"),
+    removeProof: document.getElementById("transaction-remove-proof"),
+    proofRequiredStar: document.getElementById("transaction-proof-required-star")
   };
 
-  // --- 4. Utilities & Formatters ---
   const Format = {
-    money: (n) => `${Number(n || 0).toLocaleString(CONFIG.locale)} ${CONFIG.currency}`,
+    money(n) {
+      return `${Number(n || 0).toLocaleString(CONFIG.locale)} ${CONFIG.currency}`;
+    },
 
-    typeLabel: (t) => {
+    typeLabel(t) {
       const labels = {
-        contribution:   "Contribution",
-        withdrawal:     "Withdrawal",
+        contribution: "Contribution",
+        withdrawal: "Withdrawal",
         loan_principal: "Loan Payment (Principal)",
-        loan_interest:  "Loan Interest",
-        expense:        "Expense",
-        other_income:   "Other Income",
-        other_out:      "Other Out"
+        loan_interest: "Loan Interest",
+        expense: "Expense",
+        other_income: "Other Income",
+        other_out: "Other Out"
       };
       return labels[(t || "").toLowerCase()] || t;
     },
 
-    toDTL: (mysqlDt) => (mysqlDt ? mysqlDt.replace(" ", "T").slice(0, 16) : ""),
+    toDTL(mysqlDt) {
+      return mysqlDt ? mysqlDt.replace(" ", "T").slice(0, 16) : "";
+    },
 
-    escape: (s) => String(s ?? "").replace(/[&<>"']/g, m => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
-    }[m]))
-  };
+    escape(s) {
+      return String(s ?? "").replace(/[&<>"']/g, (m) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[m]));
+    },
 
-  const Utils = {
-    debounce: (fn, wait = CONFIG.debounceTime) => {
-      let t;
-      return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+    fileSize(bytes) {
+      const n = Number(bytes || 0);
+      if (n < 1024) return `${n} B`;
+      if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+      return `${(n / (1024 * 1024)).toFixed(2)} MB`;
     }
   };
 
-  // --- 5. API Layer ---
+  const Utils = {
+    debounce(fn, wait = CONFIG.debounceTime) {
+      let t;
+      return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn(...args), wait);
+      };
+    },
+
+    isImageType(mime) {
+      return /^image\//i.test(String(mime || ""));
+    },
+
+    isPdfType(mime) {
+      return String(mime || "").toLowerCase() === "application/pdf";
+    },
+
+    resetFileInput(input) {
+      if (!input) return;
+      input.value = "";
+    },
+
+    getLocalDateTimeValue() {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    }
+  };
+
   async function apiRequest(url, options = {}) {
-    const res  = await fetch(url, { credentials: "include", ...options });
+    const res = await fetch(url, {
+      credentials: "include",
+      ...options
+    });
+
     const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json.success) throw new Error(json.message || `HTTP Error ${res.status}`);
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || `HTTP Error ${res.status}`);
+    }
     return json;
   }
 
-  // --- 6. UI Logic ---
   const UI = {
-
-    setSaveState: (enabled, reason = "") => {
-      const isDisabled = !enabled || STATE.saving;
-      DOM.btnSave.disabled = isDisabled;
-      DOM.btnSave.classList.toggle("opacity-50", isDisabled);
-      DOM.btnSave.classList.toggle("cursor-not-allowed", isDisabled);
-      if (DOM.hint) DOM.hint.textContent = reason || "Itegeko kuri transaction nshya.";
+    setSaveState(enabled, reason = "") {
+      const disabled = !enabled || STATE.saving;
+      if (DOM.btnSave) {
+        DOM.btnSave.disabled = disabled;
+        DOM.btnSave.classList.toggle("opacity-50", disabled);
+        DOM.btnSave.classList.toggle("cursor-not-allowed", disabled);
+      }
+      if (DOM.hint && reason) {
+        DOM.hint.textContent = reason;
+      }
     },
 
-    toggleModal: (show = true) => {
+    setProofRequiredUi(required) {
+      if (DOM.proof) {
+        if (required) DOM.proof.setAttribute("required", "required");
+        else DOM.proof.removeAttribute("required");
+      }
+      if (DOM.proofRequiredStar) {
+        DOM.proofRequiredStar.classList.toggle("hidden", !required);
+      }
+    },
+
+    toggleModal(show = true) {
+      if (!DOM.modal) return;
+
       DOM.modal.classList.toggle("hidden", !show);
       DOM.modal.classList.toggle("flex", show);
+
       if (!show) {
-        DOM.form.reset();
-        STATE.selectedUser = STATE.loanSummary = null;
+        DOM.form?.reset();
         STATE.userLoans = [];
         UI.updateInfoBox("");
+        UI.clearExistingProof();
+        UI.clearLocalProofPreview();
+
+        if (DOM.removeProof) DOM.removeProof.checked = false;
+        UI.setProofRequiredUi(false);
         UI.syncLogic();
       }
     },
 
-    updateInfoBox: (html) => { if (DOM.infoBox) DOM.infoBox.innerHTML = html; },
+    updateInfoBox(html) {
+      if (DOM.infoBox) DOM.infoBox.innerHTML = html || "";
+    },
 
-    renderRows: (rows) => {
-      if (!DOM.tbody) return;
-      if (!rows || rows.length === 0) {
-        DOM.tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400 text-sm">
-          Nta transactions zibonetse
-        </td></tr>`;
+    clearExistingProof() {
+      if (!DOM.proofExisting) return;
+      DOM.proofExisting.classList.add("hidden");
+      DOM.proofExisting.innerHTML = "";
+      if (DOM.proofRemoveWrap) {
+        DOM.proofRemoveWrap.classList.add("hidden");
+        DOM.proofRemoveWrap.classList.remove("flex");
+      }
+    },
+
+    showExistingProof(row) {
+      if (!DOM.proofExisting) return;
+
+      const hasProof = Number(row?.has_proof || 0) === 1;
+      if (!hasProof) {
+        UI.clearExistingProof();
         return;
       }
+
+      const type = row.proof_type || "";
+      const name = row.proof_name || "proof";
+      const size = row.proof_size || 0;
+      const viewUrl = row.proof_view_url || `${CONFIG.api}?action=view_proof&id=${row.transaction_id}`;
+      const downloadUrl = row.proof_download_url || `${CONFIG.api}?action=download_proof&id=${row.transaction_id}`;
+
+      let previewHtml = "";
+      if (Utils.isImageType(type)) {
+        previewHtml = `
+          <div class="mt-2">
+            <img
+              src="${Format.escape(viewUrl)}"
+              alt="Proof"
+              class="max-h-48 rounded border border-slate-200 object-contain bg-white"
+            >
+          </div>
+        `;
+      } else if (Utils.isPdfType(type)) {
+        previewHtml = `
+          <div class="mt-2">
+            <a href="${Format.escape(viewUrl)}" target="_blank" class="text-blue-700 underline">
+              Fungura PDF
+            </a>
+          </div>
+        `;
+      }
+
+      DOM.proofExisting.innerHTML = `
+        <div class="font-semibold text-slate-700">Proof iriho</div>
+        <div class="mt-1 text-slate-600">
+          <div><b>File:</b> ${Format.escape(name)}</div>
+          <div><b>Type:</b> ${Format.escape(type || "unknown")}</div>
+          <div><b>Size:</b> ${Format.escape(Format.fileSize(size))}</div>
+        </div>
+        <div class="mt-2 flex gap-3">
+          <a href="${Format.escape(viewUrl)}" target="_blank" class="text-blue-700 underline">Reba</a>
+          <a href="${Format.escape(downloadUrl)}" target="_blank" class="text-emerald-700 underline">Download</a>
+        </div>
+        ${previewHtml}
+      `;
+      DOM.proofExisting.classList.remove("hidden");
+
+      if (DOM.proofRemoveWrap) {
+        DOM.proofRemoveWrap.classList.remove("hidden");
+        DOM.proofRemoveWrap.classList.add("flex");
+      }
+    },
+
+    clearLocalProofPreview() {
+      if (!DOM.proofLocalPreview) return;
+      DOM.proofLocalPreview.classList.add("hidden");
+      DOM.proofLocalPreview.innerHTML = "";
+    },
+
+    previewSelectedProof() {
+      UI.clearLocalProofPreview();
+
+      const file = DOM.proof?.files?.[0];
+      if (!file || !DOM.proofLocalPreview) return;
+
+      if (!CONFIG.allowedProofTypes.includes(file.type)) {
+        alert("Dosiye yemerewe ni JPG, PNG, GIF, WEBP cyangwa PDF.");
+        Utils.resetFileInput(DOM.proof);
+        UI.validateAll();
+        return;
+      }
+
+      if (file.size > CONFIG.maxProofSize) {
+        alert("Dosiye irarengeje 10 MB.");
+        Utils.resetFileInput(DOM.proof);
+        UI.validateAll();
+        return;
+      }
+
+      const metaHtml = `
+        <div class="text-xs text-slate-700 mb-2">
+          <div><b>Selected:</b> ${Format.escape(file.name)}</div>
+          <div><b>Type:</b> ${Format.escape(file.type || "unknown")}</div>
+          <div><b>Size:</b> ${Format.escape(Format.fileSize(file.size))}</div>
+        </div>
+      `;
+
+      if (Utils.isImageType(file.type)) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          DOM.proofLocalPreview.innerHTML = `
+            ${metaHtml}
+            <img
+              src="${reader.result}"
+              alt="Preview"
+              class="max-h-48 rounded border border-slate-200 object-contain bg-white"
+            >
+          `;
+          DOM.proofLocalPreview.classList.remove("hidden");
+        };
+        reader.readAsDataURL(file);
+      } else if (Utils.isPdfType(file.type)) {
+        DOM.proofLocalPreview.innerHTML = `
+          ${metaHtml}
+          <div class="text-blue-700">PDF yatoranyijwe neza.</div>
+        `;
+        DOM.proofLocalPreview.classList.remove("hidden");
+      } else {
+        DOM.proofLocalPreview.innerHTML = metaHtml;
+        DOM.proofLocalPreview.classList.remove("hidden");
+      }
+
+      if (DOM.removeProof) DOM.removeProof.checked = false;
+    },
+
+    renderProofCell(r) {
+      const hasProof = Number(r.has_proof || 0) === 1;
+      if (!hasProof) {
+        return `<span class="text-slate-400 text-xs">Nta proof</span>`;
+      }
+
+      const viewUrl = r.proof_view_url || `${CONFIG.api}?action=view_proof&id=${r.transaction_id}`;
+      const downloadUrl = r.proof_download_url || `${CONFIG.api}?action=download_proof&id=${r.transaction_id}`;
+      const proofType = String(r.proof_type || "").toLowerCase();
+
+      if (proofType.startsWith("image/")) {
+        return `
+          <div class="flex flex-col items-center gap-2">
+            <a href="${Format.escape(viewUrl)}" target="_blank" class="block">
+              <img
+                src="${Format.escape(viewUrl)}"
+                alt="Proof"
+                class="h-20 w-20 rounded-lg border border-slate-200 object-cover bg-white shadow-sm hover:scale-105 transition-transform"
+              >
+            </a>
+            <div class="flex flex-wrap justify-center gap-2 text-xs">
+              <a class="text-blue-700 underline" target="_blank" href="${Format.escape(viewUrl)}">Reba</a>
+              <a class="text-emerald-700 underline" target="_blank" href="${Format.escape(downloadUrl)}">Download</a>
+            </div>
+          </div>
+        `;
+      }
+
+      if (proofType === "application/pdf") {
+        return `
+          <div class="flex flex-col items-center gap-2">
+            <a
+              href="${Format.escape(viewUrl)}"
+              target="_blank"
+              class="flex h-20 w-20 items-center justify-center rounded-lg border border-slate-200 bg-red-50 text-xs font-bold text-red-700 shadow-sm"
+            >
+              PDF
+            </a>
+            <div class="flex flex-wrap justify-center gap-2 text-xs">
+              <a class="text-blue-700 underline" target="_blank" href="${Format.escape(viewUrl)}">Reba</a>
+              <a class="text-emerald-700 underline" target="_blank" href="${Format.escape(downloadUrl)}">Download</a>
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="flex flex-col items-center gap-2">
+          <a class="text-blue-700 underline text-xs" target="_blank" href="${Format.escape(viewUrl)}">Reba proof</a>
+          <a class="text-emerald-700 underline text-xs" target="_blank" href="${Format.escape(downloadUrl)}">Download</a>
+        </div>
+      `;
+    },
+
+    renderRows(rows) {
+      if (!DOM.tbody) return;
+
+      if (!rows || rows.length === 0) {
+        DOM.tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="text-center py-8 text-slate-400 text-sm">
+              Nta transactions zibonetse
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
       DOM.tbody.innerHTML = rows.map((r, i) => `
         <tr class="border-b hover:bg-gray-50 text-sm">
           <td class="p-3">${i + 1}</td>
@@ -4277,104 +5162,160 @@ function clearFileInput(id) {
             <div class="font-bold text-slate-700">${Format.escape(r.user_name || "System")}</div>
             ${r.loan_id ? `<span class="text-[10px] bg-blue-100 text-blue-700 px-1 rounded">#LN-${r.loan_id}</span>` : ""}
           </td>
-          
           <td class="p-3">${Format.escape(Format.typeLabel(r.type))}</td>
           <td class="p-3">
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
-              r.direction === "IN" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-            }">${Format.escape(r.direction || "")}</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${r.direction === "IN" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}">
+              ${Format.escape(r.direction || "")}
+            </span>
           </td>
           <td class="p-3 font-mono font-bold">${Format.money(r.amount)}</td>
+          <td class="p-3 text-center">${UI.renderProofCell(r)}</td>
           <td class="p-3 space-x-1">
-            <button class="text-emerald-600 hover:underline btn-edit" data-id="${r.transaction_id}">Hindura</button>
-            <button class="text-red-600 hover:underline btn-delete" data-id="${r.transaction_id}">Siba</button>
+            <button class="text-emerald-600 hover:underline btn-edit" data-id="${r.transaction_id}" type="button">Hindura</button>
+            <button class="text-red-600 hover:underline btn-delete" data-id="${r.transaction_id}" type="button">Siba</button>
           </td>
         </tr>
       `).join("");
 
-      // wire edit/delete on rendered rows
-      DOM.tbody.querySelectorAll(".btn-edit").forEach(btn => {
+      DOM.tbody.querySelectorAll(".btn-edit").forEach((btn) => {
         btn.onclick = () => openEdit(Number(btn.dataset.id));
       });
-      DOM.tbody.querySelectorAll(".btn-delete").forEach(btn => {
+
+      DOM.tbody.querySelectorAll(".btn-delete").forEach((btn) => {
         btn.onclick = () => deleteTransaction(Number(btn.dataset.id));
       });
     },
 
-    syncLogic: async () => {
-      const type        = (DOM.type.value || "").toLowerCase();
-      const userSelected = !!DOM.user.value;
+    renderTypeOptions() {
+      const types = [
+        { v: "", t: "-- Ubwoko --" },
+        { v: "contribution", t: "Contribution" },
+        { v: "withdrawal", t: "Withdrawal" },
+        { v: "loan_principal", t: "Loan Payment (Principal)" },
+        { v: "loan_interest", t: "Loan Interest" },
+        { v: "expense", t: "Expense" },
+        { v: "other_income", t: "Other Income" },
+        { v: "other_out", t: "Other Out" }
+      ];
+
+      const userSelected = !!DOM.user?.value;
+      const current = DOM.type?.value || "";
+      const allowed = userSelected ? types : types.filter((x) => x.v === "" || x.v === "expense");
+
+      if (!DOM.type) return;
+      DOM.type.innerHTML = allowed.map((x) => `<option value="${x.v}">${Format.escape(x.t)}</option>`).join("");
+      DOM.type.value = [...DOM.type.options].some((o) => o.value === current) ? current : "";
+    },
+
+    async syncLogic() {
+      const type = (DOM.type?.value || "").toLowerCase();
+      const userSelected = !!DOM.user?.value;
 
       UI.renderTypeOptions();
 
-      // Show/hide type wrapper
-      if (DOM.typeWrap) DOM.typeWrap.classList.toggle("hidden", !userSelected && type !== "expense");
+      if (DOM.typeWrap) {
+        DOM.typeWrap.classList.toggle("hidden", !userSelected && type !== "expense");
+      }
 
-      // Show/hide loan wrapper
       const isLoan = ["loan_principal", "loan_interest"].includes(type);
-      if (DOM.loanWrap) DOM.loanWrap.classList.toggle("hidden", !isLoan);
+      if (DOM.loanWrap) {
+        DOM.loanWrap.classList.toggle("hidden", !isLoan);
+      }
 
-      // Auto-set direction
-      DOM.direction.value = ["contribution", "loan_principal", "loan_interest", "other_income"].includes(type) ? "IN" : "OUT";
+      if (DOM.direction) {
+        DOM.direction.value =
+          ["contribution", "loan_principal", "loan_interest", "other_income"].includes(type)
+            ? "IN"
+            : "OUT";
+      }
 
-      if (isLoan && userSelected) await UI.loadUserLoans();
+      if (type === "loan_principal") {
+        if (DOM.loanWrap) DOM.loanWrap.classList.remove("hidden");
+        if (DOM.loanId) {
+          DOM.loanId.innerHTML = `<option value="">-- System izagabanya ku nguzanyo zose z'uyu muntu --</option>`;
+        }
+      } else if (isLoan && userSelected) {
+        await UI.loadUserLoans();
+      } else if (DOM.loanId && !isLoan) {
+        DOM.loanId.innerHTML = `<option value="">-- Hitamo Loan --</option>`;
+      }
+
       UI.validateAll();
     },
 
-    renderTypeOptions: () => {
-      const types = [
-        { v: "",               t: "-- Ubwoko --" },
-        { v: "contribution",   t: "Contribution" },
-        { v: "withdrawal",     t: "Withdrawal" },
-        { v: "loan_principal", t: "Loan Payment (Principal)" },
-        { v: "loan_interest",  t: "Loan Interest" },
-        { v: "expense",        t: "Expense" },
-        { v: "other_income",   t: "Other Income" },
-        { v: "other_out",      t: "Other Out" }
-      ];
+    validateAll() {
+      const type = (DOM.type?.value || "").toLowerCase();
+      const amount = Number(DOM.amount?.value || 0);
+      const accId = Number(DOM.account?.value || 0);
+      const isEdit = !!DOM.id?.value;
+      const file = DOM.proof?.files?.[0];
 
-      const userSelected = !!DOM.user.value;
-      const current      = DOM.type.value;
-      const allowed      = userSelected ? types : types.filter(x => x.v === "" || x.v === "expense");
+      let valid = true;
+      let reason = "";
 
-      DOM.type.innerHTML = allowed.map(x =>
-        `<option value="${x.v}">${Format.escape(x.t)}</option>`
-      ).join("");
-      DOM.type.value = [...DOM.type.options].some(o => o.value === current) ? current : "";
-    },
+      if (!accId) {
+        valid = false;
+        reason = "Hitamo konti.";
+      } else if (!type) {
+        valid = false;
+        reason = "Hitamo ubwoko.";
+      } else if (amount <= 0) {
+        valid = false;
+        reason = "Umubare ugomba kuba > 0.";
+      } else if (type !== "expense" && !DOM.user?.value) {
+        valid = false;
+        reason = "Hitamo user.";
+      } else if (type === "loan_interest" && !DOM.loanId?.value) {
+        valid = false;
+        reason = "Hitamo loan kuri loan interest.";
+      }
 
-    validateAll: () => {
-      const type   = (DOM.type.value || "").toLowerCase();
-      const amount = Number(DOM.amount.value || 0);
-      const accId  = Number(DOM.account.value || 0);
-      let valid = true, reason = "";
-
-      if (!accId)                                   { valid = false; reason = "Hitamo konti."; }
-      else if (!type)                               { valid = false; reason = "Hitamo ubwoko."; }
-      else if (amount <= 0)                         { valid = false; reason = "Umubare ugomba kuba > 0."; }
-      else if (type !== "expense" && !DOM.user.value) { valid = false; reason = "Hitamo umunyamuryango."; }
-
-      // Balance check for OUT types
       if (valid && ["withdrawal", "expense", "other_out"].includes(type)) {
-        const acc = STATE.accounts.find(a => Number(a.account_id) === accId);
+        const acc = STATE.accounts.find((a) => Number(a.account_id) === accId);
         if (acc && amount > Number(acc.balance || 0)) {
-          valid = false; reason = `Amafaranga ari kuri konti ntahagije (${Format.money(acc.balance)}).`;
+          valid = false;
+          reason = `Amafaranga ari kuri konti ntahagije (${Format.money(acc.balance)}).`;
         }
       }
 
-      UI.setSaveState(valid, reason);
+      if (valid && !isEdit && !file) {
+        valid = false;
+        reason = "Shyiraho proof file.";
+      }
+
+      if (valid && file) {
+        if (!CONFIG.allowedProofTypes.includes(file.type)) {
+          valid = false;
+          reason = "Proof yemerewe ni JPG, PNG, GIF, WEBP cyangwa PDF.";
+        } else if (file.size > CONFIG.maxProofSize) {
+          valid = false;
+          reason = "Proof file ntigomba kurenga 10 MB.";
+        }
+      }
+
+      UI.setSaveState(valid, reason || "Itegeko kuri transaction nshya.");
       return valid;
     },
 
-    loadUserLoans: async () => {
+    async loadUserLoans() {
       try {
-        const userId = DOM.user.value;
-        const json   = await apiRequest(`loans_api.php?per_page=100`);
-        STATE.userLoans = (json.data || []).filter(l =>
-          String(l.borrower_user_id) === String(userId) && l.status === "approved"
+        const userId = DOM.user?.value;
+        if (!userId || !DOM.loanId) return;
+
+        const json = await apiRequest(`${CONFIG.loansApi}?per_page=100`);
+        STATE.userLoans = (json.data || []).filter((l) =>
+          String(l.borrower_user_id) === String(userId) &&
+          ["approved", "defaulted", "closed"].includes(String(l.status || "").toLowerCase())
         );
+
+        const currentType = (DOM.type?.value || "").toLowerCase();
+        if (currentType === "loan_principal") {
+          DOM.loanId.innerHTML = `<option value="">-- System izagabanya ku nguzanyo zose z'uyu muntu --</option>`;
+          return;
+        }
+
         DOM.loanId.innerHTML = '<option value="">-- Hitamo Loan --</option>' +
-          STATE.userLoans.map(l =>
+          STATE.userLoans.map((l) =>
             `<option value="${l.loan_id}">#LN-${l.loan_id} – ${Format.escape(l.borrower_name || "")}</option>`
           ).join("");
       } catch (e) {
@@ -4383,57 +5324,70 @@ function clearFileInput(id) {
     }
   };
 
-  // --- 7. Edit / Delete helpers ---
   async function openEdit(id) {
     try {
       const json = await apiRequest(`${CONFIG.api}?id=${id}`);
-      const r    = json.data;
+      const r = json.data || {};
 
       UI.toggleModal(true);
-      DOM.id.value        = r.transaction_id;
-      DOM.date.value      = Format.toDTL(r.tx_date);
-      DOM.account.value   = r.account_id;
-      DOM.direction.value = r.direction;
-      DOM.amount.value    = r.amount;
-      DOM.desc.value      = r.description || "";
 
-      // Populate user dropdown with the existing user so it's selectable
-      if (r.user_id) {
+      if (DOM.modalTitle) DOM.modalTitle.textContent = "Hindura Transaction";
+      if (DOM.id) DOM.id.value = r.transaction_id || "";
+      if (DOM.date) DOM.date.value = Format.toDTL(r.tx_date);
+      if (DOM.account) DOM.account.value = r.account_id || "";
+      if (DOM.direction) DOM.direction.value = r.direction || "";
+      if (DOM.amount) DOM.amount.value = r.amount || "";
+      if (DOM.desc) DOM.desc.value = r.description || "";
+
+      if (r.user_id && DOM.user) {
         DOM.user.innerHTML = `<option value="${r.user_id}">${Format.escape(r.user_name || r.user_id)}</option>`;
         DOM.user.value = r.user_id;
+      } else if (DOM.user) {
+        DOM.user.innerHTML = `<option value="">-- Hitamo User --</option>`;
+        DOM.user.value = "";
       }
 
-      // Show type wrapper, set type
       if (DOM.typeWrap) DOM.typeWrap.classList.remove("hidden");
-      DOM.type.innerHTML = `<option value="${r.type}">${Format.escape(Format.typeLabel(r.type))}</option>`;
-      DOM.type.value = r.type;
+      UI.renderTypeOptions();
+      if (DOM.type) DOM.type.value = r.type || "";
 
-      if (r.loan_id) {
+      if (r.loan_id && DOM.loanId) {
         if (DOM.loanWrap) DOM.loanWrap.classList.remove("hidden");
         DOM.loanId.innerHTML = `<option value="${r.loan_id}">#LN-${r.loan_id}</option>`;
         DOM.loanId.value = r.loan_id;
+      } else if (DOM.loanId) {
+        DOM.loanId.innerHTML = `<option value="">-- Hitamo Loan --</option>`;
       }
 
-      // Hide proof required hint on edit
-      if (DOM.hint) DOM.hint.textContent = "Injiza dosiye nshya gusa niba ushaka kuyisubiraho.";
-      if (DOM.proof) DOM.proof.removeAttribute("required");
+      UI.setProofRequiredUi(false);
+      if (DOM.hint) DOM.hint.textContent = "Injiza dosiye nshya gusa niba ushaka kuyisimbuza.";
+      if (DOM.removeProof) DOM.removeProof.checked = false;
 
-      document.getElementById("transaction-modal-title").textContent = "Hindura Transaction";
-      UI.setSaveState(true);
+      UI.showExistingProof(r);
+      UI.clearLocalProofPreview();
+      Utils.resetFileInput(DOM.proof);
 
+      await UI.syncLogic();
+      UI.validateAll();
     } catch (e) {
-      alert("Kugerageza kohereza amakuru: " + e.message);
+      alert("Kugerageza gufungura transaction byanze: " + e.message);
     }
   }
 
   async function deleteTransaction(id) {
     if (!confirm(`Uremeza gusiba transaction #${id}?`)) return;
+
     try {
       const fd = new FormData();
       fd.set("action", "delete");
       fd.set("id", id);
-      await apiRequest(CONFIG.api, { method: "POST", body: fd });
-      loadList();
+
+      await apiRequest(CONFIG.api, {
+        method: "POST",
+        body: fd
+      });
+
+      await loadList();
     } catch (e) {
       alert("Gusiba byanze: " + e.message);
     }
@@ -4441,136 +5395,203 @@ function clearFileInput(id) {
 
   async function loadList() {
     try {
-      DOM.tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400 text-sm">
-        <i class="fas fa-spinner fa-spin mr-2"></i>Gutegura...
-      </td></tr>`;
+      if (DOM.tbody) {
+        DOM.tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="text-center py-6 text-slate-400 text-sm">
+              <i class="fas fa-spinner fa-spin mr-2"></i>Gutegura...
+            </td>
+          </tr>
+        `;
+      }
+
       const json = await apiRequest(`${CONFIG.api}?per_page=100`);
       UI.renderRows(json.data || []);
     } catch (e) {
       console.error("loadList failed:", e.message);
-      DOM.tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-red-500 text-sm">
-        Gufungura urutonde byanze: ${Format.escape(e.message)}
-      </td></tr>`;
+      if (DOM.tbody) {
+        DOM.tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="text-center py-6 text-red-500 text-sm">
+              Gufungura urutonde byanze: ${Format.escape(e.message)}
+            </td>
+          </tr>
+        `;
+      }
     }
   }
 
-  // --- 8. Event Wiring ---
   function bindEvents() {
+    if (DOM.btnNew) {
+      DOM.btnNew.onclick = () => {
+        if (DOM.modalTitle) DOM.modalTitle.textContent = "Ongeza Transaction";
 
-    DOM.btnNew.onclick = () => {
-      // Reset modal title and proof requirement
-      document.getElementById("transaction-modal-title").textContent = "Ongeza Transaction";
-      if (DOM.proof) DOM.proof.setAttribute("required", "required");
-      if (DOM.hint)  DOM.hint.textContent = "Itegeko kuri transaction nshya.";
-      UI.toggleModal(true);
-      DOM.date.value = new Date().toISOString().slice(0, 16);
-      DOM.id.value   = "";
-      UI.syncLogic();
-    };
+        UI.toggleModal(true);
 
-    DOM.btnClose.onclick  = () => UI.toggleModal(false);
-    DOM.btnCancel.onclick = () => UI.toggleModal(false);
-    DOM.btnRefresh.onclick = loadList;
+        if (DOM.date) DOM.date.value = Utils.getLocalDateTimeValue();
+        if (DOM.id) DOM.id.value = "";
+        if (DOM.user) DOM.user.value = "";
+        if (DOM.loanId) DOM.loanId.innerHTML = `<option value="">-- Hitamo Loan --</option>`;
+        if (DOM.hint) DOM.hint.textContent = "Itegeko kuri transaction nshya.";
+        if (DOM.removeProof) DOM.removeProof.checked = false;
 
-    // User search
-    DOM.userSearch.oninput = Utils.debounce(async (e) => {
-      const q = e.target.value.trim();
-      if (q.length < 2) return;
-      try {
-        const json = await apiRequest(`users_api.php?q=${encodeURIComponent(q)}&per_page=20`);
-        DOM.user.innerHTML = '<option value="">-- Hitamo User --</option>' +
-          (json.data || []).map(u =>
-            `<option value="${u.id}">${Format.escape(u.names)} | ${u.phone1 || ""}</option>`
-          ).join("");
-      } catch (e) { console.error("User search failed:", e.message); }
-    }, CONFIG.debounceTime);
+        UI.setProofRequiredUi(true);
+        UI.clearExistingProof();
+        UI.clearLocalProofPreview();
+        Utils.resetFileInput(DOM.proof);
 
-    // User selected
-    DOM.user.onchange = () => UI.syncLogic();
+        UI.syncLogic();
+      };
+    }
 
-    // Loan selected — show info
-    DOM.loanId.onchange = async () => {
-      const loanId = DOM.loanId.value;
-      if (!loanId) return;
-      const loan = STATE.userLoans.find(l => String(l.loan_id) === String(loanId));
-      if (loan) {
-        UI.updateInfoBox(`
-          <div class="mt-2 text-xs rounded border border-blue-200 bg-blue-50 p-2">
-            <p class="font-bold mb-1">Loan #${loan.loan_id} – ${Format.escape(loan.borrower_name || "")}</p>
-            <p>Principal: <b>${Format.money(loan.principal_amount)}</b></p>
-            <p>Status: <b>${Format.escape(loan.status)}</b></p>
-          </div>
-        `);
-      }
-      UI.validateAll();
-    };
+    if (DOM.btnClose) DOM.btnClose.onclick = () => UI.toggleModal(false);
+    if (DOM.btnCancel) DOM.btnCancel.onclick = () => UI.toggleModal(false);
+    if (DOM.btnRefresh) DOM.btnRefresh.onclick = loadList;
 
-    [DOM.type, DOM.amount, DOM.account, DOM.date].forEach(el => {
-      if (el) el.onchange = () => UI.syncLogic();
-    });
+    if (DOM.userSearch) {
+      DOM.userSearch.oninput = Utils.debounce(async (e) => {
+        const q = e.target.value.trim();
+        if (q.length < 2 || !DOM.user) return;
 
-    // Save
-    DOM.btnSave.onclick = async () => {
-      if (!UI.validateAll()) return;
-      STATE.saving = true;
-      UI.setSaveState(false, "Kubika...");
+        try {
+          const json = await apiRequest(`${CONFIG.usersApi}?q=${encodeURIComponent(q)}&per_page=20`);
+          DOM.user.innerHTML = '<option value="">-- Hitamo User --</option>' +
+            (json.data || []).map((u) =>
+              `<option value="${u.id}">${Format.escape(u.names)} | ${Format.escape(u.phone1 || "")}</option>`
+            ).join("");
+        } catch (err) {
+          console.error("User search failed:", err.message);
+        }
+      }, CONFIG.debounceTime);
+    }
 
-      try {
-        const fd     = new FormData(DOM.form);
-        const isEdit = !!DOM.id.value;
+    if (DOM.user) {
+      DOM.user.onchange = () => UI.syncLogic();
+    }
 
-        // loan_principal goes as create (API handles split internally)
-        fd.set("action", isEdit ? "update" : "create");
-
-        const res = await apiRequest(CONFIG.api, { method: "POST", body: fd });
-
-        // If API returned split info, show it
-        if (res.data?.interest_paid !== undefined) {
-          alert(
-            `Byishyuwe:\n` +
-            `• Interest: ${Format.money(res.data.interest_paid)}\n` +
-            `• Principal: ${Format.money(res.data.principal_paid)}`
-          );
+    if (DOM.loanId) {
+      DOM.loanId.onchange = () => {
+        const loanId = DOM.loanId.value;
+        if (!loanId) {
+          UI.updateInfoBox("");
+          UI.validateAll();
+          return;
         }
 
-        UI.toggleModal(false);
-        loadList();
-      } catch (e) {
-        alert("Kubika byanze: " + e.message);
-      } finally {
-        STATE.saving = false;
-        UI.setSaveState(true);
+        const loan = STATE.userLoans.find((l) => String(l.loan_id) === String(loanId));
+        if (loan) {
+          UI.updateInfoBox(`
+            <div class="mt-2 text-xs rounded border border-blue-200 bg-blue-50 p-2">
+              <p class="font-bold mb-1">Loan #${loan.loan_id} – ${Format.escape(loan.borrower_name || "")}</p>
+              <p>Principal: <b>${Format.money(loan.principal ?? loan.principal_amount ?? 0)}</b></p>
+              <p>Status: <b>${Format.escape(loan.status)}</b></p>
+            </div>
+          `);
+        }
+
+        UI.validateAll();
+      };
+    }
+
+    [DOM.type, DOM.amount, DOM.account, DOM.date].forEach((el) => {
+      if (el) {
+        el.onchange = () => UI.syncLogic();
+        el.oninput = () => UI.validateAll();
       }
-    };
+    });
+
+    if (DOM.proof) {
+      DOM.proof.onchange = () => {
+        UI.previewSelectedProof();
+        UI.validateAll();
+      };
+    }
+
+    if (DOM.removeProof) {
+      DOM.removeProof.onchange = () => {
+        if (DOM.removeProof.checked && DOM.proof) {
+          Utils.resetFileInput(DOM.proof);
+          UI.clearLocalProofPreview();
+        }
+        UI.validateAll();
+      };
+    }
+
+    if (DOM.btnSave) {
+      DOM.btnSave.onclick = async () => {
+        if (!UI.validateAll()) return;
+
+        STATE.saving = true;
+        UI.setSaveState(false, "Kubika...");
+
+        try {
+          const fd = new FormData(DOM.form);
+          const isEdit = !!DOM.id?.value;
+          fd.set("action", isEdit ? "update" : "create");
+
+          if (!isEdit) {
+            fd.delete("remove_proof");
+          }
+
+          const res = await apiRequest(CONFIG.api, {
+            method: "POST",
+            body: fd
+          });
+
+          if (Array.isArray(res.data?.saved_rows) && res.data.saved_rows.length) {
+            const totalSaved = res.data.saved_rows.length;
+            const remain = Number(res.data.remaining_unallocated || 0);
+            alert(
+              `Byabitswe neza.\n` +
+              `Transactions zakozwe: ${totalSaved}\n` +
+              `Amafaranga atasaranganyijwe: ${Format.money(remain)}`
+            );
+          }
+
+          UI.toggleModal(false);
+          await loadList();
+        } catch (e) {
+          alert("Kubika byanze: " + e.message);
+        } finally {
+          STATE.saving = false;
+          UI.validateAll();
+        }
+      };
+    }
   }
 
-  // --- 9. Initialization ---
   (async function init() {
     try {
-      // Load accounts
       try {
-        const accJson = await apiRequest("accounts_api.php");
+        const accJson = await apiRequest(CONFIG.accountsApi);
         STATE.accounts = accJson.data || [];
-        DOM.account.innerHTML = '<option value="">-- Hitamo Konti --</option>' +
-          STATE.accounts.map(a =>
-            `<option value="${a.account_id}">${Format.escape(a.name)}${a.balance !== undefined ? ` (${Format.money(a.balance)})` : ""}</option>`
-          ).join("");
+
+        if (DOM.account) {
+          DOM.account.innerHTML = '<option value="">-- Hitamo Konti --</option>' +
+            STATE.accounts.map((a) =>
+              `<option value="${a.account_id}">${Format.escape(a.name)}${a.balance !== undefined ? ` (${Format.money(a.balance)})` : ""}</option>`
+            ).join("");
+        }
       } catch (e) {
         console.error("Accounts load failed:", e.message);
-        DOM.account.innerHTML = '<option value="">-- Konti ntizashoboka --</option>';
+        if (DOM.account) {
+          DOM.account.innerHTML = '<option value="">-- Konti ntizashoboka --</option>';
+        }
       }
 
       bindEvents();
       await loadList();
-
     } catch (e) {
       console.error("Transaction module init failed:", e);
       if (DOM.tbody) {
-        DOM.tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-red-500 text-sm">
-          Module yanze gutangira: ${Format.escape(e.message)}
-        </td></tr>`;
+        DOM.tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="text-center py-6 text-red-500 text-sm">
+              Module yanze gutangira: ${Format.escape(e.message)}
+            </td>
+          </tr>
+        `;
       }
     }
   })();
-
 })();

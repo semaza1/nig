@@ -2,22 +2,22 @@
 /**
  * pages/admin/loans_api.php
  *
- * Updated:
+ * Final version:
  * - loans must have account_id
  * - statuses: requested, approved, closed, rejected, defaulted
- * - auto create one OUT transaction (loan_disbursement) on approval
+ * - auto create one OUT transaction on approval
  * - unpaid principal = principal - SUM(loan_principal IN)
  * - immediate first-month interest is due once a loan is approved
- * - member interest share is NOT stored; it is calculated dynamically
- * - member share uses: current contribution balance + previously calculated interest
- * - user net includes calculated interest share
- * - optional reference_file blob if columns exist
+ * - member interest share is calculated dynamically
+ * - member expense partition is calculated dynamically
+ * - optional reference_file blob support with image/pdf validation
+ * - inline reference view endpoint
+ * - reference download endpoint
  */
 
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 
-header('Content-Type: application/json; charset=utf-8');
 session_start();
 ob_start();
 
@@ -26,7 +26,7 @@ ob_start();
 ------------------------------*/
 function send_json($data, int $code = 200): void {
     while (ob_get_level() > 0) {
-        ob_end_clean();
+        @ob_end_clean();
     }
     http_response_code($code);
     header('Content-Type: application/json; charset=utf-8');
@@ -39,7 +39,7 @@ register_shutdown_function(function () {
     $buf = '';
 
     while (ob_get_level() > 0) {
-        $buf .= ob_get_clean();
+        $buf .= (string)ob_get_clean();
     }
 
     $logFile = __DIR__ . '/loans_debug.log';
@@ -79,6 +79,9 @@ if (empty($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
 }
 
 $admin_user_id = (int)($_SESSION['user_id'] ?? 0);
+if ($admin_user_id <= 0) {
+    send_json(['success' => false, 'message' => 'Missing admin session user_id'], 500);
+}
 
 const USER_PHONE_COL  = 'phone1';
 const USER_PHONE2_COL = 'phone2';
@@ -87,8 +90,121 @@ const USER_PHONE2_COL = 'phone2';
    DB helpers
 ------------------------------*/
 function loan_reference_columns_exist(mysqli $mysqli): bool {
-    $res = $mysqli->query("SHOW COLUMNS FROM loans LIKE 'reference_file'");
-    return $res && $res->num_rows > 0;
+    $res1 = $mysqli->query("SHOW COLUMNS FROM loans LIKE 'reference_file'");
+    $res2 = $mysqli->query("SHOW COLUMNS FROM loans LIKE 'reference_name'");
+    $res3 = $mysqli->query("SHOW COLUMNS FROM loans LIKE 'reference_mime'");
+    return ($res1 && $res1->num_rows > 0) && ($res2 && $res2->num_rows > 0) && ($res3 && $res3->num_rows > 0);
+}
+
+function allowed_reference_mimes(): array {
+    return [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'application/pdf'
+    ];
+}
+
+function get_uploaded_reference(string $field = 'reference_file', bool $required = false): array {
+    if (!isset($_FILES[$field])) {
+        if ($required) return [false, null, 'Reference file is required'];
+        return [true, null, null];
+    }
+
+    $file = $_FILES[$field];
+    $errCode = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+
+    if ($errCode === UPLOAD_ERR_NO_FILE) {
+        if ($required) return [false, null, 'Reference file is required'];
+        return [true, null, null];
+    }
+
+    if ($errCode !== UPLOAD_ERR_OK) {
+        $msg = match ($errCode) {
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Uploaded reference file is too large',
+            UPLOAD_ERR_PARTIAL => 'Reference upload was incomplete',
+            UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary upload folder',
+            UPLOAD_ERR_CANT_WRITE => 'Server failed to write uploaded reference file',
+            UPLOAD_ERR_EXTENSION => 'Reference upload stopped by server extension',
+            default => 'Reference upload failed'
+        };
+        return [false, null, $msg];
+    }
+
+    if (!is_uploaded_file($file['tmp_name'])) {
+        return [false, null, 'Invalid uploaded reference file'];
+    }
+
+    $tmp  = $file['tmp_name'];
+    $name = mb_substr(trim((string)($file['name'] ?? 'reference')), 0, 255);
+    $size = (int)($file['size'] ?? 0);
+
+    if ($size <= 0) {
+        return [false, null, 'Uploaded reference file is empty'];
+    }
+
+    $maxSize = 10 * 1024 * 1024;
+    if ($size > $maxSize) {
+        return [false, null, 'Reference file too large. Maximum allowed is 10 MB'];
+    }
+
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime = $finfo ? (finfo_file($finfo, $tmp) ?: 'application/octet-stream') : 'application/octet-stream';
+    if ($finfo) finfo_close($finfo);
+
+    if (!in_array($mime, allowed_reference_mimes(), true)) {
+        return [false, null, 'Only JPG, PNG, GIF, WEBP, or PDF files are allowed'];
+    }
+
+    $blob = file_get_contents($tmp);
+    if ($blob === false || $blob === '') {
+        return [false, null, 'Could not read uploaded reference file'];
+    }
+
+    return [true, [
+        'name' => $name,
+        'type' => $mime,
+        'size' => $size,
+        'blob' => $blob,
+    ], null];
+}
+
+function clear_reference_file(mysqli $mysqli, int $loan_id): void {
+    $st = $mysqli->prepare("
+        UPDATE loans
+        SET reference_name=NULL, reference_mime=NULL, reference_file=NULL
+        WHERE loan_id=?
+    ");
+    if (!$st) throw new RuntimeException('Prepare clear reference failed: ' . $mysqli->error);
+
+    $st->bind_param('i', $loan_id);
+    if (!$st->execute()) {
+        $err = $st->error ?: $mysqli->error;
+        $st->close();
+        throw new RuntimeException('Clear reference failed: ' . $err);
+    }
+    $st->close();
+}
+
+function update_reference_file(mysqli $mysqli, int $loan_id, string $name, string $mime, string $blob): void {
+    $st = $mysqli->prepare("
+        UPDATE loans
+        SET reference_name=?, reference_mime=?, reference_file=?
+        WHERE loan_id=?
+    ");
+    if (!$st) throw new RuntimeException('Prepare reference update failed: ' . $mysqli->error);
+
+    $null = null;
+    $st->bind_param('ssbi', $name, $mime, $null, $loan_id);
+    $st->send_long_data(2, $blob);
+
+    if (!$st->execute()) {
+        $err = $st->error ?: $mysqli->error;
+        $st->close();
+        throw new RuntimeException('Reference update failed: ' . $err);
+    }
+    $st->close();
 }
 
 /* -----------------------------
@@ -154,13 +270,6 @@ function get_loan_paid_interest(mysqli $mysqli, int $loan_id): float {
     return (float)($row['total_paid'] ?? 0);
 }
 
-/**
- * Immediate first-month interest due:
- * once approved, first month interest is counted immediately.
- *
- * This version computes that due dynamically and does NOT store member shares.
- * It also does NOT create artificial interest charge rows in transactions.
- */
 function get_loan_initial_interest_due(mysqli $mysqli, int $loan_id): float {
     $loan = get_loan_row($mysqli, $loan_id);
     if (!$loan) return 0.0;
@@ -181,7 +290,6 @@ function get_loan_initial_interest_due(mysqli $mysqli, int $loan_id): float {
 function get_loan_unpaid_interest(mysqli $mysqli, int $loan_id): float {
     $due  = get_loan_initial_interest_due($mysqli, $loan_id);
     $paid = get_loan_paid_interest($mysqli, $loan_id);
-
     return (float)max(0, $due - $paid);
 }
 
@@ -249,16 +357,18 @@ function get_user_unpaid_interest_total(mysqli $mysqli, int $user_id): float {
 }
 
 /* -----------------------------
-   Member interest share (dynamic)
+   Dynamic member allocation:
+   - interest share
+   - expense partition
 ------------------------------*/
-/**
- * Current contribution balance:
- * contributions IN minus withdrawals/deductions OUT
- *
- * Adjust the included types here if your schema uses other names.
- */
-function get_member_contribution_base(mysqli $mysqli, int $user_id): float {
+function get_member_base_contributions(mysqli $mysqli, int $user_id, ?string $asOfDate = null): float {
     $uid = (int)$user_id;
+
+    $dateClause = '';
+    if ($asOfDate !== null && trim($asOfDate) !== '') {
+        $safeDate = $mysqli->real_escape_string($asOfDate);
+        $dateClause = " AND tx_date <= '{$safeDate} 23:59:59' ";
+    }
 
     $st = $mysqli->prepare("
         SELECT
@@ -267,11 +377,12 @@ function get_member_contribution_base(mysqli $mysqli, int $user_id): float {
                 ELSE 0
             END), 0) AS contrib_in,
             COALESCE(SUM(CASE
-                WHEN type IN ('withdrawal','withdrawal_deduction') AND direction='OUT' THEN amount
+                WHEN type='withdrawal' AND direction='OUT' THEN amount
                 ELSE 0
             END), 0) AS withdraw_out
         FROM transactions
         WHERE user_id=?
+        $dateClause
     ");
     if (!$st) return 0.0;
 
@@ -281,18 +392,10 @@ function get_member_contribution_base(mysqli $mysqli, int $user_id): float {
     $st->close();
 
     $base = (float)($row['contrib_in'] ?? 0) - (float)($row['withdraw_out'] ?? 0);
-    return max(0.0, $base);
+    return max(0.0, round($base, 2));
 }
 
-/**
- * Calculates all members' interest shares dynamically.
- *
- * Each incoming borrower interest payment is distributed proportionally by:
- *   current contribution base + previously earned calculated interest
- *
- * Interest shares are NOT stored in DB.
- */
-function calculate_member_interest_shares(mysqli $mysqli, ?string $asOfDate = null): array {
+function calculate_member_financial_shares(mysqli $mysqli, ?string $asOfDate = null): array {
     $members = [];
 
     $memberRes = $mysqli->query("
@@ -305,10 +408,13 @@ function calculate_member_interest_shares(mysqli $mysqli, ?string $asOfDate = nu
 
     while ($m = $memberRes->fetch_assoc()) {
         $uid = (int)$m['id'];
+        $base = get_member_base_contributions($mysqli, $uid, $asOfDate);
+
         $members[$uid] = [
-            'base'            => get_member_contribution_base($mysqli, $uid),
-            'earned_interest' => 0.0,
-            'current_weight'  => 0.0,
+            'base'             => $base,
+            'earned_interest'  => 0.0,
+            'expense_share'    => 0.0,
+            'current_weight'   => $base,
         ];
     }
 
@@ -320,55 +426,88 @@ function calculate_member_interest_shares(mysqli $mysqli, ?string $asOfDate = nu
         $dateClause = " AND tx_date <= '{$safeDate} 23:59:59' ";
     }
 
-    $interestRows = $mysqli->query("
-        SELECT transaction_id, amount, tx_date
+    $eventSql = "
+        SELECT transaction_id, tx_date, type, amount
         FROM transactions
-        WHERE type='loan_interest'
-          AND direction='IN'
-          {$dateClause}
+        WHERE (
+            (type='loan_interest' AND direction='IN')
+            OR
+            (type='expense' AND direction='OUT')
+        )
+        $dateClause
         ORDER BY tx_date ASC, transaction_id ASC
-    ");
-    if (!$interestRows) {
-        $result = [];
-        foreach ($members as $uid => $m) {
-            $result[$uid] = 0.0;
-        }
-        return $result;
+    ";
+    $eventRes = $mysqli->query($eventSql);
+    if (!$eventRes) {
+        return $members;
     }
 
-    while ($row = $interestRows->fetch_assoc()) {
-        $interestAmount = (float)($row['amount'] ?? 0);
-        if ($interestAmount <= 0) continue;
+    while ($ev = $eventRes->fetch_assoc()) {
+        $type   = (string)($ev['type'] ?? '');
+        $amount = (float)($ev['amount'] ?? 0);
+
+        if ($amount <= 0) continue;
 
         $totalWeight = 0.0;
 
         foreach ($members as $uid => $m) {
-            $weight = max(0.0, (float)$m['base'] + (float)$m['earned_interest']);
-            $members[$uid]['current_weight'] = $weight;
+            $weight = max(
+                0.0,
+                (float)$m['base']
+                + (float)$m['earned_interest']
+                - (float)$m['expense_share']
+            );
+            $members[$uid]['current_weight'] = round($weight, 2);
             $totalWeight += $weight;
         }
 
-        if ($totalWeight <= 0) {
-            continue;
+        if ($totalWeight <= 0) continue;
+
+        if ($type === 'loan_interest') {
+            foreach ($members as $uid => $m) {
+                $share = ($m['current_weight'] / $totalWeight) * $amount;
+                $members[$uid]['earned_interest'] += $share;
+                $members[$uid]['earned_interest'] = round($members[$uid]['earned_interest'], 2);
+            }
         }
 
-        foreach ($members as $uid => $m) {
-            $share = ($m['current_weight'] / $totalWeight) * $interestAmount;
-            $members[$uid]['earned_interest'] += $share;
+        if ($type === 'expense') {
+            foreach ($members as $uid => $m) {
+                $share = ($m['current_weight'] / $totalWeight) * $amount;
+                $members[$uid]['expense_share'] += $share;
+                $members[$uid]['expense_share'] = round($members[$uid]['expense_share'], 2);
+            }
         }
     }
 
-    $result = [];
     foreach ($members as $uid => $m) {
-        $result[$uid] = round((float)$m['earned_interest'], 2);
+        $members[$uid]['net_participation'] = round(
+            max(
+                0.0,
+                (float)$m['base']
+                + (float)$m['earned_interest']
+                - (float)$m['expense_share']
+            ),
+            2
+        );
     }
 
-    return $result;
+    return $members;
 }
 
 function get_member_calculated_interest(mysqli $mysqli, int $user_id, ?string $asOfDate = null): float {
-    $all = calculate_member_interest_shares($mysqli, $asOfDate);
-    return (float)($all[$user_id] ?? 0.0);
+    $all = calculate_member_financial_shares($mysqli, $asOfDate);
+    return (float)round(($all[$user_id]['earned_interest'] ?? 0.0), 2);
+}
+
+function get_member_expense_partition(mysqli $mysqli, int $user_id, ?string $asOfDate = null): float {
+    $all = calculate_member_financial_shares($mysqli, $asOfDate);
+    return (float)round(($all[$user_id]['expense_share'] ?? 0.0), 2);
+}
+
+function get_member_net_participation(mysqli $mysqli, int $user_id, ?string $asOfDate = null): float {
+    $all = calculate_member_financial_shares($mysqli, $asOfDate);
+    return (float)round(($all[$user_id]['net_participation'] ?? 0.0), 2);
 }
 
 /* -----------------------------
@@ -397,8 +536,9 @@ function get_user_net(mysqli $mysqli, int $user_id): array {
     }
 
     $calculated_interest = get_member_calculated_interest($mysqli, $uid);
+    $expense_partition   = get_member_expense_partition($mysqli, $uid);
 
-    $loans_unpaid = get_user_unpaid_loans($mysqli, $uid);
+    $loans_unpaid    = get_user_unpaid_loans($mysqli, $uid);
     $interest_unpaid = get_user_unpaid_interest_total($mysqli, $uid);
 
     $guaranteed = 0.0;
@@ -420,19 +560,23 @@ function get_user_net(mysqli $mysqli, int $user_id): array {
 
     $reserve = 120000.0;
 
-    $net_raw = ($contrib + $calculated_interest) - ($withdraw + $loans_unpaid + $interest_unpaid + $guaranteed + $reserve);
+    $participation_net = ($contrib + $calculated_interest) - ($withdraw + $expense_partition);
+
+    $net_raw = $participation_net - ($loans_unpaid + $interest_unpaid + $guaranteed + $reserve);
     $net     = max(0.0, $net_raw);
 
     return [
-        'contrib'              => $contrib,
-        'calculated_interest'  => $calculated_interest,
-        'withdrawals'          => $withdraw,
-        'loans_principal'      => $loans_unpaid,
-        'loans_interest'       => $interest_unpaid,
-        'guaranteed_to_others' => $guaranteed,
-        'reserve'              => $reserve,
-        'net_raw'              => $net_raw,
-        'net'                  => $net,
+        'contrib'              => round($contrib, 2),
+        'calculated_interest'  => round($calculated_interest, 2),
+        'expense_partition'    => round($expense_partition, 2),
+        'withdrawals'          => round($withdraw, 2),
+        'participation_net'    => round($participation_net, 2),
+        'loans_principal'      => round($loans_unpaid, 2),
+        'loans_interest'       => round($interest_unpaid, 2),
+        'guaranteed_to_others' => round($guaranteed, 2),
+        'reserve'              => round($reserve, 2),
+        'net_raw'              => round($net_raw, 2),
+        'net'                  => round($net, 2),
     ];
 }
 
@@ -448,39 +592,33 @@ function ensure_loan_disbursement(mysqli $mysqli, int $loan_id): void {
         WHERE loan_id=?
         LIMIT 1
     ");
-    if (!$st) {
-        throw new Exception("Prepare error: " . $mysqli->error);
-    }
+    if (!$st) throw new Exception("Prepare error: " . $mysqli->error);
 
     $st->bind_param('i', $lid);
     $st->execute();
     $loan = $st->get_result()->fetch_assoc();
     $st->close();
 
-    if (!$loan) {
-        throw new Exception("Loan not found");
-    }
+    if (!$loan) throw new Exception("Loan not found");
 
     $chk = $mysqli->prepare("
         SELECT COUNT(*) AS c
         FROM transactions
         WHERE loan_id=?
-          AND type='loan_disbursement'
+          AND type='other_out'
           AND direction='OUT'
+          AND description LIKE ?
         LIMIT 1
     ");
-    if (!$chk) {
-        throw new Exception("Prepare error: " . $mysqli->error);
-    }
+    if (!$chk) throw new Exception("Prepare error: " . $mysqli->error);
 
-    $chk->bind_param('i', $lid);
+    $descLike = "Loan disbursement for #LN-" . $lid . "%";
+    $chk->bind_param('is', $lid, $descLike);
     $chk->execute();
     $cRow = $chk->get_result()->fetch_assoc();
     $chk->close();
 
-    if ((int)($cRow['c'] ?? 0) > 0) {
-        return;
-    }
+    if ((int)($cRow['c'] ?? 0) > 0) return;
 
     $borrower_id = (int)($loan['borrower_user_id'] ?? 0);
     $account_id  = (int)($loan['account_id'] ?? 0);
@@ -494,15 +632,14 @@ function ensure_loan_disbursement(mysqli $mysqli, int $loan_id): void {
 
     $ins = $mysqli->prepare("
         INSERT INTO transactions
-            (user_id, account_id, loan_id, type, direction, amount, tx_date, description)
+            (user_id, account_id, loan_id, type, direction, amount, tx_date, description, created_by)
         VALUES
-            (?, ?, ?, 'loan_disbursement', 'OUT', ?, NOW(), ?)
+            (?, ?, ?, 'other_out', 'OUT', ?, NOW(), ?, ?)
     ");
-    if (!$ins) {
-        throw new Exception("Prepare error: " . $mysqli->error);
-    }
+    if (!$ins) throw new Exception("Prepare error: " . $mysqli->error);
 
-    $ins->bind_param('iiids', $borrower_id, $account_id, $lid, $amount, $desc);
+    $adminId = (int)($GLOBALS['admin_user_id'] ?? 0);
+    $ins->bind_param('iiidsi', $borrower_id, $account_id, $lid, $amount, $desc, $adminId);
     if (!$ins->execute()) {
         $e = $ins->error ?: $mysqli->error;
         $ins->close();
@@ -566,7 +703,7 @@ function validate_guarantees(mysqli $mysqli, int $borrower_id, float $principal,
         if ((int)$gu['is_member'] !== 1) return [false, "Guarantor must be a member"];
 
         $gFin = get_user_net($mysqli, $gid);
-        $gNet = (float)($gFin['net']);
+        $gNet = (float)($gFin['net'] ?? 0);
 
         if ($gNet <= 0) return [false, "Guarantor has no net value available"];
         if ($amt > $gNet) return [false, "Guarantor amount exceeds guarantor net value (max " . number_format($gNet, 2) . " Frw)"];
@@ -619,6 +756,79 @@ function save_guarantors(mysqli $mysqli, int $loan_id, array $guarantors): bool 
 $action = $_REQUEST['action'] ?? '';
 
 /* =========================================================
+   FILE VIEW / DOWNLOAD
+========================================================= */
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'view_reference') {
+    if (!loan_reference_columns_exist($mysqli)) {
+        send_json(['success' => false, 'message' => 'Reference file columns not available'], 400);
+    }
+
+    $id = (int)($_GET['id'] ?? 0);
+    if ($id <= 0) send_json(['success' => false, 'message' => 'Invalid loan id'], 400);
+
+    $st = $mysqli->prepare("
+        SELECT reference_name, reference_mime, reference_file
+        FROM loans
+        WHERE loan_id=?
+        LIMIT 1
+    ");
+    if (!$st) send_json(['success' => false, 'message' => 'Prepare failed'], 500);
+
+    $st->bind_param('i', $id);
+    $st->execute();
+    $row = $st->get_result()->fetch_assoc();
+    $st->close();
+
+    if (!$row || empty($row['reference_file'])) {
+        send_json(['success' => false, 'message' => 'No reference file found'], 404);
+    }
+
+    while (ob_get_level() > 0) { @ob_end_clean(); }
+
+    $mime = $row['reference_mime'] ?: 'application/octet-stream';
+    header('Content-Type: ' . $mime);
+    header('Content-Disposition: inline; filename="' . str_replace('"', '', ($row['reference_name'] ?: 'reference')) . '"');
+    echo $row['reference_file'];
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'download_reference') {
+    if (!loan_reference_columns_exist($mysqli)) {
+        send_json(['success' => false, 'message' => 'Reference file columns not available'], 400);
+    }
+
+    $id = (int)($_GET['id'] ?? 0);
+    if ($id <= 0) send_json(['success' => false, 'message' => 'Invalid loan id'], 400);
+
+    $st = $mysqli->prepare("
+        SELECT reference_name, reference_mime, reference_file
+        FROM loans
+        WHERE loan_id=?
+        LIMIT 1
+    ");
+    if (!$st) send_json(['success' => false, 'message' => 'Prepare failed'], 500);
+
+    $st->bind_param('i', $id);
+    $st->execute();
+    $row = $st->get_result()->fetch_assoc();
+    $st->close();
+
+    if (!$row || empty($row['reference_file'])) {
+        send_json(['success' => false, 'message' => 'No reference file found'], 404);
+    }
+
+    while (ob_get_level() > 0) { @ob_end_clean(); }
+
+    $fname = $row['reference_name'] ?: ("loan_reference_" . $id);
+    $mime  = $row['reference_mime'] ?: 'application/octet-stream';
+
+    header('Content-Type: ' . $mime);
+    header('Content-Disposition: attachment; filename="' . str_replace('"', '', $fname) . '"');
+    echo $row['reference_file'];
+    exit;
+}
+
+/* =========================================================
    GET endpoints
 =========================================================*/
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -638,18 +848,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             ORDER BY names ASC
             LIMIT $limit
         ");
-        if (!$stmt) {
-            send_json(['success' => false, 'message' => 'Prepare error: ' . $mysqli->error], 500);
-        }
+        if (!$stmt) send_json(['success' => false, 'message' => 'Prepare error: ' . $mysqli->error], 500);
 
         $stmt->bind_param('sss', $qLike, $qLike, $qLike);
         $stmt->execute();
 
         $res = $stmt->get_result();
         $rows = [];
-        while ($r = $res->fetch_assoc()) {
-            $rows[] = $r;
-        }
+        while ($r = $res->fetch_assoc()) $rows[] = $r;
 
         $stmt->close();
         send_json(['success' => true, 'data' => $rows]);
@@ -657,9 +863,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     if ($action === 'borrower_summary') {
         $uid = (int)($_GET['user_id'] ?? 0);
-        if ($uid <= 0) {
-            send_json(['success' => false, 'message' => 'Invalid user'], 400);
-        }
+        if ($uid <= 0) send_json(['success' => false, 'message' => 'Invalid user'], 400);
 
         $uRes = $mysqli->query("
             SELECT id, names,
@@ -671,9 +875,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             LIMIT 1
         ");
         $u = $uRes ? $uRes->fetch_assoc() : null;
-        if (!$u) {
-            send_json(['success' => false, 'message' => 'User not found'], 404);
-        }
+        if (!$u) send_json(['success' => false, 'message' => 'User not found'], 404);
 
         $fin    = get_user_net($mysqli, $uid);
         $unpaid = get_user_unpaid_loans($mysqli, $uid);
@@ -682,16 +884,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         send_json([
             'success' => true,
             'data' => [
-                'id'                => (int)$u['id'],
-                'names'             => $u['names'],
-                'phone'             => $u['phone'] ?? '',
-                'phone2'            => $u['phone2'] ?? '',
-                'is_member'         => (int)($u['is_member'] ?? 0),
-                'net_value'         => (float)$fin['net'],
-                'net_breakdown'     => $fin,
-                'unpaid_loans'      => $unpaid,
-                'unpaid_interest'   => $unpaidInterest,
+                'id'                  => (int)$u['id'],
+                'names'               => $u['names'],
+                'phone'               => $u['phone'] ?? '',
+                'phone2'              => $u['phone2'] ?? '',
+                'is_member'           => (int)($u['is_member'] ?? 0),
+                'net_value'           => (float)$fin['net'],
+                'net_breakdown'       => $fin,
+                'unpaid_loans'        => $unpaid,
+                'unpaid_interest'     => $unpaidInterest,
                 'calculated_interest' => (float)($fin['calculated_interest'] ?? 0),
+                'expense_partition'   => (float)($fin['expense_partition'] ?? 0),
+                'participation_net'   => (float)($fin['participation_net'] ?? 0),
             ]
         ]);
     }
@@ -713,9 +917,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             ORDER BY names ASC
             LIMIT $limit
         ");
-        if (!$stmt) {
-            send_json(['success' => false, 'message' => 'Prepare error: ' . $mysqli->error], 500);
-        }
+        if (!$stmt) send_json(['success' => false, 'message' => 'Prepare error: ' . $mysqli->error], 500);
 
         $stmt->bind_param('isss', $borrower_id, $qLike, $qLike, $qLike);
         $stmt->execute();
@@ -728,6 +930,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             if ($net > 0) {
                 $r['net_value'] = $net;
                 $r['calculated_interest'] = (float)($fin['calculated_interest'] ?? 0);
+                $r['expense_partition'] = (float)($fin['expense_partition'] ?? 0);
+                $r['participation_net'] = (float)($fin['participation_net'] ?? 0);
                 $rows[] = $r;
             }
         }
@@ -739,29 +943,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if (isset($_GET['id'])) {
         $id = (int)$_GET['id'];
 
+        $selectRef = loan_reference_columns_exist($mysqli)
+            ? ", l.reference_name, l.reference_mime, CASE WHEN l.reference_file IS NOT NULL THEN 1 ELSE 0 END AS has_reference"
+            : ", NULL AS reference_name, NULL AS reference_mime, 0 AS has_reference";
+
         $stmt = $mysqli->prepare("
             SELECT l.*,
                    u.names AS borrower_name,
                    CONCAT_WS(' / ', u." . USER_PHONE_COL . ", u." . USER_PHONE2_COL . ") AS borrower_phone,
                    u.is_member AS borrower_is_member,
                    a.name AS account_name
+                   $selectRef
             FROM loans l
             LEFT JOIN users u ON l.borrower_user_id = u.id
             LEFT JOIN accounts a ON l.account_id = a.account_id
             WHERE l.loan_id = ?
             LIMIT 1
         ");
-        if (!$stmt) {
-            send_json(['success' => false, 'message' => 'Prepare error: ' . $mysqli->error], 500);
-        }
+        if (!$stmt) send_json(['success' => false, 'message' => 'Prepare error: ' . $mysqli->error], 500);
 
         $stmt->bind_param('i', $id);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
-        if (!$row) {
-            send_json(['success' => false, 'message' => 'Not found'], 404);
+        if (!$row) send_json(['success' => false, 'message' => 'Not found'], 404);
+
+        if ((int)($row['has_reference'] ?? 0) === 1) {
+            $row['reference_view_url'] = 'loans_api.php?action=view_reference&id=' . $id;
+            $row['reference_download_url'] = 'loans_api.php?action=download_reference&id=' . $id;
         }
 
         $gua = [];
@@ -783,18 +993,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $gFin = get_user_net($mysqli, (int)$g['guarantor_user_id']);
                 $g['guarantor_net'] = (float)($gFin['net'] ?? 0);
                 $g['guarantor_interest_share'] = (float)($gFin['calculated_interest'] ?? 0);
+                $g['guarantor_expense_partition'] = (float)($gFin['expense_partition'] ?? 0);
+                $g['guarantor_participation_net'] = (float)($gFin['participation_net'] ?? 0);
                 $gua[] = $g;
             }
             $gStmt->close();
         }
 
         $row['guarantors'] = $gua;
-        $row['paid_principal']     = get_loan_paid_principal($mysqli, (int)$row['loan_id']);
-        $row['unpaid_principal']   = get_loan_unpaid_principal($mysqli, (int)$row['loan_id']);
+        $row['paid_principal']       = get_loan_paid_principal($mysqli, (int)$row['loan_id']);
+        $row['unpaid_principal']     = get_loan_unpaid_principal($mysqli, (int)$row['loan_id']);
         $row['initial_interest_due'] = get_loan_initial_interest_due($mysqli, (int)$row['loan_id']);
-        $row['paid_interest']      = get_loan_paid_interest($mysqli, (int)$row['loan_id']);
-        $row['unpaid_interest']    = get_loan_unpaid_interest($mysqli, (int)$row['loan_id']);
-        $row['total_due']          = (float)$row['unpaid_principal'] + (float)$row['unpaid_interest'];
+        $row['paid_interest']        = get_loan_paid_interest($mysqli, (int)$row['loan_id']);
+        $row['unpaid_interest']      = get_loan_unpaid_interest($mysqli, (int)$row['loan_id']);
+        $row['total_due']            = (float)$row['unpaid_principal'] + (float)$row['unpaid_interest'];
 
         send_json(['success' => true, 'data' => $row]);
     }
@@ -820,11 +1032,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     $offset = ($page - 1) * $per_page;
 
+    $selectRef = loan_reference_columns_exist($mysqli)
+        ? ", l.reference_name, l.reference_mime, CASE WHEN l.reference_file IS NOT NULL THEN 1 ELSE 0 END AS has_reference"
+        : ", NULL AS reference_name, NULL AS reference_mime, 0 AS has_reference";
+
     $sql = "
         SELECT l.loan_id, l.account_id, a.name AS account_name,
                l.borrower_user_id, l.principal, l.monthly_interest_rate, l.start_date, l.status, l.end_date,
                u.names AS borrower_name,
                CONCAT_WS(' / ', u." . USER_PHONE_COL . ", u." . USER_PHONE2_COL . ") AS borrower_phone
+               $selectRef
         FROM loans l
         LEFT JOIN users u ON l.borrower_user_id = u.id
         LEFT JOIN accounts a ON l.account_id = a.account_id
@@ -834,9 +1051,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     ";
 
     $res = $mysqli->query($sql);
-    if (!$res) {
-        send_json(['success' => false, 'message' => 'Query error: ' . $mysqli->error], 500);
-    }
+    if (!$res) send_json(['success' => false, 'message' => 'Query error: ' . $mysqli->error], 500);
 
     $rows = [];
     while ($r = $res->fetch_assoc()) {
@@ -847,6 +1062,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $r['paid_interest']        = get_loan_paid_interest($mysqli, $loanId);
         $r['unpaid_interest']      = get_loan_unpaid_interest($mysqli, $loanId);
         $r['total_due']            = (float)$r['unpaid_principal'] + (float)$r['unpaid_interest'];
+
+        if ((int)($r['has_reference'] ?? 0) === 1) {
+            $r['reference_view_url'] = 'loans_api.php?action=view_reference&id=' . $loanId;
+            $r['reference_download_url'] = 'loans_api.php?action=download_reference&id=' . $loanId;
+        }
+
         $rows[] = $r;
     }
 
@@ -860,18 +1081,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 /* =========================================================
-   POST endpoints
-=========================================================*/
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    send_json(['success' => false, 'message' => 'Invalid request'], 400);
-}
-
-$action = $_POST['action'] ?? '';
-
-/* =========================================================
    POST: CREATE
 =========================================================*/
-if ($action === 'create') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'create') {
     $account_id      = (int)($_POST['account_id'] ?? 0);
     $borrower_id     = (int)($_POST['borrower_user_id'] ?? 0);
     $principal       = (float)($_POST['principal'] ?? 0);
@@ -900,14 +1112,10 @@ if ($action === 'create') {
     }
 
     $hasRefCols = loan_reference_columns_exist($mysqli);
-    $ref_name = null;
-    $ref_mime = null;
-    $ref_blob = null;
-
-    if ($hasRefCols && !empty($_FILES['reference_file']) && is_uploaded_file($_FILES['reference_file']['tmp_name'])) {
-        $ref_name = $_FILES['reference_file']['name'] ?? null;
-        $ref_mime = $_FILES['reference_file']['type'] ?? null;
-        $ref_blob = @file_get_contents($_FILES['reference_file']['tmp_name']);
+    $refData = null;
+    if ($hasRefCols) {
+        [$refOk, $refData, $refErr] = get_uploaded_reference('reference_file', false);
+        if (!$refOk) send_json(['success' => false, 'message' => $refErr], 400);
     }
 
     $mysqli->begin_transaction();
@@ -923,6 +1131,9 @@ if ($action === 'create') {
             $st = $mysqli->prepare($sql);
             if (!$st) throw new Exception($mysqli->error);
 
+            $refName = $refData['name'] ?? null;
+            $refMime = $refData['type'] ?? null;
+
             $st->bind_param(
                 'iiddsisiss',
                 $account_id,
@@ -933,24 +1144,16 @@ if ($action === 'create') {
                 $term,
                 $notes,
                 $admin_user_id,
-                $ref_name,
-                $ref_mime
+                $refName,
+                $refMime
             );
 
             if (!$st->execute()) throw new Exception($st->error);
             $loan_id = (int)$st->insert_id;
             $st->close();
 
-            if ($ref_blob !== null) {
-                $up = $mysqli->prepare("UPDATE loans SET reference_file=? WHERE loan_id=?");
-                if (!$up) throw new Exception($mysqli->error);
-
-                $null = null;
-                $up->bind_param('bi', $null, $loan_id);
-                $up->send_long_data(0, $ref_blob);
-
-                if (!$up->execute()) throw new Exception($up->error);
-                $up->close();
+            if ($refData) {
+                update_reference_file($mysqli, $loan_id, $refData['name'], $refData['type'], $refData['blob']);
             }
         } else {
             $sql = "
@@ -1000,7 +1203,7 @@ if ($action === 'create') {
 /* =========================================================
    POST: UPDATE
 =========================================================*/
-if ($action === 'update') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'update') {
     $loan_id         = (int)($_POST['id'] ?? 0);
     $account_id      = (int)($_POST['account_id'] ?? 0);
     $borrower_id     = (int)($_POST['borrower_user_id'] ?? 0);
@@ -1009,10 +1212,9 @@ if ($action === 'update') {
     $interest_method = trim((string)($_POST['interest_method'] ?? 'reducing'));
     $term            = (int)($_POST['term_months'] ?? 0);
     $notes           = trim((string)($_POST['notes'] ?? ''));
+    $remove_reference = (int)($_POST['remove_reference'] ?? 0) === 1;
 
-    if ($loan_id <= 0) {
-        send_json(['success' => false, 'message' => 'Invalid id'], 400);
-    }
+    if ($loan_id <= 0) send_json(['success' => false, 'message' => 'Invalid id'], 400);
 
     if ($account_id <= 0 || $borrower_id <= 0 || $principal <= 0 || $term <= 0) {
         send_json(['success' => false, 'message' => 'Imirima yibanze irabuze cyangwa ifite agaciro kadasobanutse'], 400);
@@ -1034,21 +1236,15 @@ if ($action === 'update') {
     }
 
     $hasRefCols = loan_reference_columns_exist($mysqli);
-    $ref_name   = null;
-    $ref_mime   = null;
-    $ref_blob   = null;
-    $hasNewFile = false;
-
-    if ($hasRefCols && !empty($_FILES['reference_file']) && is_uploaded_file($_FILES['reference_file']['tmp_name'])) {
-        $ref_name   = $_FILES['reference_file']['name'] ?? null;
-        $ref_mime   = $_FILES['reference_file']['type'] ?? null;
-        $ref_blob   = @file_get_contents($_FILES['reference_file']['tmp_name']);
-        $hasNewFile = true;
+    $refData = null;
+    if ($hasRefCols) {
+        [$refOk, $refData, $refErr] = get_uploaded_reference('reference_file', false);
+        if (!$refOk) send_json(['success' => false, 'message' => $refErr], 400);
     }
 
     $mysqli->begin_transaction();
     try {
-        if ($hasRefCols && $hasNewFile) {
+        if ($hasRefCols && $refData) {
             $st = $mysqli->prepare("
                 UPDATE loans
                 SET account_id=?,
@@ -1073,23 +1269,15 @@ if ($action === 'update') {
                 $interest_method,
                 $term,
                 $notes,
-                $ref_name,
-                $ref_mime,
+                $refData['name'],
+                $refData['type'],
                 $loan_id
             );
 
             if (!$st->execute()) throw new Exception($st->error);
             $st->close();
 
-            $up = $mysqli->prepare("UPDATE loans SET reference_file=? WHERE loan_id=?");
-            if (!$up) throw new Exception($mysqli->error);
-
-            $null = null;
-            $up->bind_param('bi', $null, $loan_id);
-            $up->send_long_data(0, $ref_blob);
-
-            if (!$up->execute()) throw new Exception($up->error);
-            $up->close();
+            update_reference_file($mysqli, $loan_id, $refData['name'], $refData['type'], $refData['blob']);
         } else {
             $st = $mysqli->prepare("
                 UPDATE loans
@@ -1120,6 +1308,10 @@ if ($action === 'update') {
             $st->close();
         }
 
+        if ($hasRefCols && $remove_reference) {
+            clear_reference_file($mysqli, $loan_id);
+        }
+
         if (!save_guarantors($mysqli, $loan_id, $guarantors)) {
             throw new Exception("Error saving guarantors");
         }
@@ -1135,7 +1327,7 @@ if ($action === 'update') {
 /* =========================================================
    POST: CHANGE STATUS
 =========================================================*/
-if ($action === 'change_status') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'change_status') {
     $loan_id   = (int)($_POST['id'] ?? 0);
     $newStatus = trim((string)($_POST['status'] ?? ''));
 
@@ -1145,10 +1337,6 @@ if ($action === 'change_status') {
         send_json(['success' => false, 'message' => 'Invalid request'], 400);
     }
 
-    if ($admin_user_id <= 0) {
-        send_json(['success' => false, 'message' => 'Missing admin session user_id'], 500);
-    }
-
     $oldRes = $mysqli->query("
         SELECT status, borrower_user_id, start_date, end_date
         FROM loans
@@ -1156,9 +1344,7 @@ if ($action === 'change_status') {
         LIMIT 1
     ");
     $oldRow = $oldRes ? $oldRes->fetch_assoc() : null;
-    if (!$oldRow) {
-        send_json(['success' => false, 'message' => 'Loan not found'], 404);
-    }
+    if (!$oldRow) send_json(['success' => false, 'message' => 'Loan not found'], 404);
 
     $oldStatus   = $oldRow['status'] ?? '';
     $borrower_id = (int)($oldRow['borrower_user_id'] ?? 0);
@@ -1269,11 +1455,9 @@ if ($action === 'change_status') {
 /* =========================================================
    POST: DELETE
 =========================================================*/
-if ($action === 'delete') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'delete') {
     $loan_id = (int)($_POST['id'] ?? 0);
-    if ($loan_id <= 0) {
-        send_json(['success' => false, 'message' => 'Invalid id'], 400);
-    }
+    if ($loan_id <= 0) send_json(['success' => false, 'message' => 'Invalid id'], 400);
 
     $mysqli->begin_transaction();
     try {

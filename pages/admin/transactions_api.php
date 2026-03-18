@@ -2,26 +2,14 @@
 /**
  * pages/admin/transactions_api.php
  *
- * Updated:
+ * Final version:
  * - CRUD
- * - proof download
+ * - proof upload stored inside database (LONGBLOB)
+ * - image/pdf validation
+ * - inline proof view endpoint
+ * - proof download endpoint
  * - borrower-wide loan payment allocation
  * - payment preview endpoint
- *
- * Loan repayment rule:
- *   - entered amount is TOTAL borrower payment
- *   - pay all unpaid interest first across borrower's approved/defaulted loans
- *   - then pay principal
- *   - continue to next loan if money remains
- *   - oldest loans first (start_date ASC, loan_id ASC)
- *
- * Interest rule:
- *   - first month interest is due immediately on approval
- *   - unpaid interest = initial_interest_due - paid_interest
- *
- * Transactions created:
- *   - loan_interest (IN)
- *   - loan_principal (IN)
  */
 
 ini_set('display_errors', '0');
@@ -88,6 +76,7 @@ function is_valid_datetime(string $dt): bool {
 
 function require_user(mysqli $mysqli, int $user_id): array {
     $st = $mysqli->prepare("SELECT id, names, is_member FROM users WHERE id=? LIMIT 1");
+    if (!$st) return [false, null, 'Prepare failed: ' . $mysqli->error];
     $st->bind_param('i', $user_id);
     $st->execute();
     $u = $st->get_result()->fetch_assoc();
@@ -97,6 +86,7 @@ function require_user(mysqli $mysqli, int $user_id): array {
 
 function require_account(mysqli $mysqli, int $account_id): array {
     $st = $mysqli->prepare("SELECT account_id, name FROM accounts WHERE account_id=? LIMIT 1");
+    if (!$st) return [false, null, 'Prepare failed: ' . $mysqli->error];
     $st->bind_param('i', $account_id);
     $st->execute();
     $a = $st->get_result()->fetch_assoc();
@@ -110,6 +100,7 @@ function require_loan(mysqli $mysqli, int $loan_id): array {
         FROM loans
         WHERE loan_id=? LIMIT 1
     ");
+    if (!$st) return [false, null, 'Prepare failed: ' . $mysqli->error];
     $st->bind_param('i', $loan_id);
     $st->execute();
     $l = $st->get_result()->fetch_assoc();
@@ -147,6 +138,7 @@ function fetch_tx(mysqli $mysqli, int $id): ?array {
               t.account_id, a.name AS account_name,
               t.type, t.direction, t.amount, t.description,
               t.proof_name, t.proof_type, t.proof_size, t.proof_hash,
+              CASE WHEN t.proof_data IS NOT NULL THEN 1 ELSE 0 END AS has_proof,
               t.created_by, uc.names AS created_by_name,
               t.created_at
             FROM transactions t
@@ -155,11 +147,97 @@ function fetch_tx(mysqli $mysqli, int $id): ?array {
             LEFT JOIN users uc ON t.created_by=uc.id
             WHERE t.transaction_id=? LIMIT 1";
     $st = $mysqli->prepare($sql);
+    if (!$st) return null;
     $st->bind_param('i', $id);
     $st->execute();
     $row = $st->get_result()->fetch_assoc();
     $st->close();
+
+    if ($row && (int)($row['has_proof'] ?? 0) === 1) {
+        $row['proof_view_url'] = 'transactions_api.php?action=view_proof&id=' . $id;
+        $row['proof_download_url'] = 'transactions_api.php?action=download_proof&id=' . $id;
+    }
+
     return $row ?: null;
+}
+
+/* ---------------- Proof/Image helpers ---------------- */
+
+function allowed_proof_mimes(): array {
+    return [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'application/pdf'
+    ];
+}
+
+function get_uploaded_proof(string $field = 'proof_file', bool $required = false): array {
+    if (!isset($_FILES[$field])) {
+        if ($required) return [false, null, 'Proof file is required'];
+        return [true, null, null];
+    }
+
+    $file = $_FILES[$field];
+    $errCode = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+
+    if ($errCode === UPLOAD_ERR_NO_FILE) {
+        if ($required) return [false, null, 'Proof file is required'];
+        return [true, null, null];
+    }
+
+    if ($errCode !== UPLOAD_ERR_OK) {
+        $msg = match ($errCode) {
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Uploaded file is too large',
+            UPLOAD_ERR_PARTIAL => 'File upload was incomplete',
+            UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary upload folder',
+            UPLOAD_ERR_CANT_WRITE => 'Server failed to write uploaded file',
+            UPLOAD_ERR_EXTENSION => 'Upload stopped by server extension',
+            default => 'Upload failed'
+        };
+        return [false, null, $msg];
+    }
+
+    if (!is_uploaded_file($file['tmp_name'])) {
+        return [false, null, 'Invalid uploaded file'];
+    }
+
+    $tmp  = $file['tmp_name'];
+    $name = mb_substr(trim((string)($file['name'] ?? 'proof')), 0, 255);
+    $size = (int)($file['size'] ?? 0);
+
+    if ($size <= 0) {
+        return [false, null, 'Uploaded file is empty'];
+    }
+
+    $maxSize = 10 * 1024 * 1024; // 10 MB
+    if ($size > $maxSize) {
+        return [false, null, 'File too large. Maximum allowed is 10 MB'];
+    }
+
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime = $finfo ? (finfo_file($finfo, $tmp) ?: 'application/octet-stream') : 'application/octet-stream';
+    if ($finfo) finfo_close($finfo);
+
+    if (!in_array($mime, allowed_proof_mimes(), true)) {
+        return [false, null, 'Only JPG, PNG, GIF, WEBP, or PDF files are allowed'];
+    }
+
+    $blob = file_get_contents($tmp);
+    if ($blob === false || $blob === '') {
+        return [false, null, 'Could not read uploaded file'];
+    }
+
+    $hash = hash('sha256', $blob);
+
+    return [true, [
+        'name' => $name,
+        'type' => $mime,
+        'size' => $size,
+        'blob' => $blob,
+        'hash' => $hash,
+    ], null];
 }
 
 function update_proof(mysqli $mysqli, int $tx_id, string $blob, string $name, string $type, int $size, string $hash): void {
@@ -167,10 +245,39 @@ function update_proof(mysqli $mysqli, int $tx_id, string $blob, string $name, st
             SET proof_name=?, proof_type=?, proof_size=?, proof_hash=?, proof_data=?
             WHERE transaction_id=?";
     $st = $mysqli->prepare($sql);
-    $null = null;
-    $st->bind_param('ssissi', $name, $type, $size, $hash, $null, $tx_id);
+    if (!$st) {
+        throw new RuntimeException('Prepare proof update failed: ' . $mysqli->error);
+    }
+
+    // $null = null;
+    $st->bind_param('ssissi', $name, $type, $size, $hash, $blob, $tx_id);
     $st->send_long_data(4, $blob);
-    $st->execute();
+
+    if (!$st->execute()) {
+        $err = $st->error ?: $mysqli->error;
+        $st->close();
+        throw new RuntimeException('Proof update failed: ' . $err);
+    }
+
+    $st->close();
+}
+
+function clear_proof(mysqli $mysqli, int $tx_id): void {
+    $sql = "UPDATE transactions
+            SET proof_name=NULL, proof_type=NULL, proof_size=NULL, proof_hash=NULL, proof_data=NULL
+            WHERE transaction_id=?";
+    $st = $mysqli->prepare($sql);
+    if (!$st) {
+        throw new RuntimeException('Prepare clear proof failed: ' . $mysqli->error);
+    }
+
+    $st->bind_param('i', $tx_id);
+    if (!$st->execute()) {
+        $err = $st->error ?: $mysqli->error;
+        $st->close();
+        throw new RuntimeException('Clear proof failed: ' . $err);
+    }
+
     $st->close();
 }
 
@@ -296,12 +403,6 @@ function get_borrower_active_loans(mysqli $mysqli, int $user_id): array {
     return $rows;
 }
 
-/**
- * Borrower-wide payment allocation:
- * 1. pay all unpaid interest first across all eligible loans
- * 2. then pay principal
- * 3. oldest loans first
- */
 function allocate_borrower_payment(mysqli $mysqli, int $user_id, float $amount): array {
     $remaining = round(max(0.0, $amount), 2);
     $loans = get_borrower_active_loans($mysqli, $user_id);
@@ -322,7 +423,6 @@ function allocate_borrower_payment(mysqli $mysqli, int $user_id, float $amount):
         ];
     }
 
-    // pass 1: interest first
     foreach ($loans as $loan) {
         if ($remaining <= 0) break;
 
@@ -347,7 +447,6 @@ function allocate_borrower_payment(mysqli $mysqli, int $user_id, float $amount):
         $remaining = round($remaining - $pay, 2);
     }
 
-    // pass 2: principal
     foreach ($loans as $loan) {
         if ($remaining <= 0) break;
 
@@ -381,7 +480,7 @@ function allocate_borrower_payment(mysqli $mysqli, int $user_id, float $amount):
 }
 
 /* =======================================================================
-   PROOF DOWNLOAD (binary)
+   PROOF VIEW / DOWNLOAD
    ======================================================================= */
 
 if (isset($_GET['action']) && $_GET['action'] === 'download_proof') {
@@ -389,6 +488,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_proof') {
     if ($id <= 0) send_json(['success' => false, 'message' => 'Invalid id'], 400);
 
     $st = $mysqli->prepare("SELECT proof_name, proof_type, proof_data FROM transactions WHERE transaction_id=? LIMIT 1");
+    if (!$st) send_json(['success' => false, 'message' => 'Prepare failed'], 500);
     $st->bind_param('i', $id);
     $st->execute();
     $row = $st->get_result()->fetch_assoc();
@@ -403,6 +503,28 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_proof') {
 
     header('Content-Type: ' . $mime);
     header('Content-Disposition: attachment; filename="' . str_replace('"', '', $fname) . '"');
+    echo $row['proof_data'];
+    exit;
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'view_proof') {
+    $id = (int)($_GET['id'] ?? 0);
+    if ($id <= 0) send_json(['success' => false, 'message' => 'Invalid id'], 400);
+
+    $st = $mysqli->prepare("SELECT proof_name, proof_type, proof_data FROM transactions WHERE transaction_id=? LIMIT 1");
+    if (!$st) send_json(['success' => false, 'message' => 'Prepare failed'], 500);
+    $st->bind_param('i', $id);
+    $st->execute();
+    $row = $st->get_result()->fetch_assoc();
+    $st->close();
+
+    if (!$row || empty($row['proof_data'])) send_json(['success' => false, 'message' => 'No proof found'], 404);
+
+    while (ob_get_level() > 0) { @ob_end_clean(); }
+
+    $mime = $row['proof_type'] ?: 'application/octet-stream';
+    header('Content-Type: ' . $mime);
+    header('Content-Disposition: inline; filename="' . str_replace('"', '', ($row['proof_name'] ?: 'proof')) . '"');
     echo $row['proof_data'];
     exit;
 }
@@ -448,7 +570,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $page     = max(1, (int)($_GET['page'] ?? 1));
     $per_page = max(1, min(200, (int)($_GET['per_page'] ?? 50)));
     $offset   = ($page - 1) * $per_page;
-
     $q = trim((string)($_GET['q'] ?? ''));
 
     $where = [];
@@ -472,6 +593,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                  LEFT JOIN accounts a ON t.account_id=a.account_id
                  $whereSql";
     $st = $mysqli->prepare($countSql);
+    if (!$st) send_json(['success' => false, 'message' => 'Prepare failed'], 500);
     if ($types !== '') $st->bind_param($types, ...$params);
     $st->execute();
     $total = (int)($st->get_result()->fetch_assoc()['cnt'] ?? 0);
@@ -482,6 +604,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                   t.user_id, u.names AS user_name,
                   t.loan_id,
                   t.account_id, a.name AS account_name,
+                  t.proof_name, t.proof_type, t.proof_size,
+                  CASE WHEN t.proof_data IS NOT NULL THEN 1 ELSE 0 END AS has_proof,
                   uc.names AS created_by_name
                 FROM transactions t
                 LEFT JOIN users u ON t.user_id=u.id
@@ -491,14 +615,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 ORDER BY t.tx_date DESC, t.transaction_id DESC
                 LIMIT ? OFFSET ?";
     $st = $mysqli->prepare($dataSql);
+    if (!$st) send_json(['success' => false, 'message' => 'Prepare failed'], 500);
+
     $params2 = $params;
     $types2 = $types . 'ii';
     $params2[] = $per_page;
     $params2[] = $offset;
+
     $st->bind_param($types2, ...$params2);
     $st->execute();
     $rows = $st->get_result()->fetch_all(MYSQLI_ASSOC);
     $st->close();
+
+    foreach ($rows as &$r) {
+        if ((int)($r['has_proof'] ?? 0) === 1) {
+            $r['proof_view_url'] = 'transactions_api.php?action=view_proof&id=' . $r['transaction_id'];
+            $r['proof_download_url'] = 'transactions_api.php?action=download_proof&id=' . $r['transaction_id'];
+        }
+    }
+    unset($r);
 
     send_json([
         'success' => true,
@@ -532,6 +667,7 @@ if ($action === 'delete') {
     if (!$row) send_json(['success' => false, 'message' => 'Not found'], 404);
 
     $st = $mysqli->prepare("DELETE FROM transactions WHERE transaction_id=?");
+    if (!$st) send_json(['success' => false, 'message' => 'Prepare failed: ' . $mysqli->error], 500);
     $st->bind_param('i', $id);
     if (!$st->execute()) {
         $err = $st->error ?: $mysqli->error;
@@ -607,30 +743,25 @@ if ($typeN === 'loan_interest') {
     $loan_id_final = (int)$loan_id;
 }
 
-$has_file = (!empty($_FILES['proof_file']) && is_uploaded_file($_FILES['proof_file']['tmp_name']));
-if ($action === 'create' && !$has_file) {
-    send_json(['success' => false, 'message' => 'Proof file is required'], 400);
+$remove_proof = (int)($_POST['remove_proof'] ?? 0) === 1;
+
+/*
+ * For create:
+ * - require proof
+ * For update:
+ * - proof is optional
+ */
+[$proofOk, $proofData, $proofErr] = get_uploaded_proof('proof_file', $action === 'create');
+if (!$proofOk) {
+    send_json(['success' => false, 'message' => $proofErr], 400);
 }
 
 /* ---------------- CREATE ---------------- */
 
 if ($action === 'create') {
-
-    $proof_name = (string)($_FILES['proof_file']['name'] ?? 'proof');
-    $proof_type = (string)($_FILES['proof_file']['type'] ?? 'application/octet-stream');
-    $proof_size = (int)($_FILES['proof_file']['size'] ?? 0);
-    $proof_blob = file_get_contents($_FILES['proof_file']['tmp_name']);
-    if ($proof_blob === false || $proof_blob === '') send_json(['success' => false, 'message' => 'Invalid proof file'], 400);
-    $proof_hash = hash('sha256', $proof_blob);
-
     $mysqli->begin_transaction();
     try {
 
-        /**
-         * SPECIAL:
-         * type=loan_principal means entered amount is TOTAL borrower payment.
-         * Ignore selected loan_id for allocation logic.
-         */
         if ($typeN === 'loan_principal') {
 
             if (!$user_id || $user_id <= 0) {
@@ -658,9 +789,7 @@ if ($action === 'create') {
                         (tx_date, user_id, loan_id, account_id, type, direction, amount, description, created_by)
                         VALUES (?, ?, ?, ?, ?, 'IN', ?, ?, ?)";
                 $st = $mysqli->prepare($sql);
-                if (!$st) {
-                    throw new RuntimeException('Prepare failed: ' . $mysqli->error);
-                }
+                if (!$st) throw new RuntimeException('Prepare failed: ' . $mysqli->error);
 
                 $uid = (int)$user_id;
                 $lid = $loanId;
@@ -676,7 +805,17 @@ if ($action === 'create') {
                 $txId = (int)$mysqli->insert_id;
                 $st->close();
 
-                update_proof($mysqli, $txId, $proof_blob, $proof_name, $proof_type, $proof_size, $proof_hash);
+                if ($proofData) {
+                    update_proof(
+                        $mysqli,
+                        $txId,
+                        $proofData['blob'],
+                        $proofData['name'],
+                        $proofData['type'],
+                        $proofData['size'],
+                        $proofData['hash']
+                    );
+                }
 
                 $savedRows[] = fetch_tx($mysqli, $txId);
             }
@@ -694,18 +833,16 @@ if ($action === 'create') {
             ]);
         }
 
-        // NORMAL single transaction create
         $sql = "INSERT INTO transactions
                 (tx_date, user_id, loan_id, account_id, type, direction, amount, description, created_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $st = $mysqli->prepare($sql);
-        if (!$st) {
-            throw new RuntimeException('Prepare failed: ' . $mysqli->error);
-        }
+        if (!$st) throw new RuntimeException('Prepare failed: ' . $mysqli->error);
 
         $uid = $user_id;
         $lid = $loan_id_final;
         $st->bind_param('siiissdsi', $tx_date, $uid, $lid, $account_id, $typeN, $dirN, $amount, $description, $admin_user_id);
+
         if (!$st->execute()) {
             $err = $st->error ?: $mysqli->error;
             $st->close();
@@ -715,7 +852,17 @@ if ($action === 'create') {
         $tx_id = (int)$mysqli->insert_id;
         $st->close();
 
-        update_proof($mysqli, $tx_id, $proof_blob, $proof_name, $proof_type, $proof_size, $proof_hash);
+        if ($proofData) {
+            update_proof(
+                $mysqli,
+                $tx_id,
+                $proofData['blob'],
+                $proofData['name'],
+                $proofData['type'],
+                $proofData['size'],
+                $proofData['hash']
+            );
+        }
 
         $mysqli->commit();
         send_json(['success' => true, 'data' => fetch_tx($mysqli, $tx_id)]);
@@ -740,13 +887,12 @@ if ($action === 'update') {
                 SET tx_date=?, user_id=?, loan_id=?, account_id=?, type=?, direction=?, amount=?, description=?
                 WHERE transaction_id=?";
         $st = $mysqli->prepare($sql);
-        if (!$st) {
-            throw new RuntimeException('Prepare failed: ' . $mysqli->error);
-        }
+        if (!$st) throw new RuntimeException('Prepare failed: ' . $mysqli->error);
 
         $uid = $user_id;
         $lid = $loan_id_final;
         $st->bind_param('siiissdsi', $tx_date, $uid, $lid, $account_id, $typeN, $dirN, $amount, $description, $id);
+
         if (!$st->execute()) {
             $err = $st->error ?: $mysqli->error;
             $st->close();
@@ -754,15 +900,20 @@ if ($action === 'update') {
         }
         $st->close();
 
-        if ($has_file) {
-            $proof_name = (string)($_FILES['proof_file']['name'] ?? 'proof');
-            $proof_type = (string)($_FILES['proof_file']['type'] ?? 'application/octet-stream');
-            $proof_size = (int)($_FILES['proof_file']['size'] ?? 0);
-            $proof_blob = file_get_contents($_FILES['proof_file']['tmp_name']);
-            if ($proof_blob === false || $proof_blob === '') throw new RuntimeException('Invalid proof file');
-            $proof_hash = hash('sha256', $proof_blob);
+        if ($remove_proof) {
+            clear_proof($mysqli, $id);
+        }
 
-            update_proof($mysqli, $id, $proof_blob, $proof_name, $proof_type, $proof_size, $proof_hash);
+        if ($proofData) {
+            update_proof(
+                $mysqli,
+                $id,
+                $proofData['blob'],
+                $proofData['name'],
+                $proofData['type'],
+                $proofData['size'],
+                $proofData['hash']
+            );
         }
 
         $mysqli->commit();

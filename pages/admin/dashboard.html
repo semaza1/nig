@@ -89,9 +89,6 @@
           <button data-section="notifications" class="sidebar-link w-full text-left">
             Notifications
           </button>
-          <button data-section="reports" class="sidebar-link w-full text-left">
-            Raporo
-          </button>
           <button data-section="settings" class="sidebar-link w-full text-left">
             Settings
           </button>
@@ -309,589 +306,589 @@
           </div>
 
           <!-- USERS SECTION -->
-<div id="section-users" class="space-y-4">
-  <p class="text-sm font-semibold text-primary-dark">Abakoresha</p>
+          <div id="section-users" class="space-y-4">
+            <p class="text-sm font-semibold text-primary-dark">Abakoresha</p>
 
-  <div class="card rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-      <p class="text-xs text-slate-600">
-        Hano umuyobozi ashobora kurema, guhindura no gusiba abakoresha.
-      </p>
+            <div class="card rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <p class="text-xs text-slate-600">
+                  Hano umuyobozi ashobora kurema, guhindura no gusiba abakoresha.
+                </p>
 
-      <div class="flex gap-2">
-        <button id="btn-new-user" class="btn-secondary rounded-lg px-3 py-2 text-xs font-semibold">
-          Umunyamukoresha Mushya
-        </button>
-        <button id="btn-refresh-users" type="button" class="btn-primary rounded-lg px-3 py-2 text-xs font-semibold">
-          Refresh
-        </button>
-      </div>
-    </div>
-
-    <div class="mt-4">
-      <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex items-center gap-2">
-          <input
-            id="users-search"
-            type="search"
-            placeholder="Shakisha amazina / email / telefoni / NID"
-            class="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary"
-          />
-          <button id="users-search-btn" class="btn-secondary rounded-lg px-3 py-2 text-xs font-semibold">
-            Shakisha
-          </button>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <button id="users-prev" class="btn-ghost rounded-lg px-3 py-2 text-xs">Prev</button>
-          <span id="users-page" class="text-sm text-slate-700">1 / 1</span>
-          <button id="users-next" class="btn-ghost rounded-lg px-3 py-2 text-xs">Next</button>
-        </div>
-      </div>
-
-      <div class="overflow-x-auto rounded-xl border border-slate-200">
-        <table class="min-w-full text-sm">
-          <thead class="bg-slate-50">
-            <tr>
-              <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">#</th>
-              <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Amazina</th>
-              <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Email</th>
-              <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Telefoni</th>
-              <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Member</th>
-              <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Admin</th>
-              <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Profile Img</th>
-              <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">NID Img</th>
-              <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Ibikorwa</th>
-            </tr>
-          </thead>
-          <tbody id="users-tbody" class="divide-y divide-slate-100">
-            <!-- JS fills here -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- USER CREATE / EDIT MODAL -->
-<div id="user-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
-  <div class="max-h-[95vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
-    <div class="sticky top-0 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
-      <h2 id="modal-title" class="text-lg font-semibold text-slate-800">Umunyamukoresha Mushya</h2>
-      <button id="modal-close" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700">✕</button>
-    </div>
-
-    <div class="px-6 py-5">
-      <form id="user-form" class="space-y-6" enctype="multipart/form-data">
-        <input type="hidden" name="id" id="user-id" />
-
-        <div>
-          <h3 class="mb-3 text-sm font-semibold text-slate-800">Amakuru y'Umunyamukoresha</h3>
-          <div class="grid gap-4 md:grid-cols-2">
-            <div>
-              <label for="user-names" class="block text-xs font-medium text-slate-700">Amazina *</label>
-              <input id="user-names" name="names" type="text" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
-            </div>
-
-            <div>
-              <label for="user-nid" class="block text-xs font-medium text-slate-700">NID / Passport *</label>
-              <input id="user-nid" name="nid_passport" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
-            </div>
-
-            <div>
-              <label for="user-email" class="block text-xs font-medium text-slate-700">Email</label>
-              <input id="user-email" name="email" type="email" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
-            </div>
-
-            <div>
-              <label for="user-phone1" class="block text-xs font-medium text-slate-700">Telefoni ya Mbere</label>
-              <input id="user-phone1" name="phone1" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
-            </div>
-          </div>
-        </div>
-
-        <div class="border-t border-slate-200 pt-4">
-          <label class="flex items-center gap-2">
-            <input id="has-phone2" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
-            <span class="text-sm font-medium text-slate-700">Ifite Telefoni ya Kabiri?</span>
-          </label>
-
-          <div id="phone2-section" class="mt-4 hidden">
-            <label for="user-phone2" class="block text-xs font-medium text-slate-700">Telefoni ya Kabiri</label>
-            <input id="user-phone2" name="phone2" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
-          </div>
-        </div>
-
-        <div class="border-t border-slate-200 pt-4">
-          <label for="user-password" class="block text-xs font-medium text-slate-700">Ijambo ry'ibanga *</label>
-          <input id="user-password" name="password" type="password" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
-          <p class="mt-1 text-[11px] text-slate-500">
-            Iyo uhindura umukoresha, shyiramo gusa niba ushaka guhindura password.
-          </p>
-        </div>
-
-        <div class="border-t border-slate-200 pt-4">
-          <h3 class="mb-3 text-sm font-semibold text-slate-800">Amashusho</h3>
-
-          <div class="grid gap-4 md:grid-cols-2">
-            <div>
-              <label for="user-profile-image" class="block text-xs font-medium text-slate-700">Profile Image</label>
-              <input id="user-profile-image" name="profile_image" type="file" accept="image/*"
-                     class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-              <a id="user-current-profile-link" href="#" target="_blank" class="mt-2 hidden text-xs font-medium text-blue-600 underline">
-                Reba profile image iriho
-              </a>
-              <img id="user-profile-preview" class="mt-3 hidden h-24 w-24 rounded-lg border border-slate-200 object-cover" alt="Profile Preview" />
-            </div>
-
-            <div>
-              <label for="user-nid-image" class="block text-xs font-medium text-slate-700">NID / Passport Image</label>
-              <input id="user-nid-image" name="nid_image" type="file" accept="image/*"
-                     class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-              <a id="user-current-nid-link" href="#" target="_blank" class="mt-2 hidden text-xs font-medium text-blue-600 underline">
-                Reba NID image iriho
-              </a>
-              <img id="user-nid-preview" class="mt-3 hidden max-h-24 rounded-lg border border-slate-200 object-contain" alt="NID Preview" />
-            </div>
-          </div>
-        </div>
-
-        <div class="border-t border-slate-200 pt-4">
-          <label class="flex items-center gap-2">
-            <input id="has-guarantor" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
-            <span class="text-sm font-medium text-slate-700">Ifite Umwishingira?</span>
-          </label>
-
-          <div id="guarantor-section" class="mt-4 hidden space-y-4">
-            <h3 class="text-sm font-semibold text-slate-800">Amakuru y'Umwishingira</h3>
-
-            <div class="grid gap-4 md:grid-cols-2">
-              <div>
-                <label for="user-guarantee-name" class="block text-xs font-medium text-slate-700">Izina ry'Umwishingira</label>
-                <input id="user-guarantee-name" name="guarantee_name" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                <div class="flex gap-2">
+                  <button id="btn-new-user" class="btn-secondary rounded-lg px-3 py-2 text-xs font-semibold">
+                    Umunyamukoresha Mushya
+                  </button>
+                  <button id="btn-refresh-users" type="button" class="btn-primary rounded-lg px-3 py-2 text-xs font-semibold">
+                    Refresh
+                  </button>
+                </div>
               </div>
 
-              <div>
-                <label for="user-guarantee-nid" class="block text-xs font-medium text-slate-700">NID / Passport y'Umwishingira</label>
-                <input id="user-guarantee-nid" name="guarantee_nid_passport" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
-              </div>
+              <div class="mt-4">
+                <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div class="flex items-center gap-2">
+                    <input
+                      id="users-search"
+                      type="search"
+                      placeholder="Shakisha amazina / email / telefoni / NID"
+                      class="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary"
+                    />
+                    <button id="users-search-btn" class="btn-secondary rounded-lg px-3 py-2 text-xs font-semibold">
+                      Shakisha
+                    </button>
+                  </div>
 
-              <div>
-                <label for="user-guarantee-email" class="block text-xs font-medium text-slate-700">Email y'Umwishingira</label>
-                <input id="user-guarantee-email" name="guarantee_email" type="email" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
-              </div>
+                  <div class="flex items-center gap-2">
+                    <button id="users-prev" class="btn-ghost rounded-lg px-3 py-2 text-xs">Prev</button>
+                    <span id="users-page" class="text-sm text-slate-700">1 / 1</span>
+                    <button id="users-next" class="btn-ghost rounded-lg px-3 py-2 text-xs">Next</button>
+                  </div>
+                </div>
 
-              <div>
-                <label for="user-guarantee-phone1" class="block text-xs font-medium text-slate-700">Telefoni ya Mbere y'Umwishingira</label>
-                <input id="user-guarantee-phone1" name="guarantee_phone1" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
-              </div>
-            </div>
-
-            <div>
-              <label class="flex items-center gap-2">
-                <input id="has-guarantee-phone2" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
-                <span class="text-xs font-medium text-slate-700">Telefoni ya Kabiri y'Umwishingira</span>
-              </label>
-
-              <div id="guarantee-phone2-section" class="mt-2 hidden">
-                <input id="user-guarantee-phone2" name="guarantee_phone2" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="border-t border-slate-200 pt-4">
-          <label class="mb-3 block text-xs font-medium text-slate-700">Imiterere</label>
-          <div class="flex flex-wrap gap-4">
-            <label class="flex items-center gap-2">
-              <input id="user-is-member" name="is_member" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
-              <span class="text-sm text-slate-700">Umunyamuryango</span>
-            </label>
-
-            <label class="flex items-center gap-2">
-              <input id="user-is-admin" name="is_admin" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
-              <span class="text-sm text-slate-700">Admin</span>
-            </label>
-          </div>
-        </div>
-      </form>
-    </div>
-
-    <div class="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
-      <button id="user-cancel" class="btn-ghost rounded-lg px-4 py-2 text-sm">Siba</button>
-      <button id="user-save" class="btn-primary rounded-lg px-4 py-2 text-sm font-semibold">Bika</button>
-    </div>
-  </div>
-</div>
-
-<!-- USER VIEW MODAL -->
-<div id="user-view-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-3 backdrop-blur-sm">
-  <div class="flex h-[95vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-
-    <div class="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4">
-      <div class="flex flex-wrap items-center gap-3">
-        <div class="relative h-14 w-14 shrink-0">
-          <img id="uvm-avatar-img"
-               class="hidden h-14 w-14 rounded-full border border-slate-200 object-cover"
-               alt="Profile" />
-          <div id="uvm-avatar"
-               class="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-700 text-sm font-bold text-white">
-            ?
-          </div>
-        </div>
-
-        <div>
-          <h2 id="uvm-name" class="text-base font-bold text-slate-800">—</h2>
-          <p id="uvm-email" class="text-xs text-slate-500">—</p>
-        </div>
-
-        <span id="uvm-badge-member"
-              class="hidden rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-          Member
-        </span>
-
-        <span id="uvm-badge-admin"
-              class="hidden rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
-          Admin
-        </span>
-      </div>
-
-      <div class="flex items-center gap-2">
-        <button id="uvm-download-pdf"
-                class="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90">
-          Download PDF
-        </button>
-
-        <button id="view-modal-close"
-                class="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-          ✕
-        </button>
-      </div>
-    </div>
-
-    <div class="shrink-0 flex overflow-x-auto border-b border-slate-200 bg-slate-50 px-3">
-      <button class="uvm-tab uvm-tab-active" data-tab="profile">👤 Profile</button>
-      <button class="uvm-tab" data-tab="transactions">💸 Transactions</button>
-      <button class="uvm-tab" data-tab="contributions">💰 Contributions</button>
-      <button class="uvm-tab" data-tab="loans">🏦 Loans</button>
-      <button class="uvm-tab" data-tab="guaranteed">🤝 Guaranteed</button>
-      <button class="uvm-tab" data-tab="assets">🏢 Assets</button>
-      <button class="uvm-tab" data-tab="summary">📊 Summary</button>
-    </div>
-
-    <div class="flex-1 overflow-y-auto px-6 py-5">
-      <div id="uvm-loading" class="hidden py-20 text-center text-sm text-slate-400">
-        Gukurura amakuru...
-      </div>
-
-      <div id="uvm-error" class="hidden rounded-xl bg-red-50 px-4 py-6 text-center text-sm text-red-600"></div>
-
-      <!-- PROFILE TAB -->
-      <div id="uvm-tab-profile" class="uvm-panel space-y-4">
-        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <p class="uvm-section-label">Personal Information</p>
-          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 text-sm">
-            <div><p class="uvm-field-label">Full Name</p><p id="p-names" class="uvm-field-val">—</p></div>
-            <div><p class="uvm-field-label">NID / Passport</p><p id="p-nid" class="uvm-field-val">—</p></div>
-            <div><p class="uvm-field-label">Email</p><p id="p-email" class="uvm-field-val">—</p></div>
-            <div><p class="uvm-field-label">Phone 1</p><p id="p-ph1" class="uvm-field-val">—</p></div>
-            <div><p class="uvm-field-label">Phone 2</p><p id="p-ph2" class="uvm-field-val">—</p></div>
-            <div><p class="uvm-field-label">Roles</p><p id="p-roles" class="uvm-field-val">—</p></div>
-          </div>
-        </div>
-
-        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <p class="uvm-section-label">Images</p>
-          <div class="grid gap-4 md:grid-cols-2">
-            <div class="rounded-xl border border-slate-200 bg-white p-4">
-              <p class="uvm-field-label mb-2">Profile Image</p>
-              <div class="flex min-h-[220px] items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
-                <img id="uvm-profile-full-img"
-                     class="hidden max-h-52 rounded-lg object-cover"
-                     alt="Profile Image" />
-                <div id="uvm-profile-placeholder" class="text-center text-sm text-slate-400">
-                  Nta profile image ihari
+                <div class="overflow-x-auto rounded-xl border border-slate-200">
+                  <table class="min-w-full text-sm">
+                    <thead class="bg-slate-50">
+                      <tr>
+                        <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">#</th>
+                        <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Amazina</th>
+                        <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Email</th>
+                        <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Telefoni</th>
+                        <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Member</th>
+                        <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Admin</th>
+                        <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Profile Img</th>
+                        <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">NID Img</th>
+                        <th class="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Ibikorwa</th>
+                      </tr>
+                    </thead>
+                    <tbody id="users-tbody" class="divide-y divide-slate-100">
+                      <!-- JS fills here -->
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
+          </div>
 
-            <div id="uvm-nid-wrap" class="hidden rounded-xl border border-slate-200 bg-white p-4">
-              <p class="uvm-field-label mb-2">NID / Passport Image</p>
-              <div class="flex min-h-[220px] items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
-                <img id="uvm-nid-img"
-                     class="max-h-52 rounded-lg object-contain"
-                     alt="NID Image" />
+          <!-- USER CREATE / EDIT MODAL -->
+          <div id="user-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+            <div class="max-h-[95vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+              <div class="sticky top-0 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+                <h2 id="modal-title" class="text-lg font-semibold text-slate-800">Umunyamukoresha Mushya</h2>
+                <button id="modal-close" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700">✕</button>
+              </div>
+
+              <div class="px-6 py-5">
+                <form id="user-form" class="space-y-6" enctype="multipart/form-data">
+                  <input type="hidden" name="id" id="user-id" />
+
+                  <div>
+                    <h3 class="mb-3 text-sm font-semibold text-slate-800">Amakuru y'Umunyamukoresha</h3>
+                    <div class="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label for="user-names" class="block text-xs font-medium text-slate-700">Amazina *</label>
+                        <input id="user-names" name="names" type="text" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                      </div>
+
+                      <div>
+                        <label for="user-nid" class="block text-xs font-medium text-slate-700">NID / Passport *</label>
+                        <input id="user-nid" name="nid_passport" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                      </div>
+
+                      <div>
+                        <label for="user-email" class="block text-xs font-medium text-slate-700">Email</label>
+                        <input id="user-email" name="email" type="email" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                      </div>
+
+                      <div>
+                        <label for="user-phone1" class="block text-xs font-medium text-slate-700">Telefoni ya Mbere</label>
+                        <input id="user-phone1" name="phone1" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="border-t border-slate-200 pt-4">
+                    <label class="flex items-center gap-2">
+                      <input id="has-phone2" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
+                      <span class="text-sm font-medium text-slate-700">Ifite Telefoni ya Kabiri?</span>
+                    </label>
+
+                    <div id="phone2-section" class="mt-4 hidden">
+                      <label for="user-phone2" class="block text-xs font-medium text-slate-700">Telefoni ya Kabiri</label>
+                      <input id="user-phone2" name="phone2" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                    </div>
+                  </div>
+
+                  <div class="border-t border-slate-200 pt-4">
+                    <label for="user-password" class="block text-xs font-medium text-slate-700">Ijambo ry'ibanga *</label>
+                    <input id="user-password" name="password" type="password" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                    <p class="mt-1 text-[11px] text-slate-500">
+                      Iyo uhindura umukoresha, shyiramo gusa niba ushaka guhindura password.
+                    </p>
+                  </div>
+
+                  <div class="border-t border-slate-200 pt-4">
+                    <h3 class="mb-3 text-sm font-semibold text-slate-800">Amashusho</h3>
+
+                    <div class="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label for="user-profile-image" class="block text-xs font-medium text-slate-700">Profile Image</label>
+                        <input id="user-profile-image" name="profile_image" type="file" accept="image/*"
+                              class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                        <a id="user-current-profile-link" href="#" target="_blank" class="mt-2 hidden text-xs font-medium text-blue-600 underline">
+                          Reba profile image iriho
+                        </a>
+                        <img id="user-profile-preview" class="mt-3 hidden h-24 w-24 rounded-lg border border-slate-200 object-cover" alt="Profile Preview" />
+                      </div>
+
+                      <div>
+                        <label for="user-nid-image" class="block text-xs font-medium text-slate-700">NID / Passport Image</label>
+                        <input id="user-nid-image" name="nid_image" type="file" accept="image/*"
+                              class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                        <a id="user-current-nid-link" href="#" target="_blank" class="mt-2 hidden text-xs font-medium text-blue-600 underline">
+                          Reba NID image iriho
+                        </a>
+                        <img id="user-nid-preview" class="mt-3 hidden max-h-24 rounded-lg border border-slate-200 object-contain" alt="NID Preview" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="border-t border-slate-200 pt-4">
+                    <label class="flex items-center gap-2">
+                      <input id="has-guarantor" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
+                      <span class="text-sm font-medium text-slate-700">Ifite Umwishingira?</span>
+                    </label>
+
+                    <div id="guarantor-section" class="mt-4 hidden space-y-4">
+                      <h3 class="text-sm font-semibold text-slate-800">Amakuru y'Umwishingira</h3>
+
+                      <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <label for="user-guarantee-name" class="block text-xs font-medium text-slate-700">Izina ry'Umwishingira</label>
+                          <input id="user-guarantee-name" name="guarantee_name" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                        </div>
+
+                        <div>
+                          <label for="user-guarantee-nid" class="block text-xs font-medium text-slate-700">NID / Passport y'Umwishingira</label>
+                          <input id="user-guarantee-nid" name="guarantee_nid_passport" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                        </div>
+
+                        <div>
+                          <label for="user-guarantee-email" class="block text-xs font-medium text-slate-700">Email y'Umwishingira</label>
+                          <input id="user-guarantee-email" name="guarantee_email" type="email" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                        </div>
+
+                        <div>
+                          <label for="user-guarantee-phone1" class="block text-xs font-medium text-slate-700">Telefoni ya Mbere y'Umwishingira</label>
+                          <input id="user-guarantee-phone1" name="guarantee_phone1" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label class="flex items-center gap-2">
+                          <input id="has-guarantee-phone2" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
+                          <span class="text-xs font-medium text-slate-700">Telefoni ya Kabiri y'Umwishingira</span>
+                        </label>
+
+                        <div id="guarantee-phone2-section" class="mt-2 hidden">
+                          <input placeholder="phone2" id="user-guarantee-phone2" name="guarantee_phone2" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="border-t border-slate-200 pt-4">
+                    <label class="mb-3 block text-xs font-medium text-slate-700">Imiterere</label>
+                    <div class="flex flex-wrap gap-4">
+                      <label class="flex items-center gap-2">
+                        <input id="user-is-member" name="is_member" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
+                        <span class="text-sm text-slate-700">Umunyamuryango</span>
+                      </label>
+
+                      <label class="flex items-center gap-2">
+                        <input id="user-is-admin" name="is_admin" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
+                        <span class="text-sm text-slate-700">Admin</span>
+                      </label>
+                    </div>
+                  </div>
+                </form>
+              </div>
+
+              <div class="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
+                <button id="user-cancel" class="btn-ghost rounded-lg px-4 py-2 text-sm">Siba</button>
+                <button id="user-save" class="btn-primary rounded-lg px-4 py-2 text-sm font-semibold">Bika</button>
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <p class="uvm-section-label">Guarantor</p>
-          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 text-sm">
-            <div><p class="uvm-field-label">Name</p><p id="p-gname" class="uvm-field-val">—</p></div>
-            <div><p class="uvm-field-label">NID</p><p id="p-gnid" class="uvm-field-val">—</p></div>
-            <div><p class="uvm-field-label">Email</p><p id="p-gemail" class="uvm-field-val">—</p></div>
-            <div><p class="uvm-field-label">Phone 1</p><p id="p-gph1" class="uvm-field-val">—</p></div>
-            <div><p class="uvm-field-label">Phone 2</p><p id="p-gph2" class="uvm-field-val">—</p></div>
+          <!-- USER VIEW MODAL -->
+          <div id="user-view-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-3 backdrop-blur-sm">
+            <div class="flex h-[95vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+
+              <div class="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4">
+                <div class="flex flex-wrap items-center gap-3">
+                  <div class="relative h-14 w-14 shrink-0">
+                    <img id="uvm-avatar-img"
+                        class="hidden h-14 w-14 rounded-full border border-slate-200 object-cover"
+                        alt="Profile" />
+                    <div id="uvm-avatar"
+                        class="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-700 text-sm font-bold text-white">
+                      ?
+                    </div>
+                  </div>
+
+                  <div>
+                    <h2 id="uvm-name" class="text-base font-bold text-slate-800">—</h2>
+                    <p id="uvm-email" class="text-xs text-slate-500">—</p>
+                  </div>
+
+                  <span id="uvm-badge-member"
+                        class="hidden rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                    Member
+                  </span>
+
+                  <span id="uvm-badge-admin"
+                        class="hidden rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                    Admin
+                  </span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <button id="uvm-download-pdf"
+                          class="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90">
+                    Download PDF
+                  </button>
+
+                  <button id="view-modal-close"
+                          class="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              <div class="shrink-0 flex overflow-x-auto border-b border-slate-200 bg-slate-50 px-3">
+                <button class="uvm-tab uvm-tab-active" data-tab="profile">👤 Profile</button>
+                <button class="uvm-tab" data-tab="transactions">💸 Transactions</button>
+                <button class="uvm-tab" data-tab="contributions">💰 Contributions</button>
+                <button class="uvm-tab" data-tab="loans">🏦 Loans</button>
+                <button class="uvm-tab" data-tab="guaranteed">🤝 Guaranteed</button>
+                <button class="uvm-tab" data-tab="assets">🏢 Assets</button>
+                <button class="uvm-tab" data-tab="summary">📊 Summary</button>
+              </div>
+
+              <div class="flex-1 overflow-y-auto px-6 py-5">
+                <div id="uvm-loading" class="hidden py-20 text-center text-sm text-slate-400">
+                  Gukurura amakuru...
+                </div>
+
+                <div id="uvm-error" class="hidden rounded-xl bg-red-50 px-4 py-6 text-center text-sm text-red-600"></div>
+
+                <!-- PROFILE TAB -->
+                <div id="uvm-tab-profile" class="uvm-panel space-y-4">
+                  <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="uvm-section-label">Personal Information</p>
+                    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 text-sm">
+                      <div><p class="uvm-field-label">Full Name</p><p id="p-names" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">NID / Passport</p><p id="p-nid" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Email</p><p id="p-email" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Phone 1</p><p id="p-ph1" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Phone 2</p><p id="p-ph2" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Roles</p><p id="p-roles" class="uvm-field-val">—</p></div>
+                    </div>
+                  </div>
+
+                  <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="uvm-section-label">Images</p>
+                    <div class="grid gap-4 md:grid-cols-2">
+                      <div class="rounded-xl border border-slate-200 bg-white p-4">
+                        <p class="uvm-field-label mb-2">Profile Image</p>
+                        <div class="flex min-h-[220px] items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
+                          <img id="uvm-profile-full-img"
+                              class="hidden max-h-52 rounded-lg object-cover"
+                              alt="Profile Image" />
+                          <div id="uvm-profile-placeholder" class="text-center text-sm text-slate-400">
+                            Nta profile image ihari
+                          </div>
+                        </div>
+                      </div>
+
+                      <div id="uvm-nid-wrap" class="hidden rounded-xl border border-slate-200 bg-white p-4">
+                        <p class="uvm-field-label mb-2">NID / Passport Image</p>
+                        <div class="flex min-h-[220px] items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
+                          <img id="uvm-nid-img"
+                              class="max-h-52 rounded-lg object-contain"
+                              alt="NID Image" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="uvm-section-label">Guarantor</p>
+                    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 text-sm">
+                      <div><p class="uvm-field-label">Name</p><p id="p-gname" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">NID</p><p id="p-gnid" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Email</p><p id="p-gemail" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Phone 1</p><p id="p-gph1" class="uvm-field-val">—</p></div>
+                      <div><p class="uvm-field-label">Phone 2</p><p id="p-gph2" class="uvm-field-val">—</p></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- TRANSACTIONS TAB -->
+                <div id="uvm-tab-transactions" class="uvm-panel hidden">
+                  <div class="mb-3 flex items-center justify-between">
+                    <p class="uvm-section-label">All Transactions</p>
+                    <span id="uvm-tx-count" class="uvm-badge bg-slate-100 text-slate-600">—</span>
+                  </div>
+                  <div id="uvm-tx-body"></div>
+                </div>
+
+                <!-- CONTRIBUTIONS TAB -->
+                <div id="uvm-tab-contributions" class="uvm-panel hidden">
+                  <div class="mb-3 flex items-center justify-between">
+                    <p class="uvm-section-label">Contributions and Expenses</p>
+                    <span id="uvm-contrib-total" class="uvm-badge bg-emerald-100 text-emerald-700">—</span>
+                  </div>
+                  <div id="uvm-contrib-body"></div>
+                </div>
+
+                <!-- LOANS TAB -->
+                <div id="uvm-tab-loans" class="uvm-panel hidden">
+                  <div class="mb-3 flex items-center justify-between">
+                    <p class="uvm-section-label">Loans Borrowed</p>
+                    <span id="uvm-loans-count" class="uvm-badge bg-amber-100 text-amber-700">—</span>
+                  </div>
+                  <div id="uvm-loans-body"></div>
+                </div>
+
+                <!-- GUARANTEED TAB -->
+                <div id="uvm-tab-guaranteed" class="uvm-panel hidden">
+                  <div class="mb-3 flex items-center justify-between">
+                    <p class="uvm-section-label">Loans This User Has Guaranteed</p>
+                    <span id="uvm-guar-total" class="uvm-badge bg-violet-100 text-violet-700">—</span>
+                  </div>
+                  <div id="uvm-guar-body"></div>
+                </div>
+
+                <!-- ASSETS TAB -->
+                <div id="uvm-tab-assets" class="uvm-panel hidden">
+                  <div class="mb-3"><p class="uvm-section-label">Asset Holdings</p></div>
+                  <div id="uvm-assets-body"></div>
+                </div>
+
+                <!-- SUMMARY TAB -->
+                <div id="uvm-tab-summary" class="uvm-panel hidden space-y-4">
+                  <p class="uvm-section-label">Financial Summary</p>
+
+                  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div class="uvm-kpi bg-emerald-50">
+                      <p class="uvm-kpi-label">Total Contributed</p>
+                      <p id="sum-contrib" class="uvm-kpi-val text-emerald-700">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-rose-50">
+                      <p class="uvm-kpi-label">Total Withdrawn</p>
+                      <p id="sum-withdraw" class="uvm-kpi-val text-rose-600">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-orange-50">
+                      <p class="uvm-kpi-label">Expense Portion</p>
+                      <p id="sum-expense-share" class="uvm-kpi-val text-orange-700">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-amber-50">
+                      <p class="uvm-kpi-label">Interest Paid</p>
+                      <p id="sum-interest" class="uvm-kpi-val text-amber-600">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-lime-50">
+                      <p class="uvm-kpi-label">Interest Gained</p>
+                      <p id="sum-interest-gained" class="uvm-kpi-val text-lime-700">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-blue-50">
+                      <p class="uvm-kpi-label">Principal Repaid</p>
+                      <p id="sum-principal-paid" class="uvm-kpi-val text-blue-600">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-slate-50">
+                      <p class="uvm-kpi-label">Active Loans</p>
+                      <p id="sum-active-loans" class="uvm-kpi-val text-slate-700">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-slate-50">
+                      <p class="uvm-kpi-label">Total Loan Principal</p>
+                      <p id="sum-loan-principal" class="uvm-kpi-val text-slate-700">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-rose-50">
+                      <p class="uvm-kpi-label">Unpaid Principal</p>
+                      <p id="sum-unpaid" class="uvm-kpi-val text-rose-700">—</p>
+                    </div>
+
+                    <div class="uvm-kpi bg-violet-50">
+                      <p class="uvm-kpi-label">Guaranteed Amount</p>
+                      <p id="sum-guaranteed" class="uvm-kpi-val text-violet-700">—</p>
+                    </div>
+
+                    <div class="uvm-kpi border border-emerald-300 bg-emerald-100">
+                      <p class="uvm-kpi-label font-semibold text-emerald-700">Net Value</p>
+                      <p id="sum-net" class="uvm-kpi-val text-emerald-800">—</p>
+                    </div>
+                  </div>
+
+                  <div class="rounded-xl border border-slate-200 p-4">
+                    <p class="uvm-section-label mb-3">Recent Activity</p>
+                    <div id="sum-recent" class="space-y-2"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex shrink-0 justify-end border-t border-slate-200 bg-slate-50 px-6 py-3">
+                <button id="view-close" class="btn-ghost rounded-lg px-4 py-2 text-sm">Funga</button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <!-- TRANSACTIONS TAB -->
-      <div id="uvm-tab-transactions" class="uvm-panel hidden">
-        <div class="mb-3 flex items-center justify-between">
-          <p class="uvm-section-label">All Transactions</p>
-          <span id="uvm-tx-count" class="uvm-badge bg-slate-100 text-slate-600">—</span>
-        </div>
-        <div id="uvm-tx-body"></div>
-      </div>
+          <style>
+          .uvm-tab {
+            padding: .55rem .85rem;
+            font-size: .72rem;
+            font-weight: 500;
+            color: #64748b;
+            white-space: nowrap;
+            border-bottom: 2px solid transparent;
+            background: transparent;
+            cursor: pointer;
+            transition: color .15s, border-color .15s;
+          }
+          .uvm-tab:hover { color: #1e293b; }
+          .uvm-tab-active {
+            color: #047857;
+            border-bottom-color: #047857;
+            font-weight: 600;
+          }
 
-      <!-- CONTRIBUTIONS TAB -->
-      <div id="uvm-tab-contributions" class="uvm-panel hidden">
-        <div class="mb-3 flex items-center justify-between">
-          <p class="uvm-section-label">Contributions and Expenses</p>
-          <span id="uvm-contrib-total" class="uvm-badge bg-emerald-100 text-emerald-700">—</span>
-        </div>
-        <div id="uvm-contrib-body"></div>
-      </div>
+          .uvm-section-label {
+            font-size: .62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            color: #94a3b8;
+          }
+          .uvm-field-label {
+            font-size: .62rem;
+            color: #94a3b8;
+            margin-bottom: .1rem;
+          }
+          .uvm-field-val {
+            font-size: .85rem;
+            font-weight: 500;
+            color: #1e293b;
+          }
+          .uvm-badge {
+            display: inline-block;
+            padding: .15rem .6rem;
+            border-radius: 9999px;
+            font-size: .7rem;
+            font-weight: 600;
+          }
 
-      <!-- LOANS TAB -->
-      <div id="uvm-tab-loans" class="uvm-panel hidden">
-        <div class="mb-3 flex items-center justify-between">
-          <p class="uvm-section-label">Loans Borrowed</p>
-          <span id="uvm-loans-count" class="uvm-badge bg-amber-100 text-amber-700">—</span>
-        </div>
-        <div id="uvm-loans-body"></div>
-      </div>
+          .uvm-kpi {
+            border-radius: .75rem;
+            border: 1px solid #e2e8f0;
+            padding: 1rem;
+            text-align: center;
+          }
+          .uvm-kpi-label {
+            font-size: .62rem;
+            color: #94a3b8;
+          }
+          .uvm-kpi-val {
+            margin-top: .25rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+          }
 
-      <!-- GUARANTEED TAB -->
-      <div id="uvm-tab-guaranteed" class="uvm-panel hidden">
-        <div class="mb-3 flex items-center justify-between">
-          <p class="uvm-section-label">Loans This User Has Guaranteed</p>
-          <span id="uvm-guar-total" class="uvm-badge bg-violet-100 text-violet-700">—</span>
-        </div>
-        <div id="uvm-guar-body"></div>
-      </div>
+          .uvm-tbl-wrap {
+            overflow-x: auto;
+            border-radius: .75rem;
+            border: 1px solid #e2e8f0;
+          }
+          .uvm-tbl-wrap table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .75rem;
+          }
+          .uvm-tbl-wrap thead tr {
+            background: #f8fafc;
+          }
+          .uvm-tbl-wrap th {
+            padding: .5rem .75rem;
+            text-align: left;
+            font-size: .62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: #94a3b8;
+            border-bottom: 1px solid #e2e8f0;
+            white-space: nowrap;
+          }
+          .uvm-tbl-wrap td {
+            padding: .6rem .75rem;
+            border-bottom: 1px solid #f1f5f9;
+            color: #334155;
+            vertical-align: middle;
+          }
+          .uvm-tbl-wrap tr:last-child td {
+            border-bottom: none;
+          }
+          .uvm-tbl-wrap tr:hover td {
+            background: #f8fafc;
+          }
 
-      <!-- ASSETS TAB -->
-      <div id="uvm-tab-assets" class="uvm-panel hidden">
-        <div class="mb-3"><p class="uvm-section-label">Asset Holdings</p></div>
-        <div id="uvm-assets-body"></div>
-      </div>
+          .spill {
+            display: inline-block;
+            padding: .12rem .5rem;
+            border-radius: 9999px;
+            font-size: .62rem;
+            font-weight: 700;
+            line-height: 1.5;
+          }
+          .spill-green  { background: #dcfce7; color: #16a34a; }
+          .spill-amber  { background: #fef3c7; color: #d97706; }
+          .spill-red    { background: #fee2e2; color: #dc2626; }
+          .spill-slate  { background: #f1f5f9; color: #64748b; }
+          .spill-violet { background: #ede9fe; color: #7c3aed; }
+          .spill-blue   { background: #dbeafe; color: #2563eb; }
 
-      <!-- SUMMARY TAB -->
-      <div id="uvm-tab-summary" class="uvm-panel hidden space-y-4">
-        <p class="uvm-section-label">Financial Summary</p>
+          .btn-primary {
+            background: #047857;
+            color: white;
+          }
+          .btn-primary:hover { opacity: .92; }
 
-        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div class="uvm-kpi bg-emerald-50">
-            <p class="uvm-kpi-label">Total Contributed</p>
-            <p id="sum-contrib" class="uvm-kpi-val text-emerald-700">—</p>
-          </div>
+          .btn-secondary {
+            background: #E89C2C;
+            color: #0f172a;
+          }
+          .btn-secondary:hover { background: #cbd5e1; }
 
-          <div class="uvm-kpi bg-rose-50">
-            <p class="uvm-kpi-label">Total Withdrawn</p>
-            <p id="sum-withdraw" class="uvm-kpi-val text-rose-600">—</p>
-          </div>
+          .btn-ghost {
+            background: transparent;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+          }
+          .btn-ghost:hover { background: #f8fafc; }
 
-          <div class="uvm-kpi bg-orange-50">
-            <p class="uvm-kpi-label">Expense Portion</p>
-            <p id="sum-expense-share" class="uvm-kpi-val text-orange-700">—</p>
-          </div>
-
-          <div class="uvm-kpi bg-amber-50">
-            <p class="uvm-kpi-label">Interest Paid</p>
-            <p id="sum-interest" class="uvm-kpi-val text-amber-600">—</p>
-          </div>
-
-          <div class="uvm-kpi bg-lime-50">
-            <p class="uvm-kpi-label">Interest Gained</p>
-            <p id="sum-interest-gained" class="uvm-kpi-val text-lime-700">—</p>
-          </div>
-
-          <div class="uvm-kpi bg-blue-50">
-            <p class="uvm-kpi-label">Principal Repaid</p>
-            <p id="sum-principal-paid" class="uvm-kpi-val text-blue-600">—</p>
-          </div>
-
-          <div class="uvm-kpi bg-slate-50">
-            <p class="uvm-kpi-label">Active Loans</p>
-            <p id="sum-active-loans" class="uvm-kpi-val text-slate-700">—</p>
-          </div>
-
-          <div class="uvm-kpi bg-slate-50">
-            <p class="uvm-kpi-label">Total Loan Principal</p>
-            <p id="sum-loan-principal" class="uvm-kpi-val text-slate-700">—</p>
-          </div>
-
-          <div class="uvm-kpi bg-rose-50">
-            <p class="uvm-kpi-label">Unpaid Principal</p>
-            <p id="sum-unpaid" class="uvm-kpi-val text-rose-700">—</p>
-          </div>
-
-          <div class="uvm-kpi bg-violet-50">
-            <p class="uvm-kpi-label">Guaranteed Amount</p>
-            <p id="sum-guaranteed" class="uvm-kpi-val text-violet-700">—</p>
-          </div>
-
-          <div class="uvm-kpi border border-emerald-300 bg-emerald-100">
-            <p class="uvm-kpi-label font-semibold text-emerald-700">Net Value</p>
-            <p id="sum-net" class="uvm-kpi-val text-emerald-800">—</p>
-          </div>
-        </div>
-
-        <div class="rounded-xl border border-slate-200 p-4">
-          <p class="uvm-section-label mb-3">Recent Activity</p>
-          <div id="sum-recent" class="space-y-2"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="flex shrink-0 justify-end border-t border-slate-200 bg-slate-50 px-6 py-3">
-      <button id="view-close" class="btn-ghost rounded-lg px-4 py-2 text-sm">Funga</button>
-    </div>
-  </div>
-</div>
-
-<style>
-.uvm-tab {
-  padding: .55rem .85rem;
-  font-size: .72rem;
-  font-weight: 500;
-  color: #64748b;
-  white-space: nowrap;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  cursor: pointer;
-  transition: color .15s, border-color .15s;
-}
-.uvm-tab:hover { color: #1e293b; }
-.uvm-tab-active {
-  color: #047857;
-  border-bottom-color: #047857;
-  font-weight: 600;
-}
-
-.uvm-section-label {
-  font-size: .62rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .07em;
-  color: #94a3b8;
-}
-.uvm-field-label {
-  font-size: .62rem;
-  color: #94a3b8;
-  margin-bottom: .1rem;
-}
-.uvm-field-val {
-  font-size: .85rem;
-  font-weight: 500;
-  color: #1e293b;
-}
-.uvm-badge {
-  display: inline-block;
-  padding: .15rem .6rem;
-  border-radius: 9999px;
-  font-size: .7rem;
-  font-weight: 600;
-}
-
-.uvm-kpi {
-  border-radius: .75rem;
-  border: 1px solid #e2e8f0;
-  padding: 1rem;
-  text-align: center;
-}
-.uvm-kpi-label {
-  font-size: .62rem;
-  color: #94a3b8;
-}
-.uvm-kpi-val {
-  margin-top: .25rem;
-  font-size: 1.1rem;
-  font-weight: 700;
-}
-
-.uvm-tbl-wrap {
-  overflow-x: auto;
-  border-radius: .75rem;
-  border: 1px solid #e2e8f0;
-}
-.uvm-tbl-wrap table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: .75rem;
-}
-.uvm-tbl-wrap thead tr {
-  background: #f8fafc;
-}
-.uvm-tbl-wrap th {
-  padding: .5rem .75rem;
-  text-align: left;
-  font-size: .62rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: #94a3b8;
-  border-bottom: 1px solid #e2e8f0;
-  white-space: nowrap;
-}
-.uvm-tbl-wrap td {
-  padding: .6rem .75rem;
-  border-bottom: 1px solid #f1f5f9;
-  color: #334155;
-  vertical-align: middle;
-}
-.uvm-tbl-wrap tr:last-child td {
-  border-bottom: none;
-}
-.uvm-tbl-wrap tr:hover td {
-  background: #f8fafc;
-}
-
-.spill {
-  display: inline-block;
-  padding: .12rem .5rem;
-  border-radius: 9999px;
-  font-size: .62rem;
-  font-weight: 700;
-  line-height: 1.5;
-}
-.spill-green  { background: #dcfce7; color: #16a34a; }
-.spill-amber  { background: #fef3c7; color: #d97706; }
-.spill-red    { background: #fee2e2; color: #dc2626; }
-.spill-slate  { background: #f1f5f9; color: #64748b; }
-.spill-violet { background: #ede9fe; color: #7c3aed; }
-.spill-blue   { background: #dbeafe; color: #2563eb; }
-
-.btn-primary {
-  background: #047857;
-  color: white;
-}
-.btn-primary:hover { opacity: .92; }
-
-.btn-secondary {
-  background: #E89C2C;
-  color: #0f172a;
-}
-.btn-secondary:hover { background: #cbd5e1; }
-
-.btn-ghost {
-  background: transparent;
-  color: #334155;
-  border: 1px solid #cbd5e1;
-}
-.btn-ghost:hover { background: #f8fafc; }
-
-.btn-ghost-danger {
-  background: transparent;
-  color: #dc2626;
-  border: 1px solid #fecaca;
-}
-.btn-ghost-danger:hover { background: #fef2f2; }
-</style>
+          .btn-ghost-danger {
+            background: transparent;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+          }
+          .btn-ghost-danger:hover { background: #fef2f2; }
+          </style>
           
 
           <!-- ACCOUNTS (admin CRUD) -->
@@ -972,309 +969,496 @@
 
           
           <!-- LOANS -->
-          <div id="section-loans" class="hidden space-y-4">
-            <p class="text-sm font-semibold text-primary-dark">Inguzanyo</p>
+<div id="section-loans" class="hidden space-y-4">
+  <p class="text-sm font-semibold text-primary-dark">Inguzanyo</p>
 
-            <div class="grid gap-4 lg:grid-cols-3">
-              <div class="card lg:col-span-5">
-                <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <p class="text-xs text-slate-600">
-                    Urutonde rw'inguzanyo ziriho, izemejwe, n'izitegereje icyemezo.
-                  </p>
-                  <div class="flex gap-2">
-                    <button id="btn-new-loan" class="btn-secondary text-xs">Inguzanyo Nshya</button>
-                    <button id="btn-refresh-loans" class="btn-primary text-xs">Kugarura Urutonde</button>
-                  </div>
-                </div>
+  <div class="grid gap-4 lg:grid-cols-3">
+    <div class="card lg:col-span-5">
+      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <p class="text-xs text-slate-600">
+          Urutonde rw'inguzanyo ziriho, izemejwe, n'izitegereje icyemezo.
+        </p>
+        <div class="flex gap-2">
+          <button id="btn-new-loan" type="button" class="btn-secondary text-xs">Inguzanyo Nshya</button>
+          <button id="btn-refresh-loans" type="button" class="btn-primary text-xs">Kugarura Urutonde</button>
+        </div>
+      </div>
 
-                <div class="mt-3 table-wrapper">
-                  <table class="table">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Borrower</th>
-                        <th>Account</th>
-                        <th>Loan amount</th>
-                        <th>Due Amount</th>
-                        <th>Start date</th>
-                        <th>Status</th>
-                        <th>End Date</th>
-                        <th>Ibikorwa</th>
-                      </tr>
-                    </thead>
-                    <tbody><!-- JSON Data --></tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
+      <div class="mt-3 table-wrapper overflow-x-auto">
+        <table class="table w-full">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Borrower</th>
+              <th>Account</th>
+              <th>Loan amount</th>
+              <th>Due Amount</th>
+              <th>Start date</th>
+              <th>Status</th>
+              <th>End Date</th>
+              <th>Reference</th>
+              <th>Ibikorwa</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="10" class="py-8 text-center text-sm text-slate-400">Gutegura...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE / UPDATE MODAL -->
+<div id="loan-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="loan-modal-title">
+  <div class="max-h-screen w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-xl">
+    <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+      <div>
+        <h2 id="loan-modal-title" class="text-lg font-semibold text-primary-dark">
+          Ongeza / Hindura Inguzanyo
+          <span class="ml-2 text-xs text-slate-600">Status: <b id="loan-current-status">requested</b></span>
+        </h2>
+        <p class="mt-1 text-xs text-slate-600">
+          “Bika” izafungurwa gusa igihe conditions zose zuzuye.
+        </p>
+      </div>
+      <button id="loan-modal-close" type="button" class="text-gray-500 hover:text-gray-700" aria-label="Funga modal">✕</button>
+    </div>
+
+    <div class="px-6 py-4">
+      <form id="loan-form" class="space-y-4" enctype="multipart/form-data">
+        <input type="hidden" id="loan-id" name="id" />
+
+        <div>
+          <label for="loan-account" class="block text-xs font-medium text-slate-700">
+            Konti (aho amafaranga aturuka) *
+          </label>
+          <select id="loan-account" name="account_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
+            <option value="">-- Hitamo Konti --</option>
+          </select>
+        </div>
+
+        <!-- Borrower Search -->
+        <div class="relative">
+          <label class="block text-xs font-medium text-slate-700">Uwasabye inguzanyo (Search) *</label>
+          <input
+            id="borrower-search"
+            type="text"
+            class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+            placeholder="Andika izina cyangwa phone..."
+            autocomplete="off"
+          />
+          <div id="borrower-results" class="absolute z-10 mt-1 hidden max-h-56 w-full overflow-auto rounded-lg border bg-white shadow-sm"></div>
+
+          <input type="hidden" id="loan-borrower-id" name="borrower_user_id" />
+
+          <div class="mt-2 text-xs text-slate-700">
+            Watoranyije: <span id="borrower-selected" class="font-semibold">Ntawe</span>
           </div>
 
-          <!-- CREATE / UPDATE MODAL -->
-          <div id="loan-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4">
-            <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
-              <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
-                <div>
-                  <h2 class="text-lg font-semibold text-primary-dark">
-                    Ongeza / Hindura Inguzanyo
-                    <span class="ml-2 text-xs text-slate-600">Status: <b id="loan-current-status">requested</b></span>
-                  </h2>
-                  <p class="mt-1 text-xs text-slate-600">
-                    “Bika” izafungurwa gusa igihe conditions zose zuzuye.
-                  </p>
-                </div>
-                <button id="loan-modal-close" class="text-gray-500 hover:text-gray-700">✕</button>
-              </div>
-
-              <div class="px-6 py-4">
-                <form id="loan-form" class="space-y-4" enctype="multipart/form-data">
-                  <input type="hidden" id="loan-id" name="id" />
-
-                  <div>
-                    <label for="loan-account" class="block text-xs font-medium text-slate-700">
-                      Konti (aho amafaranga aturuka) *
-                    </label>
-                    <select id="loan-account" name="account_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
-                      <option value="">-- Hitamo Konti --</option>
-                    </select>
-                  </div>
-
-                  <!-- Borrower Search -->
-                  <div class="relative">
-                    <label class="block text-xs font-medium text-slate-700">Uwasabye inguzanyo (Search) *</label>
-                    <input
-                      id="borrower-search"
-                      type="text"
-                      class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      placeholder="Andika izina cyangwa phone..."
-                      autocomplete="off"
-                    />
-                    <div id="borrower-results" class="absolute z-10 mt-1 hidden max-h-56 w-full overflow-auto rounded-lg border bg-white shadow-sm"></div>
-
-                    <input type="hidden" id="loan-borrower-id" name="borrower_user_id" />
-
-                    <div class="mt-2 text-xs text-slate-700">
-                      Watoranyije: <span id="borrower-selected" class="font-semibold">Ntawe</span>
-                    </div>
-
-                    <!-- Borrower Summary -->
-                    <div class="mt-2 grid grid-cols-1 gap-2 text-xs md:grid-cols-3">
-                      <div class="rounded bg-slate-50 p-2">
-                        <div class="text-slate-500">Borrower Net</div>
-                        <div id="borrower-net" class="font-semibold">-</div>
-                        <div id="borrower-net-details"></div>
-                      </div>
-                      <div class="rounded bg-slate-50 p-2">
-                        <div class="text-slate-500">Unpaid Loans</div>
-                        <div id="borrower-unpaid" class="font-semibold">-</div>
-                      </div>
-                      <div class="rounded bg-slate-50 p-2">
-                        <div class="text-slate-500">Type</div>
-                        <div id="borrower-member" class="font-semibold">-</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <div>
-                      <label for="loan-principal" class="block text-xs font-medium text-slate-700">Umubare (Frw) *</label>
-                      <input
-                        id="loan-principal"
-                        name="principal"
-                        type="number"
-                        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                        step="0.01"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label for="loan-rate" class="block text-xs font-medium text-slate-700">Inyungu y'ukwezi (%) *</label>
-                      <input
-                        id="loan-rate"
-                        name="monthly_interest_rate"
-                        type="number"
-                        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                        step="0.0001"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <div>
-                      <label for="loan-term" class="block text-xs font-medium text-slate-700">Igihe izamara (amezi) *</label>
-                      <input
-                        id="loan-term"
-                        name="term_months"
-                        type="number"
-                        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                        required
-                      />
-                    </div>
-
-                    <div class="rounded bg-blue-50 p-3 text-xs">
-                      <div class="text-slate-600">Interest Method</div>
-                      <div class="font-bold text-blue-700">Reducing Balance</div>
-                      <div class="mt-2 text-slate-600">Required guarantee</div>
-                      <div class="font-bold text-blue-700" id="required-guarantee">0 Frw</div>
-                      <div class="mt-1 text-slate-600">Guarantors total</div>
-                      <div class="font-bold" id="guarantors-total">0 Frw</div>
-                    </div>
-                  </div>
-
-                  <!-- Guarantors -->
-                  <div>
-                    <label class="block text-xs font-medium text-slate-700">Abamwishingizi (Guarantors)</label>
-                    <div id="loan-guarantors-list" class="mt-2 space-y-2"></div>
-                    <button type="button" id="btn-add-guarantor" class="btn-secondary mt-2 text-xs">+ Ongeza Umwishingizi</button>
-
-                    <div id="loan-validation-msg" class="mt-2 hidden text-xs text-red-600"></div>
-                  </div>
-
-                  <div>
-                    <label for="loan-notes" class="block text-xs font-medium text-slate-700">Ibyiyongera / Ibisobanuro</label>
-                    <textarea id="loan-notes" name="notes" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows="3"></textarea>
-                  </div>
-
-                  <div>
-                    <label for="loan-ref" class="block text-xs font-medium text-slate-700">Icyemezo / Inyandiko (optional)</label>
-                    <input id="loan-ref" name="reference_file" type="file" class="mt-1 w-full text-sm" />
-                  </div>
-                </form>
-              </div>
-
-              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
-                <button id="loan-cancel" class="btn-ghost">Funga</button>
-                <button id="loan-save" class="btn-primary cursor-not-allowed opacity-50" disabled>Bika</button>
-              </div>
+          <!-- Borrower Summary -->
+          <div class="mt-2 grid grid-cols-1 gap-2 text-xs md:grid-cols-3">
+            <div class="rounded bg-slate-50 p-2">
+              <div class="text-slate-500">Borrower Net</div>
+              <div id="borrower-net" class="font-semibold">-</div>
+              <div id="borrower-net-details"></div>
+            </div>
+            <div class="rounded bg-slate-50 p-2">
+              <div class="text-slate-500">Unpaid Loans</div>
+              <div id="borrower-unpaid" class="font-semibold">-</div>
+            </div>
+            <div class="rounded bg-slate-50 p-2">
+              <div class="text-slate-500">Type</div>
+              <div id="borrower-member" class="font-semibold">-</div>
             </div>
           </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div>
+            <label for="loan-principal" class="block text-xs font-medium text-slate-700">Umubare (Frw) *</label>
+            <input
+              id="loan-principal"
+              name="principal"
+              type="number"
+              class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              step="0.01"
+              min="0.01"
+              required
+            />
+          </div>
+          <div>
+            <label for="loan-rate" class="block text-xs font-medium text-slate-700">Inyungu y'ukwezi (%) *</label>
+            <input
+              id="loan-rate"
+              name="monthly_interest_rate"
+              type="number"
+              class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              step="0.0001"
+              min="0"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div>
+            <label for="loan-term" class="block text-xs font-medium text-slate-700">Igihe izamara (amezi) *</label>
+            <input
+              id="loan-term"
+              name="term_months"
+              type="number"
+              class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              min="1"
+              required
+            />
+          </div>
+
+          <div class="rounded bg-blue-50 p-3 text-xs">
+            <div class="text-slate-600">Interest Method</div>
+            <div class="font-bold text-blue-700">Reducing Balance</div>
+            <div class="mt-2 text-slate-600">Required guarantee</div>
+            <div class="font-bold text-blue-700" id="required-guarantee">0 Frw</div>
+            <div class="mt-1 text-slate-600">Guarantors total</div>
+            <div class="font-bold" id="guarantors-total">0 Frw</div>
+          </div>
+        </div>
+
+        <!-- Guarantors -->
+        <div>
+          <label class="block text-xs font-medium text-slate-700">Abamwishingizi (Guarantors)</label>
+          <div id="loan-guarantors-list" class="mt-2 space-y-2"></div>
+          <button type="button" id="btn-add-guarantor" class="btn-secondary mt-2 text-xs">+ Ongeza Umwishingizi</button>
+
+          <div id="loan-validation-msg" class="mt-2 hidden text-xs text-red-600"></div>
+        </div>
+
+        <div>
+          <label for="loan-notes" class="block text-xs font-medium text-slate-700">Ibyiyongera / Ibisobanuro</label>
+          <textarea id="loan-notes" name="notes" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows="3"></textarea>
+        </div>
+
+        <!-- REFERENCE FILE -->
+        <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+          <label for="loan-reference-file" class="block text-xs font-semibold text-slate-700 mb-1">
+            Icyemezo / Inyandiko
+            <span id="loan-reference-required-star" class="text-red-500">*</span>
+          </label>
+
+          <input
+            id="loan-reference-file"
+            name="reference_file"
+            type="file"
+            accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,image/jpeg,image/png,image/gif,image/webp,application/pdf"
+            class="block w-full text-xs text-slate-500
+                   file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0
+                   file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700
+                   hover:file:bg-blue-100 cursor-pointer"
+          />
+
+          <p id="loan-reference-hint" class="text-[10px] text-red-500 mt-1 italic">
+            Shyiraho reference file.
+          </p>
+
+          <!-- Existing reference -->
+          <div id="loan-reference-existing" class="hidden mt-3 rounded-lg border border-slate-200 bg-white p-3 text-xs"></div>
+
+          <!-- Local preview -->
+          <div id="loan-reference-local-preview" class="hidden mt-3 rounded-lg border border-slate-200 bg-white p-3"></div>
+
+          <!-- Remove reference -->
+          <label
+            id="loan-reference-remove-wrap"
+            class="hidden mt-3 items-center gap-2 text-xs text-red-700"
+          >
+            <input
+              type="checkbox"
+              id="loan-remove-reference"
+              name="remove_reference"
+              value="1"
+              class="rounded border-slate-300 text-red-600 focus:ring-red-500"
+            />
+            <span>Kuraho reference iriho</span>
+          </label>
+
+          <div class="mt-2 text-[10px] text-slate-500 leading-relaxed">
+            Emerera dosiye nka <b>JPG</b>, <b>PNG</b>, <b>GIF</b>, <b>WEBP</b>, cyangwa <b>PDF</b>.
+            Ingano ntigomba kurenga <b>10 MB</b>.
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
+      <button id="loan-cancel" type="button" class="btn-ghost">Funga</button>
+      <button id="loan-save" type="button" class="btn-primary cursor-not-allowed opacity-50" disabled>Bika</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW MODAL -->
+<div id="loan-view-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="loan-view-title">
+  <div class="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-xl">
+    <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+      <h2 id="loan-view-title" class="text-lg font-semibold text-primary-dark">Reba Inguzanyo</h2>
+      <button id="loan-view-close" type="button" class="text-gray-500 hover:text-gray-700">✕</button>
+    </div>
+    <div id="loan-view-body" class="px-6 py-4 text-sm text-slate-700">
+      Loading...
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE STATUS MODAL -->
+<div id="loan-status-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="loan-status-title">
+  <div class="w-full max-w-md rounded-lg bg-white shadow-xl">
+    <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+      <h2 id="loan-status-title" class="text-lg font-semibold text-primary-dark">Hindura Status</h2>
+      <button id="loan-status-close" type="button" class="text-gray-500 hover:text-gray-700">✕</button>
+    </div>
+
+    <div class="px-6 py-4 space-y-3">
+      <input type="hidden" id="loan-status-loan-id" />
+      <div class="text-sm text-slate-600">
+        Current status: <b id="loan-status-current">requested</b>
+      </div>
+
+      <div>
+        <label for="loan-status-select" class="block text-xs font-medium text-slate-700">Status nshya</label>
+        <select id="loan-status-select" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+          <option value="requested">requested</option>
+          <option value="approved">approved</option>
+          <option value="closed">closed</option>
+          <option value="rejected">rejected</option>
+          <option value="defaulted">defaulted</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
+      <button id="loan-status-cancel" type="button" class="btn-ghost">Funga</button>
+      <button id="loan-status-save" type="button" class="btn-primary">Bika</button>
+    </div>
+  </div>
+</div>
 
           <!-- FRONTEND: EXPENSES (transactions.type='expense' only) -->
-          <div id="section-expenses" class="hidden space-y-4">
-            <p class="text-sm font-semibold text-primary-dark">Expenses z'Ikimina</p>
+<div id="section-expenses" class="hidden space-y-4">
+  <p class="text-sm font-semibold text-primary-dark">Expenses z'Ikimina</p>
 
-            <div class="card">
-              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <p class="text-xs text-slate-600">
-                  Ibikorwa byose byishyuwe n'Ikimina: ibikoresho, inyubako, inama n'ibindi.
-                </p>
-                <div class="flex gap-2">
-                  <button id="btn-new-expense" class="btn-secondary text-xs">Ongeza Expense</button>
-                  <button id="btn-refresh-expenses" class="btn-primary text-xs">Kugarura Urutonde</button>
-                </div>
-              </div>
+  <div class="card shadow-sm border border-slate-200 rounded-xl overflow-hidden">
+    <div class="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between bg-slate-50/50 border-b border-slate-200">
+      <p class="text-xs text-slate-600">
+        Ibikorwa byose byishyuwe n'Ikimina: ibikoresho, inyubako, inama n'ibindi.
+      </p>
+      <div class="flex gap-2">
+        <button id="btn-new-expense" type="button" class="btn-secondary text-xs px-4 py-2">
+          Ongeza Expense
+        </button>
+        <button id="btn-refresh-expenses" type="button" class="btn-primary text-xs px-4 py-2">
+          Kugarura Urutonde
+        </button>
+      </div>
+    </div>
 
-              <div class="mt-4">
-                <div class="mb-3 flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <input
-                      id="expenses-search"
-                      type="search"
-                      placeholder="Shakisha category / description"
-                      class="rounded-lg border px-3 py-2 text-sm"
-                    />
-                    <button id="expenses-search-btn" class="btn-secondary text-xs">Shakisha</button>
-                  </div>
-                </div>
+    <div class="p-4">
+      <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div class="flex flex-col gap-2 md:flex-row md:items-center">
+          <input
+            id="expense-search"
+            type="search"
+            placeholder="Shakisha description..."
+            class="rounded-lg border px-3 py-2 text-sm"
+          />
+          <select
+            id="expense-filter-account"
+            class="rounded-lg border px-3 py-2 text-sm"
+          >
+            <option value="">-- Konti zose --</option>
+          </select>
+          <button id="expenses-search-btn" type="button" class="btn-secondary text-xs">
+            Shakisha
+          </button>
+        </div>
+      </div>
 
-                <div class="table-wrapper">
-                  <table class="table">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Konti</th>
-                        <th>Itariki</th>
-                        <th>Icyiciro</th>
-                        <th>Igipimo (Frw)</th>
-                        <th>Ibisobanuro</th>
-                        <th>Ibikorwa</th>
-                      </tr>
-                    </thead>
-                    <tbody id="expenses-tbody">
-                      <tr>
-                        <td colspan="7" class="py-8 text-center text-sm text-slate-400">
-                          Gutegura...
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
+      <div class="table-wrapper overflow-x-auto">
+        <table class="table w-full text-left border-collapse">
+          <thead class="bg-slate-100 text-slate-700 text-xs uppercase">
+            <tr>
+              <th class="p-3">#</th>
+              <th class="p-3">Itariki</th>
+              <th class="p-3">Konti</th>
+              <th class="p-3">Ibisobanuro</th>
+              <th class="p-3 text-right">Igipimo (Frw)</th>
+              <th class="p-3 text-center">Proof</th>
+              <th class="p-3 text-center">Ibikorwa</th>
+            </tr>
+          </thead>
+          <tbody id="expenses-tbody" class="text-sm divide-y divide-slate-100">
+            <tr>
+              <td colspan="7" class="py-8 text-center text-sm text-slate-400">
+                Gutegura...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Expense Modal -->
+<div
+  id="expense-modal"
+  class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="expense-modal-title"
+>
+  <div class="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-xl bg-white shadow-xl flex flex-col">
+    <div class="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+      <h2 id="expense-modal-title" class="text-lg font-semibold text-primary-dark">
+        Ongeza Expense
+      </h2>
+      <button
+        id="expense-modal-close"
+        type="button"
+        class="text-gray-500 hover:text-gray-700"
+        aria-label="Funga modal"
+      >
+        ✕
+      </button>
+    </div>
+
+    <div class="px-6 py-4 overflow-y-auto flex-1">
+      <form id="expense-form" class="space-y-4" enctype="multipart/form-data">
+        <input type="hidden" id="expense-id" name="id" />
+
+        <div>
+          <label for="expense-account" class="block text-xs font-medium text-slate-700">
+            Konto *
+          </label>
+          <select
+            id="expense-account"
+            name="account_id"
+            class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+            required
+          >
+            <option value="">-- Hitamo Konto --</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div>
+            <label for="expense-date" class="block text-xs font-medium text-slate-700">
+              Itariki n'Igihe *
+            </label>
+            <input
+              id="expense-date"
+              name="tx_date"
+              type="datetime-local"
+              class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              required
+            />
           </div>
 
-          <!-- Expense Modal -->
-          <div id="expense-modal" class="fixed inset-0 z-50 hidden h-full items-center justify-center bg-black/50 p-4">
-            <div class="max-h-screen w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
-              <div class="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
-                <h2 id="expense-modal-title" class="text-lg font-semibold text-primary-dark">Ongeza Expense</h2>
-                <button id="expense-modal-close" class="text-gray-500 hover:text-gray-700">✕</button>
-              </div>
-
-              <div class="px-6 py-4">
-                <form id="expense-form" class="space-y-4">
-                  <input type="hidden" id="expense-id" name="id" />
-
-                  <div>
-                    <label for="expense-account" class="block text-xs font-medium text-slate-700">Konto *</label>
-                    <select id="expense-account" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" required>
-                      <option value="">-- Hitamo Konto --</option>
-                    </select>
-                  </div>
-
-                  <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <div>
-                      <label for="expense-date" class="block text-xs font-medium text-slate-700">Itariki n'Igihe *</label>
-                      <input
-                        id="expense-date"
-                        type="datetime-local"
-                        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label for="expense-category" class="block text-xs font-medium text-slate-700">Icyiciro *</label>
-                      <input
-                        id="expense-category"
-                        type="text"
-                        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                        placeholder="e.g., Office Supplies"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label for="expense-amount" class="block text-xs font-medium text-slate-700">Igipimo (Frw) *</label>
-                    <input
-                      id="expense-amount"
-                      type="number"
-                      class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      step="0.01"
-                      min="0"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label for="expense-description" class="block text-xs font-medium text-slate-700">Ibisobanuro</label>
-                    <textarea
-                      id="expense-description"
-                      class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      rows="2"
-                      placeholder="Additional notes..."
-                    ></textarea>
-                  </div>
-                </form>
-              </div>
-
-              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
-                <button id="expense-cancel" class="btn-ghost">Funga</button>
-                <button id="expense-save" class="btn-primary">Bika</button>
-              </div>
-            </div>
+          <div>
+            <label for="expense-amount" class="block text-xs font-medium text-slate-700">
+              Igipimo (Frw) *
+            </label>
+            <input
+              id="expense-amount"
+              name="amount"
+              type="number"
+              class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              step="0.01"
+              min="0.01"
+              inputmode="decimal"
+              required
+            />
           </div>
+        </div>
+
+        <div>
+          <label for="expense-description" class="block text-xs font-medium text-slate-700">
+            Ibisobanuro
+          </label>
+          <textarea
+            id="expense-description"
+            name="description"
+            class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+            rows="3"
+            maxlength="255"
+            placeholder="Additional notes..."
+          ></textarea>
+        </div>
+
+        <div id="expense-info-box" class="text-xs empty:hidden"></div>
+
+        <!-- PROOF -->
+        <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+          <label for="expense-proof" class="block text-xs font-semibold text-slate-700 mb-1">
+            Inyemezabwishyu (Proof)
+            <span id="expense-proof-required-star" class="text-red-500">*</span>
+          </label>
+
+          <input
+            id="expense-proof"
+            name="proof_file"
+            type="file"
+            accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,image/jpeg,image/png,image/gif,image/webp,application/pdf"
+            class="block w-full text-xs text-slate-500
+                   file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0
+                   file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700
+                   hover:file:bg-blue-100 cursor-pointer"
+          />
+
+          <p id="expense-proof-hint" class="text-[10px] text-red-500 mt-1 italic">
+            Itegeko kuri expense nshya.
+          </p>
+
+          <!-- Existing proof -->
+          <div id="expense-proof-existing" class="hidden mt-3 rounded-lg border border-slate-200 bg-white p-3 text-xs"></div>
+
+          <!-- Local preview -->
+          <div id="expense-proof-local-preview" class="hidden mt-3 rounded-lg border border-slate-200 bg-white p-3"></div>
+
+          <!-- Remove proof -->
+          <label
+            id="expense-proof-remove-wrap"
+            class="hidden mt-3 items-center gap-2 text-xs text-red-700"
+          >
+            <input
+              type="checkbox"
+              id="expense-remove-proof"
+              name="remove_proof"
+              value="1"
+              class="rounded border-slate-300 text-red-600 focus:ring-red-500"
+            />
+            <span>Kuraho proof iriho</span>
+          </label>
+
+          <div class="mt-2 text-[10px] text-slate-500 leading-relaxed">
+            Emerera dosiye nka <b>JPG</b>, <b>PNG</b>, <b>GIF</b>, <b>WEBP</b>, cyangwa <b>PDF</b>.
+            Ingano ntigomba kurenga <b>10 MB</b>.
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
+      <button id="expense-cancel" type="button" class="btn-ghost">
+        Funga
+      </button>
+      <button id="expense-save" type="button" class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+        Bika
+      </button>
+    </div>
+  </div>
+</div>
 
           <!-- VIEW MODAL -->
           <div id="loan-view-modal" class="fixed inset-0 z-50 h-full hidden items-center justify-center bg-black/50 p-4">
@@ -1325,242 +1509,299 @@
           </div>
 
           <!-- ═══════════════════════════════════════════════════════════
-              TRANSACTIONS SECTION
-          ═══════════════════════════════════════════════════════════ -->
-          <div id="section-transactions" class="hidden space-y-4">
-            <header>
-              <p class="text-sm font-semibold text-primary-dark uppercase tracking-wider">Transactions (Amasoko)</p>
-            </header>
+     TRANSACTIONS SECTION
+════════════════════════════════════════════════════════════ -->
+<div id="section-transactions" class="hidden space-y-4">
+  <header>
+    <p class="text-sm font-semibold text-primary-dark uppercase tracking-wider">
+      Transactions (Amasoko)
+    </p>
+  </header>
 
-            <div class="card shadow-sm border border-slate-200 rounded-xl">
-              <div class="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between bg-slate-50/50">
-                <p class="text-xs text-slate-600">
-                  Urutonde rw'amasoko yose (contribution, withdrawal, loan payments, expense, n'ibindi).
-                </p>
-                <div class="flex gap-2">
-                  <button id="btn-new-transaction" class="btn-secondary text-xs px-4 py-2">
-                    <i class="fas fa-plus mr-1"></i> Transaction Nshya
-                  </button>
-                  <button id="btn-refresh-transactions" class="btn-primary text-xs px-4 py-2">
-                    <i class="fas fa-sync-alt mr-1"></i> Kugarura Urutonde
-                  </button>
-                </div>
-              </div>
+  <div class="card shadow-sm border border-slate-200 rounded-xl overflow-hidden">
+    <div class="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between bg-slate-50/50 border-b border-slate-200">
+      <p class="text-xs text-slate-600">
+        Urutonde rw'amasoko yose (contribution, withdrawal, loan payments, expense, n'ibindi).
+      </p>
+      <div class="flex gap-2">
+        <button id="btn-new-transaction" type="button" class="btn-secondary text-xs px-4 py-2">
+          <i class="fas fa-plus mr-1"></i> Transaction Nshya
+        </button>
+        <button id="btn-refresh-transactions" type="button" class="btn-primary text-xs px-4 py-2">
+          <i class="fas fa-sync-alt mr-1"></i> Kugarura Urutonde
+        </button>
+      </div>
+    </div>
 
-              <div class="table-wrapper overflow-x-auto">
-                <table class="table w-full text-left border-collapse">
-                  <thead class="bg-slate-100 text-slate-700 text-xs uppercase">
-                    <tr>
-                      <th class="p-3">#</th>
-                      <th class="p-3">Itariki</th>
-                      <th class="p-3">User</th>
-                      <!-- <th class="p-3">Konti</th> -->
-                      <th class="p-3">Ubwoko</th>
-                      <th class="p-3">Direction</th>
-                      <th class="p-3 text-right">Igipimo (Frw)</th>
-                      <th class="p-3 text-center">Ibikorwa</th>
-                    </tr>
-                  </thead>
-                  <tbody id="transactions-tbody" class="text-sm divide-y divide-slate-100">
-                    <tr>
-                      <td colspan="8" class="text-center py-8 text-slate-400 text-sm">
-                        <i class="fas fa-spinner fa-spin mr-2"></i>Gutegura...
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
+    <div class="table-wrapper overflow-x-auto">
+      <table class="table w-full text-left border-collapse">
+        <thead class="bg-slate-100 text-slate-700 text-xs uppercase">
+          <tr>
+            <th class="p-3">#</th>
+            <th class="p-3">Itariki</th>
+            <th class="p-3">User</th>
+            <th class="p-3">Ubwoko</th>
+            <th class="p-3">Direction</th>
+            <th class="p-3 text-right">Igipimo (Frw)</th>
+            <th class="p-3 text-center">Proof</th>
+            <th class="p-3 text-center">Ibikorwa</th>
+          </tr>
+        </thead>
+        <tbody id="transactions-tbody" class="text-sm divide-y divide-slate-100">
+          <tr>
+            <td colspan="8" class="text-center py-8 text-slate-400 text-sm">
+              <i class="fas fa-spinner fa-spin mr-2"></i>Gutegura...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TRANSACTION MODAL
+════════════════════════════════════════════════════════════ -->
+<div
+  id="transaction-modal"
+  class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="transaction-modal-title"
+>
+  <div class="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-xl bg-white shadow-2xl flex flex-col">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+      <h2 id="transaction-modal-title" class="text-lg font-bold text-primary-dark">
+        Ongeza Transaction
+      </h2>
+      <button
+        id="transaction-modal-close"
+        type="button"
+        class="text-gray-400 hover:text-gray-600 transition-colors"
+        aria-label="Funga modal"
+      >
+        <span class="text-2xl leading-none">&times;</span>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="px-6 py-4 overflow-y-auto flex-1">
+      <form id="transaction-form" class="grid grid-cols-1 md:grid-cols-2 gap-4" enctype="multipart/form-data">
+
+        <!-- Hidden fields -->
+        <input type="hidden" id="transaction-id" name="id">
+        <input type="hidden" id="transaction-direction" name="direction" value="IN">
+
+        <!-- DATE -->
+        <div class="md:col-span-2">
+          <label for="transaction-date" class="block text-xs font-semibold text-slate-700 mb-1">
+            Itariki &amp; Igihe <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="transaction-date"
+            name="tx_date"
+            type="datetime-local"
+            class="form-input-style"
+            required
+          >
+          <p class="text-[10px] text-slate-500 mt-1">
+            Igihe cyifashishwa mu kubika transaction no mu mibare y'inguzanyo.
+          </p>
+        </div>
+
+        <!-- USER SEARCH -->
+        <div class="md:col-span-2">
+          <label for="transaction-user-search" class="block text-xs font-semibold text-slate-700 mb-1">
+            Shakisha User (Amazina / NID / Telefoni)
+          </label>
+          <input
+            id="transaction-user-search"
+            type="text"
+            class="form-input-style"
+            placeholder="Andika amazina cyangwa NID/Phone..."
+            autocomplete="off"
+          >
+        </div>
+
+        <!-- USER -->
+        <div class="md:col-span-2">
+          <label for="transaction-user" class="block text-xs font-semibold text-slate-700 mb-1">
+            User <span class="text-red-500">*</span>
+          </label>
+          <select id="transaction-user" name="user_id" class="form-input-style">
+            <option value="">-- Hitamo User --</option>
+          </select>
+          <p class="text-[10px] text-slate-400 mt-1">
+            Expense ishobora kujya kuri system; andi moko asaba user.
+          </p>
+        </div>
+
+        <!-- TYPE -->
+        <div id="transaction-type-wrapper" class="md:col-span-2 hidden">
+          <label for="transaction-type" class="block text-xs font-semibold text-slate-700 mb-1">
+            Ubwoko (Type) <span class="text-red-500">*</span>
+          </label>
+          <select id="transaction-type" name="type" class="form-input-style" required>
+            <option value="">-- Hitamo Type --</option>
+            <optgroup label="Abanyamuryango">
+              <option value="contribution">Contribution</option>
+              <option value="withdrawal">Withdrawal</option>
+            </optgroup>
+            <optgroup label="Inguzanyo">
+              <option value="loan_principal">Loan Payment</option>
+              <option value="loan_interest">Loan Interest</option>
+            </optgroup>
+            <optgroup label="Ibindi">
+              <option value="expense">Expense</option>
+              <option value="other_income">Other Income</option>
+              <option value="other_out">Other Out</option>
+            </optgroup>
+          </select>
+          <p class="text-[10px] text-blue-600 mt-1 leading-tight">
+            <b>Loan Payment:</b> system ibanza kwishyura interest yose ku nguzanyo z'uwo muntu,
+            hanyuma amafaranga asigaye akajya kuri principal.
+          </p>
+        </div>
+
+        <!-- ACCOUNT -->
+        <div>
+          <label for="transaction-account" class="block text-xs font-semibold text-slate-700 mb-1">
+            Konti (Account) <span class="text-red-500">*</span>
+          </label>
+          <select id="transaction-account" name="account_id" class="form-input-style" required>
+            <option value="">-- Hitamo Konti --</option>
+          </select>
+          <p class="text-[10px] text-slate-400 mt-1">
+            OUT (withdrawal/expense/other_out) ntirenza amafaranga ari kuri konti wahisemo.
+          </p>
+        </div>
+
+        <!-- AMOUNT -->
+        <div>
+          <label for="transaction-amount" class="block text-xs font-semibold text-slate-700 mb-1">
+            Umubare (Frw) <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="transaction-amount"
+            name="amount"
+            type="number"
+            step="0.01"
+            min="0.01"
+            inputmode="decimal"
+            class="form-input-style"
+            required
+          >
+          <p class="text-[10px] text-slate-500 mt-1">
+            Shyiramo amafaranga yose wishyuye cyangwa usohoye.
+          </p>
+        </div>
+
+        <!-- LOAN -->
+        <div id="loan-id-wrapper" class="hidden md:col-span-2 bg-blue-50 p-3 rounded-lg border border-blue-100">
+          <label for="transaction-loan-id" class="block text-xs font-bold text-blue-800 mb-1">
+            Loan
+          </label>
+          <select id="transaction-loan-id" name="loan_id" class="form-input-style border-blue-200">
+            <option value="">-- Hitamo Loan --</option>
+          </select>
+          <p class="text-[10px] text-blue-700 mt-1 italic">
+            Kuri <b>Loan Payment</b>, ushobora kutahitamo loan imwe kuko system ishobora kugabanya
+            amafaranga ku nguzanyo zose z'uwo muntu. Kuri <b>Loan Interest</b>, hitamo loan imwe
+            ushaka kwishyuriraho interest gusa.
+          </p>
+        </div>
+
+        <!-- INFO BOX -->
+        <div class="md:col-span-2">
+          <div id="transaction-info-box" class="text-xs empty:hidden"></div>
+        </div>
+
+        <!-- DESCRIPTION -->
+        <div class="md:col-span-2">
+          <label for="transaction-description" class="block text-xs font-semibold text-slate-700 mb-1">
+            Ibisobanuro
+          </label>
+          <textarea
+            id="transaction-description"
+            name="description"
+            rows="2"
+            maxlength="255"
+            class="form-input-style"
+            placeholder="Andika ibisobanuro hano (si ngombwa)..."
+          ></textarea>
+        </div>
+
+        <!-- PROOF -->
+        <div class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+          <label for="transaction-proof" class="block text-xs font-semibold text-slate-700 mb-1">
+            Inyemezabwishyu (Proof)
+            <span id="transaction-proof-required-star" class="text-red-500">*</span>
+          </label>
+
+          <input
+            id="transaction-proof"
+            name="proof_file"
+            type="file"
+            accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,image/jpeg,image/png,image/gif,image/webp,application/pdf"
+            class="block w-full text-xs text-slate-500
+                   file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0
+                   file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700
+                   hover:file:bg-blue-100 cursor-pointer"
+          >
+
+          <p id="transaction-proof-hint" class="text-[10px] text-red-500 mt-1 italic">
+            Itegeko kuri transaction nshya.
+          </p>
+
+          <!-- Existing proof -->
+          <div id="transaction-proof-existing" class="hidden mt-3 rounded-lg border border-slate-200 bg-white p-3 text-xs"></div>
+
+          <!-- Local preview -->
+          <div id="transaction-proof-local-preview" class="hidden mt-3 rounded-lg border border-slate-200 bg-white p-3"></div>
+
+          <!-- Remove proof -->
+          <label
+            id="transaction-proof-remove-wrap"
+            class="hidden mt-3 items-center gap-2 text-xs text-red-700"
+          >
+            <input
+              type="checkbox"
+              id="transaction-remove-proof"
+              name="remove_proof"
+              value="1"
+              class="rounded border-slate-300 text-red-600 focus:ring-red-500"
+            >
+            <span>Kuraho proof iriho</span>
+          </label>
+
+          <div class="mt-2 text-[10px] text-slate-500 leading-relaxed">
+            Emerera dosiye nka <b>JPG</b>, <b>PNG</b>, <b>GIF</b>, <b>WEBP</b>, cyangwa <b>PDF</b>.
+            Ingano ntigomba kurenga <b>10 MB</b>.
           </div>
+        </div>
 
-          <!-- ═══════════════════════════════════════════════════════════
-              TRANSACTION MODAL
-          ═══════════════════════════════════════════════════════════ -->
-          <div id="transaction-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div class="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-2xl flex flex-col">
+      </form>
+    </div>
 
-              <!-- Modal Header -->
-              <div class="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
-                <h2 id="transaction-modal-title" class="text-lg font-bold text-primary-dark">Ongeza Transaction</h2>
-                <button id="transaction-modal-close" class="text-gray-400 hover:text-gray-600 transition-colors">
-                  <span class="text-2xl leading-none">&times;</span>
-                </button>
-              </div>
+    <!-- Footer -->
+    <div class="flex justify-end gap-3 border-t border-gray-100 bg-slate-50 px-6 py-4 shrink-0">
+      <button id="transaction-cancel" type="button" class="btn-ghost text-sm px-5 py-2">
+        Funga
+      </button>
+      <button
+        id="transaction-save"
+        type="button"
+        class="btn-primary text-sm px-8 py-2 font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled
+      >
+        Bika Ibikorwa
+      </button>
+    </div>
 
-              <!-- Modal Body -->
-              <div class="px-6 py-4 overflow-y-auto flex-1">
-                <form id="transaction-form" class="grid grid-cols-1 md:grid-cols-2 gap-4" enctype="multipart/form-data">
-
-                  <!-- Hidden fields -->
-                  <input type="hidden" id="transaction-id" name="id" />
-                  <input type="hidden" id="transaction-direction" name="direction" value="IN" />
-
-                  <!-- DATE -->
-                  <div class="md:col-span-2">
-                    <label for="transaction-date" class="block text-xs font-semibold text-slate-700 mb-1">
-                      Itariki &amp; Igihe <span class="text-red-500">*</span>
-                    </label>
-                    <input id="transaction-date" name="tx_date" type="datetime-local" class="form-input-style" required />
-                    <p class="text-[10px] text-slate-500 mt-1">
-                      Igihe cyifashishwa mu kubika transaction no mu mibare y'inguzanyo.
-                    </p>
-                  </div>
-
-                  <!-- USER SEARCH -->
-                  <div class="md:col-span-2">
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">
-                      Shakisha User (Amazina / NID / Telefoni)
-                    </label>
-                    <input
-                      id="transaction-user-search"
-                      type="text"
-                      class="form-input-style"
-                      placeholder="Andika amazina cyangwa NID/Phone..."
-                      autocomplete="off"
-                    />
-                  </div>
-
-                  <!-- USER SELECT -->
-                  <div class="md:col-span-2">
-                    <label for="transaction-user" class="block text-xs font-semibold text-slate-700 mb-1">
-                      User <span class="text-red-500">*</span>
-                    </label>
-                    <select id="transaction-user" name="user_id" class="form-input-style">
-                      <option value="">-- Hitamo User --</option>
-                    </select>
-                    <p class="text-[10px] text-slate-400 mt-1">
-                      Expense ishobora kujya kuri system; andi moko asaba user.
-                    </p>
-                  </div>
-
-                  <!-- TYPE -->
-                  <div id="transaction-type-wrapper" class="md:col-span-2 hidden">
-                    <label for="transaction-type" class="block text-xs font-semibold text-slate-700 mb-1">
-                      Ubwoko (Type) <span class="text-red-500">*</span>
-                    </label>
-                    <select id="transaction-type" name="type" class="form-input-style" required>
-                      <option value="">-- Hitamo Type --</option>
-                      <optgroup label="Abanyamuryango">
-                        <option value="contribution">Contribution</option>
-                        <option value="withdrawal">Withdrawal</option>
-                      </optgroup>
-                      <optgroup label="Inguzanyo">
-                        <option value="loan_principal">Loan Payment</option>
-                        <option value="loan_interest">Loan Interest</option>
-                      </optgroup>
-                      <optgroup label="Ibindi">
-                        <option value="expense">Expense</option>
-                        <option value="other_income">Other Income</option>
-                        <option value="other_out">Other Out</option>
-                      </optgroup>
-                    </select>
-                    <p class="text-[10px] text-blue-600 mt-1 leading-tight">
-                      <b>Loan Payment:</b> system ibanza kwishyura interest yose ku nguzanyo z'uwo muntu, hanyuma amafaranga asigaye akajya kuri principal.
-                    </p>
-                  </div>
-
-                  <!-- ACCOUNT -->
-                  <div>
-                    <label for="transaction-account" class="block text-xs font-semibold text-slate-700 mb-1">
-                      Konti (Account) <span class="text-red-500">*</span>
-                    </label>
-                    <select id="transaction-account" name="account_id" class="form-input-style" required>
-                      <option value="">-- Hitamo Konti --</option>
-                    </select>
-                    <p class="text-[10px] text-slate-400 mt-1">
-                      OUT (withdrawal/expense/other_out) ntirenza amafaranga ari kuri konti wahisemo.
-                    </p>
-                  </div>
-
-                  <!-- AMOUNT -->
-                  <div>
-                    <label for="transaction-amount" class="block text-xs font-semibold text-slate-700 mb-1">
-                      Umubare (Frw) <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="transaction-amount"
-                      name="amount"
-                      type="number"
-                      step="0.01"
-                      min="1"
-                      class="form-input-style"
-                      required
-                    />
-                    <p class="text-[10px] text-slate-500 mt-1">
-                      Shyiramo amafaranga yose wishyuye cyangwa usohoye.
-                    </p>
-                  </div>
-
-                  <!-- LOAN SELECT -->
-                  <div id="loan-id-wrapper" class="hidden md:col-span-2 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                    <label for="transaction-loan-id" class="block text-xs font-bold text-blue-800 mb-1">
-                      Loan
-                    </label>
-                    <select id="transaction-loan-id" name="loan_id" class="form-input-style border-blue-200">
-                      <option value="">-- Hitamo Loan --</option>
-                    </select>
-                    <p class="text-[10px] text-blue-700 mt-1 italic">
-                      Kuri <b>Loan Payment</b>, ushobora kutahitamo loan imwe kuko system ishobora kugabanya amafaranga ku nguzanyo zose z'uwo muntu.
-                      Kuri <b>Loan Interest</b>, hitamo loan imwe ushaka kwishyuriraho interest gusa.
-                    </p>
-                  </div>
-
-                  <!-- INFO BOX -->
-                  <div class="md:col-span-2">
-                    <div id="transaction-info-box" class="text-xs"></div>
-                  </div>
-
-                  <!-- DESCRIPTION -->
-                  <div class="md:col-span-2">
-                    <label for="transaction-description" class="block text-xs font-semibold text-slate-700 mb-1">
-                      Ibisobanuro
-                    </label>
-                    <textarea
-                      id="transaction-description"
-                      name="description"
-                      rows="2"
-                      class="form-input-style"
-                      maxlength="255"
-                      placeholder="Andika ibisobanuro hano (si ngombwa)..."
-                    ></textarea>
-                  </div>
-
-                  <!-- PROOF FILE -->
-                  <div class="md:col-span-2">
-                    <label for="transaction-proof" class="block text-xs font-semibold text-slate-700 mb-1">
-                      Inyemezabwishyu (Proof) <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="transaction-proof"
-                      name="proof_file"
-                      type="file"
-                      accept="image/*,application/pdf"
-                      class="block w-full text-xs text-slate-500
-                            file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0
-                            file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700
-                            hover:file:bg-blue-100 cursor-pointer"
-                    />
-                    <p id="transaction-proof-hint" class="text-[10px] text-red-500 mt-1 italic">
-                      Itegeko kuri transaction nshya.
-                    </p>
-                  </div>
-
-                </form>
-              </div>
-
-              <!-- Modal Footer -->
-              <div class="flex justify-end gap-3 border-t border-gray-100 bg-slate-50 px-6 py-4 shrink-0">
-                <button id="transaction-cancel" class="btn-ghost text-sm px-5 py-2">
-                  Funga
-                </button>
-                <button id="transaction-save" class="btn-primary text-sm px-8 py-2 font-bold shadow-md" disabled>
-                  Bika Ibikorwa
-                </button>
-              </div>
-
-            </div>
-          </div>
-          <!-- /transaction-modal -->
+  </div>
+</div>
 
           <!-- ASSETS (admin CRUD) -->
           <div id="section-assets" class="hidden space-y-4">
@@ -1874,51 +2115,6 @@
                 <button id="notification-cancel" class="btn-ghost">Siba</button>
                 <button id="notification-save" class="btn-primary">Bika</button>
               </div>
-            </div>
-          </div>
-
-          <!-- REPORTS -->
-          <div id="section-reports" class="hidden space-y-4">
-            <p class="text-sm font-semibold text-primary-dark">Raporo</p>
-            <div class="card">
-              <p class="text-xs text-slate-600">
-                Hitamo raporo ushaka kubona: ku banyamuryango, inguzanyo, imigabane cyangwa umutungo.
-              </p>
-              <form class="mt-3 grid gap-3 text-xs md:grid-cols-4">
-              <div>
-                <label class="block font-medium text-slate-700"> Icyiciro cya Raporo </label>
-                <select
-                  title="Icyiciro cya Raporo"
-                  class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                >
-                    <option>Abanyamuryango</option>
-                    <option>Inguzanyo</option>
-                    <option>Imigabane</option>
-                    <option>Expenses &amp; Assets</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block font-medium text-slate-700"> Guhera kuwa </label>
-                  <input
-                    type="date"
-                    title="Guhera kuwa"
-                    class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label class="block font-medium text-slate-700"> Kugeza kuwa </label>
-                  <input
-                    type="date"
-                    title="Kugeza kuwa"
-                    class="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-                <div class="flex items-end">
-                  <button type="button" class="btn-secondary w-full justify-center">
-                    Kwerekana Raporo
-                  </button>
-                </div>
-              </form>
             </div>
           </div>
 
