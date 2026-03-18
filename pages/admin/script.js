@@ -251,17 +251,18 @@ function clearFileInput(id) {
   function fillContributions(items) {
     const relevant = items.filter(t =>
       (t.type === 'contribution' && t.direction === 'IN') ||
-      (t.type === 'loan_interest' && t.direction === 'IN') ||
-      (t.type === 'withdrawal' && t.direction === 'OUT') ||
-      (t.type === 'withdrawal_deduction' && t.direction === 'OUT') ||
-      (t.type === 'expense_share' && t.direction === 'OUT')
+      (t.type === 'expense' && t.direction === 'OUT')
     );
 
-    const net =
-      relevant.filter(t => t.type === 'contribution').reduce((s, t) => s + Number(t.amount || 0), 0) +
-      relevant.filter(t => t.type === 'loan_interest').reduce((s, t) => s + Number(t.amount || 0), 0) -
-      relevant.filter(t => ['withdrawal', 'withdrawal_deduction', 'expense_share'].includes(t.type))
-              .reduce((s, t) => s + Number(t.amount || 0), 0);
+    const totalContrib = relevant
+      .filter(t => t.type === 'contribution')
+      .reduce((s, t) => s + Number(t.amount || 0), 0);
+
+    const totalExpense = relevant
+      .filter(t => t.type === 'expense')
+      .reduce((s, t) => s + Number(t.amount || 0), 0);
+
+    const net = totalContrib - totalExpense;
 
     setHTML('uvm-contrib-total', 'Net: ' + _money(net));
 
@@ -279,7 +280,7 @@ function clearFileInput(id) {
     setHTML('uvm-contrib-body', buildTable(
       ['Date','Type','Direction','Amount','Balance','Description'],
       rows,
-      'Nta contribution history ibonetse'
+      'Nta contribution / expense history ibonetse'
     ));
   }
 
@@ -369,47 +370,42 @@ function clearFileInput(id) {
   }
 
   function fillSummary(transactions, loans, guaranteed, summaryData = {}) {
-    const sum = (arr) => arr.reduce((s, t) => s + Number(t.amount || 0), 0);
-
     const contribs = transactions.filter(t => t.type === 'contribution' && t.direction === 'IN');
     const withdrawals = transactions.filter(t =>
       ['withdrawal', 'withdrawal_deduction'].includes(t.type) && t.direction === 'OUT'
     );
-    const expenseShare = transactions.filter(t => t.type === 'expense_share' && t.direction === 'OUT');
-    const interestPaid = transactions.filter(t => t.type === 'loan_interest' && t.direction === 'IN');
-    const principalPaid = transactions.filter(t => t.type === 'loan_principal' && t.direction === 'IN');
-    const allIn = transactions.filter(t => t.direction === 'IN');
-    const allOut = transactions.filter(t => t.direction === 'OUT');
 
-    const totalContrib = Number(summaryData.total_contribution || sum(contribs));
-    const totalWithdraw = Number(summaryData.total_withdraw || sum(withdrawals));
-    const totalExpenseShare = Number(summaryData.expense_portion || sum(expenseShare));
-    const totalInterestPaid = sum(interestPaid);
+    const totalContrib = Number(summaryData.total_contribution || contribs.reduce((s, t) => s + Number(t.amount || 0), 0));
+    const totalWithdraw = Number(summaryData.total_withdraw || withdrawals.reduce((s, t) => s + Number(t.amount || 0), 0));
+    const totalExpenseShare = Number(summaryData.expense_portion || 0);
     const totalInterestGained = Number(summaryData.interest_gained || 0);
-    const contributionBase = Number(summaryData.contribution_base || 0);
-    const totalPrincipalPaid = sum(principalPaid);
+
+    const totalPrincipalPaid = transactions
+      .filter(t => t.type === 'loan_principal' && t.direction === 'IN')
+      .reduce((s, t) => s + Number(t.amount || 0), 0);
+
+    const totalInterestPaid = transactions
+      .filter(t => t.type === 'loan_interest' && t.direction === 'IN')
+      .reduce((s, t) => s + Number(t.amount || 0), 0);
+
     const totalPrincipal = loans.reduce((s, l) => s + Number(l.principal || 0), 0);
     const totalUnpaid = loans.reduce((s, l) => s + Number(l.unpaid_principal || 0), 0);
     const totalGuaranteed = guaranteed.reduce((s, g) => s + Number(g.guarantee_amount || 0), 0);
     const activeLoans = loans.filter(l => ['approved', 'defaulted'].includes(l.status));
 
-    const netVal = (contributionBase + totalInterestGained) - totalUnpaid - totalGuaranteed;
+    const netVal = (totalContrib + totalInterestGained) - (totalExpenseShare + totalWithdraw);
 
     setHTML('sum-contrib', _money(totalContrib));
     setHTML('sum-withdraw', _money(totalWithdraw));
     setHTML('sum-expense-share', _money(totalExpenseShare));
     setHTML('sum-interest', _money(totalInterestPaid));
     setHTML('sum-interest-gained', _money(totalInterestGained));
-    setHTML('sum-contribution-base', _money(contributionBase));
     setHTML('sum-principal-paid', _money(totalPrincipalPaid));
     setHTML('sum-active-loans', activeLoans.length + ' loan' + (activeLoans.length !== 1 ? 's' : ''));
     setHTML('sum-loan-principal', _money(totalPrincipal));
     setHTML('sum-unpaid', _money(totalUnpaid));
     setHTML('sum-guaranteed', _money(totalGuaranteed));
-    setHTML('sum-tx-in', _money(sum(allIn)));
-    setHTML('sum-tx-out', _money(sum(allOut)));
-    setHTML('sum-tx-count', transactions.length + ' total');
-    setHTML('sum-net', _money(Math.max(0, netVal)));
+    setHTML('sum-net', _money(netVal));
 
     const recent = [...transactions]
       .slice()
@@ -450,13 +446,17 @@ function clearFileInput(id) {
     const loans = currentUserFullData.loans || [];
     const guaranteed = currentUserFullData.guaranteed || [];
     const assets = currentUserFullData.assets || [];
+    const interestHistory = currentUserFullData.interest_history || [];
+    const expenseHistory = currentUserFullData.expense_history || [];
 
     const contribTx = tx.filter(t => t.type === 'contribution' && t.direction === 'IN');
+    const expenseTx = tx.filter(t => t.type === 'expense' && t.direction === 'OUT');
     const withdrawTx = tx.filter(t =>
       ['withdrawal', 'withdrawal_deduction'].includes(t.type) && t.direction === 'OUT'
     );
-    const interestTx = tx.filter(t => t.type === 'loan_interest' && t.direction === 'IN');
-    const expenseTx = tx.filter(t => t.type === 'expense_share' && t.direction === 'OUT');
+
+    const netValue = (Number(s.total_contribution || 0) + Number(s.interest_gained || 0)) -
+                     (Number(s.expense_portion || 0) + Number(s.total_withdraw || 0));
 
     const printable = `
       <html>
@@ -497,9 +497,9 @@ function clearFileInput(id) {
             <p><strong>Admin:</strong> ${d.is_admin ? 'Yes' : 'No'}</p>
             <p><strong>Total Contribution:</strong> ${_money(s.total_contribution || 0)}</p>
             <p><strong>Total Withdraw:</strong> ${_money(s.total_withdraw || 0)}</p>
-            <p><strong>Contribution Base:</strong> ${_money(s.contribution_base || 0)}</p>
             <p><strong>Interest Gained:</strong> ${_money(s.interest_gained || 0)}</p>
             <p><strong>Expense Portion:</strong> ${_money(s.expense_portion || 0)}</p>
+            <p><strong>Net Value:</strong> ${_money(netValue)}</p>
           </div>
         </div>
 
@@ -512,12 +512,11 @@ function clearFileInput(id) {
 
         <h2>Summary</h2>
         <div class="grid">
-          <div class="box"><strong>Total Contributions</strong><br>${_money((s.total_contribution || contribTx.reduce((a, t) => a + Number(t.amount || 0), 0)))}</div>
-          <div class="box"><strong>Total Withdrawals</strong><br>${_money((s.total_withdraw || withdrawTx.reduce((a, t) => a + Number(t.amount || 0), 0)))}</div>
-          <div class="box"><strong>Total Loan Interest Paid In</strong><br>${_money(interestTx.reduce((a, t) => a + Number(t.amount || 0), 0))}</div>
-          <div class="box"><strong>Total Expense Portion</strong><br>${_money(expenseTx.reduce((a, t) => a + Number(t.amount || 0), 0))}</div>
-          <div class="box"><strong>Contribution Base</strong><br>${_money(s.contribution_base || 0)}</div>
+          <div class="box"><strong>Total Contributions</strong><br>${_money(s.total_contribution || 0)}</div>
+          <div class="box"><strong>Total Withdrawals</strong><br>${_money(s.total_withdraw || 0)}</div>
           <div class="box"><strong>Interest Gained</strong><br>${_money(s.interest_gained || 0)}</div>
+          <div class="box"><strong>Expense Portion</strong><br>${_money(s.expense_portion || 0)}</div>
+          <div class="box"><strong>Net Value</strong><br>${_money(netValue)}</div>
         </div>
 
         <h2>Client Statement / Running Balance History</h2>
@@ -559,7 +558,7 @@ function clearFileInput(id) {
             `).join('') : '<tr><td colspan="3">No contributions</td></tr>'}
           </tbody>
         </table>
-
+        
         <h2>Withdrawal History</h2>
         <table>
           <thead><tr><th>Date</th><th>Description</th><th class="right">Amount</th></tr></thead>
@@ -574,31 +573,59 @@ function clearFileInput(id) {
           </tbody>
         </table>
 
-        <h2>Interest History</h2>
+        <h2>Interest Gained History</h2>
         <table>
-          <thead><tr><th>Date</th><th>Description</th><th class="right">Amount</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Loan</th>
+              <th>Borrower</th>
+              <th class="right">Interest Received</th>
+              <th class="right">My Base</th>
+              <th class="right">Total NIG Base</th>
+              <th class="right">My Share</th>
+              <th>Description</th>
+            </tr>
+          </thead>
           <tbody>
-            ${interestTx.length ? interestTx.map(t => `
+            ${interestHistory.length ? interestHistory.map(h => `
               <tr>
-                <td>${globalEscapeHtml(t.tx_date || '')}</td>
-                <td>${globalEscapeHtml(t.description || '')}</td>
-                <td class="right">${_money(t.amount || 0)}</td>
+                <td>${globalEscapeHtml(h.tx_date || '')}</td>
+                <td>${h.loan_id ? '#LN-' + globalEscapeHtml(h.loan_id) : ''}</td>
+                <td>${globalEscapeHtml(h.borrower_name || '')}</td>
+                <td class="right">${_money(h.source_amount || 0)}</td>
+                <td class="right">${_money(h.member_base || 0)}</td>
+                <td class="right">${_money(h.total_base || 0)}</td>
+                <td class="right">${_money(h.member_share || 0)}</td>
+                <td>${globalEscapeHtml(h.description || '')}</td>
               </tr>
-            `).join('') : '<tr><td colspan="3">No interest transactions</td></tr>'}
+            `).join('') : '<tr><td colspan="8">No interest gained history</td></tr>'}
           </tbody>
         </table>
 
         <h2>Expense Portion History</h2>
         <table>
-          <thead><tr><th>Date</th><th>Description</th><th class="right">Amount</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th class="right">Expense Amount</th>
+              <th class="right">My Base</th>
+              <th class="right">Total NIG Base</th>
+              <th class="right">My Portion</th>
+              <th>Description</th>
+            </tr>
+          </thead>
           <tbody>
-            ${expenseTx.length ? expenseTx.map(t => `
+            ${expenseHistory.length ? expenseHistory.map(h => `
               <tr>
-                <td>${globalEscapeHtml(t.tx_date || '')}</td>
-                <td>${globalEscapeHtml(t.description || '')}</td>
-                <td class="right">${_money(t.amount || 0)}</td>
+                <td>${globalEscapeHtml(h.tx_date || '')}</td>
+                <td class="right">${_money(h.source_amount || 0)}</td>
+                <td class="right">${_money(h.member_base || 0)}</td>
+                <td class="right">${_money(h.total_base || 0)}</td>
+                <td class="right">${_money(h.member_share || 0)}</td>
+                <td>${globalEscapeHtml(h.description || '')}</td>
               </tr>
-            `).join('') : '<tr><td colspan="3">No expense portions</td></tr>'}
+            `).join('') : '<tr><td colspan="6">No expense portion history</td></tr>'}
           </tbody>
         </table>
 
@@ -791,7 +818,9 @@ function clearFileInput(id) {
         loans,
         guaranteed,
         assets,
-        summary: json.summary || {}
+        summary: json.summary || {},
+        interest_history: json.interest_history || [],
+        expense_history: json.expense_history || []
       };
 
       const profilePanel = document.getElementById('uvm-tab-profile');
