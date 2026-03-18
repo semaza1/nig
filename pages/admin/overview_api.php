@@ -695,7 +695,7 @@ $totalCash = scalar($mysqli, "
 ");
 $totalAssetsValue = scalar($mysqli, "SELECT COALESCE(SUM(purchase_value),0) FROM assets");
 $requestedLoans = (int)scalar($mysqli, "SELECT COUNT(*) FROM loans WHERE status='requested'");
-$totalGuarantors = (int)scalar($mysqli, "SELECT COUNT(DISTINCT guarantor_user_id) FROM loan_guaranters");
+$totalGuarantors = (int)scalar($mysqli, "SELECT COUNT(DISTINCT guarantor_user_id) FROM loan_guaranters INNER JOIN loans ON loans.loan_id = loan_guaranters.loan_id WHERE loans.status IN ('approved','defaulted')");
 $activeLoansUnpaid = total_active_loans_unpaid($mysqli);
 $totalIncome = $totalContributions + $totalInterest;
 

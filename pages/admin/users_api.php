@@ -168,8 +168,16 @@ function check_unique_user_fields(mysqli $db, string $nid, string $email = '', ?
 /* ─────────────────────────────────────────────────────────────
    Finance helpers
 ───────────────────────────────────────────────────────────── */
+
+/**
+ * Unpaid principal rule:
+ * only approved loans
+ * unpaid = principal - SUM(loan_principal IN)
+ */
 function loan_unpaid(mysqli $db, int $loanId, float $principal, string $status): float {
-    if (!in_array($status, ['approved', 'defaulted', 'closed'], true)) return 0.0;
+    if ($status !== 'approved') {
+        return 0.0;
+    }
 
     $row = db_query_one($db, "
         SELECT COALESCE(SUM(amount), 0) AS paid
@@ -178,9 +186,31 @@ function loan_unpaid(mysqli $db, int $loanId, float $principal, string $status):
           AND type = 'loan_principal'
           AND direction = 'IN'
     ");
-    $paid = (float)($row['paid'] ?? 0);
 
-    return max(0.0, $principal - $paid);
+    $paid = (float)($row['paid'] ?? 0.0);
+    return max(0.0, round($principal - $paid, 2));
+}
+
+function loan_paid_principal(mysqli $db, int $loanId): float {
+    $row = db_query_one($db, "
+        SELECT COALESCE(SUM(amount), 0) AS paid
+        FROM transactions
+        WHERE loan_id = {$loanId}
+          AND type = 'loan_principal'
+          AND direction = 'IN'
+    ");
+    return round((float)($row['paid'] ?? 0.0), 2);
+}
+
+function loan_paid_interest(mysqli $db, int $loanId): float {
+    $row = db_query_one($db, "
+        SELECT COALESCE(SUM(amount), 0) AS paid
+        FROM transactions
+        WHERE loan_id = {$loanId}
+          AND type = 'loan_interest'
+          AND direction = 'IN'
+    ");
+    return round((float)($row['paid'] ?? 0.0), 2);
 }
 
 function calculate_running_balance(array $transactions): array {
@@ -212,15 +242,36 @@ function get_loan_payment_history(mysqli $db, int $loanId): array {
         SELECT transaction_id, tx_date, type, direction, amount, description
         FROM transactions
         WHERE loan_id = {$loanId}
-          AND type IN ('loan_principal', 'loan_interest', 'penalty')
+          AND type IN ('loan_principal', 'loan_interest')
         ORDER BY tx_date ASC, transaction_id ASC
     ");
 }
 
+function get_user_transaction_totals(array $transactions): array {
+    $totalIn = 0.0;
+    $totalOut = 0.0;
+
+    foreach ($transactions as $t) {
+        $amount = (float)($t['amount'] ?? 0);
+        $dir = strtoupper((string)($t['direction'] ?? ''));
+
+        if ($dir === 'IN') {
+            $totalIn += $amount;
+        } elseif ($dir === 'OUT') {
+            $totalOut += $amount;
+        }
+    }
+
+    return [
+        'count' => count($transactions),
+        'total_in' => round($totalIn, 2),
+        'total_out' => round($totalOut, 2),
+        'net' => round($totalIn - $totalOut, 2),
+    ];
+}
+
 /* ─────────────────────────────────────────────────────────────
    Allocation engine with event-by-event history
-   Base at any moment:
-   (contribution - withdraw) + interest_gained - expense_portion
 ───────────────────────────────────────────────────────────── */
 function nig_member_allocation_cache(mysqli $db): array {
     static $cache = null;
@@ -488,42 +539,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             WHERE t.user_id = {$id}
             ORDER BY t.tx_date DESC, t.transaction_id DESC
         ");
+        $transactionTotals = get_user_transaction_totals($transactions);
         $transactions = calculate_running_balance($transactions);
 
         $loan_rows = db_query($mysqli, "
-            SELECT loan_id, principal, interest_rate, status,
-                   start_date, end_date, created_at
+            SELECT
+                loan_id,
+                account_id,
+                borrower_user_id,
+                principal,
+                monthly_interest_rate,
+                interest_method,
+                term_months,
+                status,
+                requested_at,
+                approved_at,
+                closed_at,
+                start_date,
+                end_date,
+                notes,
+                created_at
             FROM loans
             WHERE borrower_user_id = {$id}
             ORDER BY loan_id DESC
         ");
 
         $loans = [];
+        $unpaid_loans = [];
+        $unpaid_loans_count = 0;
+        $unpaid_loans_amount = 0.0;
+
         foreach ($loan_rows as $r) {
             $loanId = (int)$r['loan_id'];
-            $r['unpaid_principal'] = round(
-                loan_unpaid($mysqli, $loanId, (float)$r['principal'], (string)$r['status']),
-                2
-            );
-            $r['payments'] = get_loan_payment_history($mysqli, $loanId);
+            $principal = (float)($r['principal'] ?? 0);
+            $status = (string)($r['status'] ?? '');
+
+            $paidPrincipal = loan_paid_principal($mysqli, $loanId);
+            $paidInterest  = loan_paid_interest($mysqli, $loanId);
+            $unpaid        = loan_unpaid($mysqli, $loanId, $principal, $status);
+
+            $r['paid_principal']   = round($paidPrincipal, 2);
+            $r['paid_interest']    = round($paidInterest, 2);
+            $r['unpaid_principal'] = round($unpaid, 2);
+            $r['payments']         = get_loan_payment_history($mysqli, $loanId);
+
             $loans[] = $r;
+
+            if ($status === 'approved' && $unpaid > 0) {
+                $unpaid_loans[] = $r;
+                $unpaid_loans_count++;
+                $unpaid_loans_amount += $unpaid;
+            }
         }
 
         $guaranteed = [];
         if (table_exists($mysqli, 'loan_guaranters')) {
-            $guaranteed = db_query($mysqli, "
+            $guaranteed_raw = db_query($mysqli, "
                 SELECT lg.loan_id, lg.guarantee_amount, lg.status,
                        lg.created_at AS since,
                        l.status      AS loan_status,
                        l.principal   AS loan_principal,
+                       l.monthly_interest_rate,
                        u.names       AS borrower_name
                 FROM loan_guaranters lg
                 INNER JOIN loans l ON l.loan_id = lg.loan_id
                 INNER JOIN users u ON u.id = l.borrower_user_id
                 WHERE lg.guarantor_user_id = {$id}
-                  AND l.status <> 'closed'
                 ORDER BY lg.loan_id DESC
             ");
+
+            foreach ($guaranteed_raw as $g) {
+                $loanId = (int)$g['loan_id'];
+                $g['unpaid_principal'] = loan_unpaid(
+                    $mysqli,
+                    $loanId,
+                    (float)$g['loan_principal'],
+                    (string)$g['loan_status']
+                );
+                $guaranteed[] = $g;
+            }
         }
 
         $assets = [];
@@ -548,23 +642,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $expenseHistory        = get_user_expense_history($mysqli, $id);
 
         $summary = [
-            'interest_gained'    => round($userInterestGained, 2),
-            'contribution_base'  => round($userContributionBase, 2),
-            'expense_portion'    => round($userExpensePortion, 2),
-            'total_contribution' => round($userContributionTotal, 2),
-            'total_withdraw'     => round($userWithdrawTotal, 2),
+            'interest_gained'         => round($userInterestGained, 2),
+            'contribution_base'       => round($userContributionBase, 2),
+            'expense_portion'         => round($userExpensePortion, 2),
+            'total_contribution'      => round($userContributionTotal, 2),
+            'total_withdraw'          => round($userWithdrawTotal, 2),
+
+            'transactions_count'      => (int)$transactionTotals['count'],
+            'transactions_total_in'   => round($transactionTotals['total_in'], 2),
+            'transactions_total_out'  => round($transactionTotals['total_out'], 2),
+            'transactions_net'        => round($transactionTotals['net'], 2),
+
+            'loans_count'             => count($loans),
+            'unpaid_loans_count'      => (int)$unpaid_loans_count,
+            'unpaid_loans_amount'     => round($unpaid_loans_amount, 2),
         ];
 
         respond_json([
-            'success'          => true,
-            'data'             => $user,
-            'transactions'     => $transactions,
-            'loans'            => $loans,
-            'guaranteed'       => $guaranteed,
-            'assets'           => $assets,
-            'summary'          => $summary,
-            'interest_history' => $interestHistory,
-            'expense_history'  => $expenseHistory,
+            'success'             => true,
+            'data'                => $user,
+            'transactions'        => $transactions,
+            'loans'               => $loans,
+            'unpaid_loans'        => $unpaid_loans,
+            'guaranteed'          => $guaranteed,
+            'assets'              => $assets,
+            'summary'             => $summary,
+            'interest_history'    => $interestHistory,
+            'expense_history'     => $expenseHistory,
         ]);
     }
 
